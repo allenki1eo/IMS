@@ -1,0 +1,44 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────
+# LOCAL / LAN DEPLOYMENT
+# Access via http://<server-ip>:3000
+# ─────────────────────────────────────────────────────────
+
+services:
+  sqld:
+    image: ghcr.io/tursodatabase/sqld:main
+    container_name: ims_sqld
+    ports:
+      - "8080:8080"
+    volumes:
+      - sqld_data:/var/lib/sqld
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ims_app
+    ports:
+      - "3000:3000"
+    env_file: ../.env.local
+    environment:
+      DATABASE_URL: "http://sqld:8080"
+      DATABASE_AUTH_TOKEN: ""
+      NODE_ENV: production
+    volumes:
+      - app_uploads:/app/uploads
+    restart: unless-stopped
+    depends_on:
+      sqld:
+        condition: service_healthy
+
+volumes:
+  sqld_data:
+  app_uploads:

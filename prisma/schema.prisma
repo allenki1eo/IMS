@@ -1,0 +1,372 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// COMPANY STRUCTURE
+// ─────────────────────────────────────────────
+
+model Company {
+  id                 String   @id @default(cuid())
+  name               String
+  legalName          String?
+  registrationNumber String?
+  taxNumber          String?
+  address            String?
+  city               String?
+  country            String?
+  phone              String?
+  email              String?
+  website            String?
+  logoPath           String?
+  currency           String   @default("USD")
+  dateFormat         String   @default("YYYY-MM-DD")
+  fiscalYearStart    Int      @default(1)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  branches    Branch[]
+  departments Department[]
+  employees   Employee[]
+  settings    Setting[]
+
+  @@map("companies")
+}
+
+model Branch {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  code        String   @unique
+  address     String?
+  city        String?
+  phone       String?
+  email       String?
+  managerId   String?
+  isMain      Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  departments Department[]
+  employees   Employee[]
+  userRoles   UserRole[]
+
+  @@map("branches")
+}
+
+model Department {
+  id             String   @id @default(cuid())
+  companyId      String
+  branchId       String?
+  name           String
+  code           String   @unique
+  description    String?
+  parentId       String?
+  headEmployeeId String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String
+
+  company    Company      @relation(fields: [companyId], references: [id])
+  branch     Branch?      @relation(fields: [branchId], references: [id])
+  parent     Department?  @relation("DeptHierarchy", fields: [parentId], references: [id])
+  children   Department[] @relation("DeptHierarchy")
+  employees  Employee[]
+
+  @@map("departments")
+}
+
+// ─────────────────────────────────────────────
+// USERS, ROLES & PERMISSIONS
+// ─────────────────────────────────────────────
+
+model User {
+  id                 String    @id @default(cuid())
+  employeeId         String?
+  username           String    @unique
+  email              String    @unique
+  passwordHash       String
+  fullName           String
+  phone              String?
+  avatarPath         String?
+  isActive           Boolean   @default(true)
+  isSystemUser       Boolean   @default(false)
+  mustChangePassword Boolean   @default(true)
+  lastLoginAt        DateTime?
+  passwordChangedAt  DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdById        String?
+
+  roles    UserRole[]
+  sessions Session[]
+  employee Employee? @relation(fields: [employeeId], references: [id])
+
+  @@map("users")
+}
+
+model Role {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  code         String   @unique
+  description  String?
+  isSystemRole Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String?
+
+  permissions   RolePermission[]
+  userRoles     UserRole[]
+  approvalSteps ApprovalWorkflowStep[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  module      String
+  resource    String
+  action      String
+  description String?
+
+  rolePermissions RolePermission[]
+
+  @@unique([module, resource, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  grantedAt    DateTime @default(now())
+  grantedById  String
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id           String    @id @default(cuid())
+  userId       String
+  roleId       String
+  branchId     String?
+  assignedAt   DateTime  @default(now())
+  assignedById String
+  expiresAt    DateTime?
+
+  user   User    @relation(fields: [userId], references: [id])
+  role   Role    @relation(fields: [roleId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  @@unique([userId, roleId, branchId])
+  @@map("user_roles")
+}
+
+// ─────────────────────────────────────────────
+// SESSIONS
+// ─────────────────────────────────────────────
+
+model Session {
+  id             String    @id @default(cuid())
+  userId         String
+  tokenHash      String    @unique
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime
+  lastActivityAt DateTime  @default(now())
+  isActive       Boolean   @default(true)
+  revokedAt      DateTime?
+  revokedReason  String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ─────────────────────────────────────────────
+// EMPLOYEES
+// ─────────────────────────────────────────────
+
+model Employee {
+  id              String   @id @default(cuid())
+  companyId       String
+  branchId        String?
+  departmentId    String?
+  employeeNumber  String   @unique
+  firstName       String
+  lastName        String
+  fullName        String
+  email           String?
+  phone           String?
+  position        String?
+  employmentType  String   @default("PERMANENT")
+  status          String   @default("ACTIVE")
+  hireDate        DateTime?
+  terminationDate DateTime?
+  isDriver        Boolean  @default(false)
+  source          String   @default("MANUAL")
+  hrEmployeeId    String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
+
+  company    Company     @relation(fields: [companyId], references: [id])
+  branch     Branch?     @relation(fields: [branchId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+  users      User[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("employees")
+}
+
+// ─────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────
+
+model Setting {
+  id          String   @id @default(cuid())
+  companyId   String
+  key         String   @unique
+  value       String
+  category    String   @default("general")
+  description String?
+  isPublic    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedById String
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([category])
+  @@map("settings")
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOGS
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  companyId   String?
+  branchId    String?
+  userId      String?
+  userName    String
+  action      String
+  module      String
+  resource    String
+  recordId    String?
+  oldValue    String?
+  newValue    String?
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  sessionId   String?
+  createdAt   DateTime @default(now())
+
+  @@index([module, resource])
+  @@index([userId])
+  @@index([recordId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────
+// APPROVAL SYSTEM
+// ─────────────────────────────────────────────
+
+model ApprovalWorkflow {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  module      String
+  resource    String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  steps    ApprovalWorkflowStep[]
+  requests ApprovalRequest[]
+
+  @@unique([companyId, module, resource])
+  @@map("approval_workflows")
+}
+
+model ApprovalWorkflowStep {
+  id              String  @id @default(cuid())
+  workflowId      String
+  stepNumber      Int
+  name            String
+  description     String?
+  approverType    String  @default("ANY_OF_ROLE")
+  approverRoleId  String?
+  approverUserId  String?
+  canDelegate     Boolean @default(false)
+  timeLimitHours  Int?
+
+  workflow ApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  role     Role?            @relation(fields: [approverRoleId], references: [id])
+
+  @@unique([workflowId, stepNumber])
+  @@map("approval_workflow_steps")
+}
+
+model ApprovalRequest {
+  id              String    @id @default(cuid())
+  companyId       String
+  workflowId      String
+  module          String
+  resource        String
+  recordId        String
+  recordReference String
+  requestedById   String
+  requestedAt     DateTime  @default(now())
+  currentStep     Int       @default(1)
+  status          String    @default("PENDING")
+  priority        String    @default("NORMAL")
+  notes           String?
+  resolvedAt      DateTime?
+  resolvedById    String?
+
+  workflow ApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  actions  ApprovalAction[]
+
+  @@index([module, resource, recordId])
+  @@index([requestedById])
+  @@index([status])
+  @@map("approval_requests")
+}
+
+model ApprovalAction {
+  id             String   @id @default(cuid())
+  requestId      String
+  stepNumber     Int
+  action         String
+  actedById      String
+  actedAt        DateTime @default(now())
+  comments       String?
+  nextApproverId String?
+
+  request ApprovalRequest @relation(fields: [requestId], references: [id])
+
+  @@map("approval_actions")
+}
