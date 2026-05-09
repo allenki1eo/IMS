@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Shield, Building2, GitBranch, Layers,
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
   Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
-  Fuel, Receipt, TrendingDown,
+  Fuel, Receipt, TrendingDown, Wrench, PenTool,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -92,6 +92,18 @@ const NAV: NavItem[] = [
       { label: "Issues", href: "/fuel/issues", icon: <TrendingDown className="h-4 w-4" />, permission: "fuel:issue:read" },
       { label: "Prices", href: "/fuel/prices", icon: <BarChart3 className="h-4 w-4" />, permission: "fuel:price:read" },
       { label: "Reports", href: "/fuel/reports", icon: <ClipboardList className="h-4 w-4" />, permission: "fuel:report:read" },
+    ],
+  },
+  {
+    label: "Maintenance",
+    icon: <Wrench className="h-4 w-4" />,
+    permission: "maintenance:workorder:read",
+    children: [
+      { label: "Overview", href: "/maintenance", icon: <BarChart3 className="h-4 w-4" />, permission: "maintenance:workorder:read" },
+      { label: "Work Orders", href: "/maintenance/work-orders", icon: <ClipboardList className="h-4 w-4" />, permission: "maintenance:workorder:read" },
+      { label: "Schedules", href: "/maintenance/schedules", icon: <PenTool className="h-4 w-4" />, permission: "maintenance:schedule:read" },
+      { label: "Spare Parts", href: "/maintenance/parts", icon: <Package className="h-4 w-4" />, permission: "maintenance:part:read" },
+      { label: "Parts Receipts", href: "/maintenance/receipts", icon: <Receipt className="h-4 w-4" />, permission: "maintenance:receipt:read" },
     ],
   },
   {

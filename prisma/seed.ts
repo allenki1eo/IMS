@@ -104,6 +104,20 @@ const PERMISSIONS = [
   { module: "fuel", resource: "price", action: "read", description: "View fuel prices" },
   { module: "fuel", resource: "price", action: "create", description: "Record fuel prices" },
   { module: "fuel", resource: "report", action: "read", description: "View fuel consumption reports" },
+  // Maintenance
+  { module: "maintenance", resource: "schedule", action: "read", description: "View maintenance schedules" },
+  { module: "maintenance", resource: "schedule", action: "create", description: "Create maintenance schedules" },
+  { module: "maintenance", resource: "schedule", action: "update", description: "Edit maintenance schedules" },
+  { module: "maintenance", resource: "workorder", action: "read", description: "View work orders" },
+  { module: "maintenance", resource: "workorder", action: "create", description: "Create work orders" },
+  { module: "maintenance", resource: "workorder", action: "update", description: "Edit work orders" },
+  { module: "maintenance", resource: "workorder", action: "complete", description: "Complete work orders" },
+  { module: "maintenance", resource: "part", action: "read", description: "View spare parts" },
+  { module: "maintenance", resource: "part", action: "create", description: "Create spare parts" },
+  { module: "maintenance", resource: "part", action: "update", description: "Edit spare parts" },
+  { module: "maintenance", resource: "receipt", action: "read", description: "View spare part receipts" },
+  { module: "maintenance", resource: "receipt", action: "create", description: "Receive spare parts into stock" },
+  { module: "maintenance", resource: "report", action: "read", description: "View maintenance reports" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -151,6 +165,11 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "fuel:issue:read", "fuel:issue:create",
     "fuel:price:read", "fuel:price:create",
     "fuel:report:read",
+    "maintenance:schedule:read", "maintenance:schedule:create", "maintenance:schedule:update",
+    "maintenance:workorder:read", "maintenance:workorder:create", "maintenance:workorder:update", "maintenance:workorder:complete",
+    "maintenance:part:read", "maintenance:part:create", "maintenance:part:update",
+    "maintenance:receipt:read", "maintenance:receipt:create",
+    "maintenance:report:read",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -178,6 +197,11 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "fuel:issue:read", "fuel:issue:create",
     "fuel:price:read", "fuel:price:create",
     "fuel:report:read",
+    "maintenance:schedule:read", "maintenance:schedule:create", "maintenance:schedule:update",
+    "maintenance:workorder:read", "maintenance:workorder:create", "maintenance:workorder:update", "maintenance:workorder:complete",
+    "maintenance:part:read", "maintenance:part:create", "maintenance:part:update",
+    "maintenance:receipt:read", "maintenance:receipt:create",
+    "maintenance:report:read",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -196,6 +220,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "transport:incident:read", "transport:incident:create",
     "fuel:tank:read", "fuel:receipt:read", "fuel:issue:read", "fuel:issue:create",
     "fuel:price:read", "fuel:report:read",
+    "maintenance:schedule:read", "maintenance:workorder:read", "maintenance:workorder:create", "maintenance:workorder:update",
+    "maintenance:part:read", "maintenance:receipt:read", "maintenance:receipt:create",
+    "maintenance:report:read",
   ],
   MANAGEMENT: [
     "auth:session:create",
@@ -210,6 +237,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:grn:read", "warehouse:transfer:read", "warehouse:adjustment:read",
     "transport:vehicle:read", "transport:driver:read", "transport:trip:read", "transport:incident:read",
     "fuel:tank:read", "fuel:receipt:read", "fuel:issue:read", "fuel:price:read", "fuel:report:read",
+    "maintenance:schedule:read", "maintenance:workorder:read", "maintenance:part:read", "maintenance:report:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -225,6 +253,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:grn:read", "warehouse:transfer:read", "warehouse:adjustment:read",
     "transport:vehicle:read", "transport:driver:read", "transport:trip:read", "transport:incident:read",
     "fuel:tank:read", "fuel:receipt:read", "fuel:issue:read", "fuel:price:read", "fuel:report:read",
+    "maintenance:schedule:read", "maintenance:workorder:read", "maintenance:part:read", "maintenance:report:read",
   ],
 };
 

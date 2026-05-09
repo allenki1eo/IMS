@@ -682,11 +682,13 @@ model Vehicle {
   updatedAt        DateTime  @updatedAt
   createdById      String
 
-  assignments VehicleAssignment[]
-  trips       TripOrder[]
-  incidents   VehicleIncident[]
-  documents   VehicleDocument[]
-  fuelIssues  FuelIssue[]
+  assignments        VehicleAssignment[]
+  trips              TripOrder[]
+  incidents          VehicleIncident[]
+  documents          VehicleDocument[]
+  fuelIssues         FuelIssue[]
+  maintenanceSchedules MaintenanceSchedule[]
+  workOrders         WorkOrder[]
 
   @@index([companyId])
   @@index([status])
@@ -936,4 +938,143 @@ model FuelPrice {
 
   @@index([companyId, fuelType])
   @@map("fuel_prices")
+}
+
+// ─────────────────────────────────────────────
+// MAINTENANCE & SPARE PARTS
+// ─────────────────────────────────────────────
+
+model MaintenanceSchedule {
+  id               String    @id @default(cuid())
+  companyId        String
+  vehicleId        String
+  maintenanceType  String
+  description      String?
+  intervalKm       Float?
+  intervalDays     Int?
+  lastDoneAt       DateTime?
+  lastDoneOdometer Float?
+  nextDueAt        DateTime?
+  nextDueOdometer  Float?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdById      String
+
+  vehicle    Vehicle     @relation(fields: [vehicleId], references: [id])
+  workOrders WorkOrder[]
+
+  @@index([vehicleId])
+  @@map("maintenance_schedules")
+}
+
+model WorkOrder {
+  id              String    @id @default(cuid())
+  companyId       String
+  vehicleId       String
+  scheduleId      String?
+  reference       String    @unique
+  maintenanceType String
+  description     String
+  priority        String    @default("NORMAL")
+  status          String    @default("OPEN")
+  requestedById   String
+  assignedToId    String?
+  workshopName    String?
+  estimatedCost   Float?
+  actualCost      Float?
+  odometerAtWork  Float?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+
+  vehicle  Vehicle              @relation(fields: [vehicleId], references: [id])
+  schedule MaintenanceSchedule? @relation(fields: [scheduleId], references: [id])
+  items    WorkOrderItem[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([vehicleId])
+  @@map("work_orders")
+}
+
+model WorkOrderItem {
+  id           String  @id @default(cuid())
+  workOrderId  String
+  description  String
+  itemType     String  @default("LABOUR")
+  sparePartId  String?
+  quantity     Float   @default(1)
+  unitCost     Float?
+  totalCost    Float?
+
+  workOrder  WorkOrder  @relation(fields: [workOrderId], references: [id])
+  sparePart  SparePart? @relation(fields: [sparePartId], references: [id])
+
+  @@map("work_order_items")
+}
+
+model SparePartCategory {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  code        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  parts SparePart[]
+
+  @@unique([companyId, code])
+  @@map("spare_part_categories")
+}
+
+model SparePart {
+  id           String   @id @default(cuid())
+  companyId    String
+  categoryId   String?
+  code         String
+  name         String
+  description  String?
+  partNumber   String?
+  uom          String   @default("PCS")
+  currentStock Float    @default(0)
+  minStock     Float    @default(0)
+  unitCost     Float?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+
+  category     SparePartCategory?    @relation(fields: [categoryId], references: [id])
+  transactions SparePartTransaction[]
+  workItems    WorkOrderItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("spare_parts")
+}
+
+model SparePartTransaction {
+  id              String   @id @default(cuid())
+  companyId       String
+  sparePartId     String
+  transactionType String
+  quantity        Float
+  unitCost        Float?
+  totalCost       Float?
+  referenceType   String?
+  referenceId     String?
+  notes           String?
+  createdById     String
+  createdAt       DateTime @default(now())
+
+  sparePart SparePart @relation(fields: [sparePartId], references: [id])
+
+  @@index([sparePartId])
+  @@index([createdAt])
+  @@map("spare_part_transactions")
 }
