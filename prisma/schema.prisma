@@ -398,6 +398,7 @@ model Warehouse {
   fromTransfers StockTransfer[]     @relation("TransferFrom")
   toTransfers   StockTransfer[]     @relation("TransferTo")
   adjustments   StockAdjustment[]
+  fgLots        FGLot[]
 
   @@index([companyId])
   @@map("warehouses")
@@ -691,6 +692,7 @@ model Vehicle {
   fuelIssues         FuelIssue[]
   maintenanceSchedules MaintenanceSchedule[]
   workOrders         WorkOrder[]
+  dispatchOrders     DispatchOrder[]
 
   @@index([companyId])
   @@index([status])
@@ -728,10 +730,11 @@ model Driver {
   updatedAt     DateTime  @updatedAt
   createdById   String
 
-  employee    Employee            @relation(fields: [employeeId], references: [id])
-  assignments VehicleAssignment[]
-  trips       TripOrder[]
-  fuelIssues  FuelIssue[]
+  employee       Employee            @relation(fields: [employeeId], references: [id])
+  assignments    VehicleAssignment[]
+  trips          TripOrder[]
+  fuelIssues     FuelIssue[]
+  dispatchOrders DispatchOrder[]
 
   @@index([companyId])
   @@map("drivers")
@@ -1431,4 +1434,98 @@ model NonConformance {
   @@index([testId])
   @@index([status])
   @@map("non_conformances")
+}
+
+// ─── Phase 9: Finished Goods & Dispatch ───────────────────────────────────────
+
+model FGProduct {
+  id          String   @id @default(cuid())
+  companyId   String
+  code        String
+  name        String
+  description String?
+  uom         String   @default("UNIT")
+  unitPrice   Float?
+  isActive    Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lots FGLot[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("fg_products")
+}
+
+model FGLot {
+  id          String    @id @default(cuid())
+  companyId   String
+  productId   String
+  lotNumber   String?
+  quantityIn  Float
+  quantityOut Float     @default(0)
+  unitCost    Float?
+  bestBefore  DateTime?
+  warehouseId String?
+  status      String    @default("AVAILABLE")
+  notes       String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product       FGProduct          @relation(fields: [productId], references: [id])
+  warehouse     Warehouse?         @relation(fields: [warehouseId], references: [id])
+  dispatchLines DispatchOrderLine[]
+
+  @@index([companyId])
+  @@index([productId])
+  @@index([status])
+  @@map("fg_lots")
+}
+
+model DispatchOrder {
+  id              String    @id @default(cuid())
+  companyId       String
+  reference       String    @unique
+  status          String    @default("DRAFT")
+  customerName    String
+  customerContact String?
+  deliveryAddress String?
+  scheduledDate   DateTime?
+  dispatchedAt    DateTime?
+  deliveredAt     DateTime?
+  vehicleId       String?
+  driverId        String?
+  notes           String?
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  lines   DispatchOrderLine[]
+  vehicle Vehicle?            @relation(fields: [vehicleId], references: [id])
+  driver  Driver?             @relation(fields: [driverId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@map("dispatch_orders")
+}
+
+model DispatchOrderLine {
+  id          String  @id @default(cuid())
+  orderId     String
+  lotId       String?
+  productId   String?
+  description String
+  quantity    Float
+  uom         String  @default("UNIT")
+  unitPrice   Float?
+  totalPrice  Float?
+
+  order DispatchOrder @relation(fields: [orderId], references: [id])
+  lot   FGLot?        @relation(fields: [lotId], references: [id])
+
+  @@index([orderId])
+  @@index([lotId])
+  @@map("dispatch_order_lines")
 }

@@ -7,7 +7,7 @@ import {
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
   Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
-  Factory, FlaskConical, FileSearch, XCircle,
+  Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -138,6 +138,17 @@ const NAV: NavItem[] = [
       { label: "Standards", href: "/qc/standards", icon: <FileCheck className="h-4 w-4" />, permission: "qc:standard:read" },
       { label: "Lab Tests", href: "/qc/tests", icon: <FileSearch className="h-4 w-4" />, permission: "qc:test:read" },
       { label: "Non-Conformances", href: "/qc/ncr", icon: <XCircle className="h-4 w-4" />, permission: "qc:ncr:read" },
+    ],
+  },
+  {
+    label: "Dispatch",
+    icon: <SendHorizonal className="h-4 w-4" />,
+    permission: "dispatch:order:read",
+    children: [
+      { label: "Overview", href: "/dispatch", icon: <BarChart3 className="h-4 w-4" />, permission: "dispatch:order:read" },
+      { label: "Products", href: "/dispatch/products", icon: <Package className="h-4 w-4" />, permission: "dispatch:product:read" },
+      { label: "Inventory", href: "/dispatch/inventory", icon: <Boxes className="h-4 w-4" />, permission: "dispatch:lot:read" },
+      { label: "Dispatch Orders", href: "/dispatch/orders", icon: <SendHorizonal className="h-4 w-4" />, permission: "dispatch:order:read" },
     ],
   },
   {
