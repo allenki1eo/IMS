@@ -1,40 +1,31 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
-import { createClient } from "@libsql/client";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+
+const log: Prisma.LogLevel[] =
+  process.env.NODE_ENV === "development"
+    ? ["query", "error", "warn"]
+    : ["error"];
 
 function createPrismaClient(): PrismaClient {
   const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
 
-  // Local SQLite: use standard PrismaClient
+  // Local SQLite: use standard datasource URL (no adapter needed)
   if (databaseUrl.startsWith("file:")) {
     return new PrismaClient({
-      datasources: {
-        db: { url: databaseUrl },
-      },
-      log:
-        process.env.NODE_ENV === "development"
-          ? ["query", "error", "warn"]
-          : ["error"],
+      datasources: { db: { url: databaseUrl } },
+      log,
     });
   }
 
-  // Turso / libSQL: use driver adapter
-  const client = createClient({
+  // Turso / libSQL remote: use driver adapter with config object
+  const adapter = new PrismaLibSQL({
     url: databaseUrl,
     authToken: process.env.DATABASE_AUTH_TOKEN,
   });
 
-  const adapter = new PrismaLibSQL(client);
-
-  return new PrismaClient({
-    adapter,
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"],
-  });
+  return new PrismaClient({ adapter, log });
 }
 
 export const db = globalForPrisma.prisma || createPrismaClient();
