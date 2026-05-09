@@ -1,10 +1,12 @@
-# IMS — Company ERP System
+# IMS - Company ERP System
 
 ## Project Overview
 
-A modular, phased ERP for a manufacturing/distribution company. Built with Next.js 15, TypeScript, Prisma, Turso (libSQL/SQLite), and Tailwind CSS + shadcn/ui.
+A modular, phased ERP for a manufacturing/distribution company. Built with Next.js 15, TypeScript, Prisma, Turso/libSQL/SQLite, and Tailwind CSS plus shadcn-style UI primitives.
 
-**Current Phase: Phase 1 — Core Foundation**
+**Current Phase: Phase 4 - Fuel Management complete**
+
+The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, and Fuel Management modules.
 
 ## Architecture
 
@@ -18,7 +20,7 @@ src/
 ├── lib/                 # Infrastructure: db, auth, session, audit, response helpers
 ├── components/
 │   ├── layout/          # DashboardShell, Sidebar, Navbar, SyncStatus, UserMenu
-│   ├── ui/              # shadcn/ui primitives
+│   ├── ui/              # shadcn-style UI primitives
 │   └── shared/          # DataTable, PageHeader, StatusBadge, PermissionGuard, etc.
 ├── hooks/               # useCurrentUser, usePermission, useLocalDraft, useOnlineStatus
 └── types/               # TypeScript type definitions
@@ -33,10 +35,10 @@ src/
 | Database | Turso (libSQL/SQLite) |
 | ORM | Prisma |
 | Auth | JWT in HttpOnly cookies |
-| UI | Tailwind CSS + shadcn/ui |
-| Forms | react-hook-form + zod |
+| UI | Tailwind CSS + shadcn-style primitives |
+| Forms | react-hook-form + zod where used; local form state in module pages |
 | Toasts | sonner |
-| Charts | recharts (future phases) |
+| Charts / reports | Recharts dependency available; current reports use tables |
 
 ## Development
 
@@ -55,26 +57,29 @@ npm run dev
 npm run db:generate
 ```
 
+On Windows PowerShell, use `npm.cmd` if script execution policy blocks the `npm.ps1` shim.
+
 ## Environment Variables
 
 Copy `.env.example` to `.env.local` and fill in:
 
 ```
-DATABASE_URL        — libSQL connection string (file:./dev.db for local)
-DATABASE_AUTH_TOKEN — Turso auth token (empty for local sqld)
-JWT_SECRET          — 64+ char random string
-BASE_URL            — App base URL
+DATABASE_URL        - libSQL connection string (file:./dev.db for local)
+DATABASE_AUTH_TOKEN - Turso auth token (empty for local sqld)
+JWT_SECRET          - 64+ char random string
+BASE_URL            - App base URL
 ```
 
 ## Database
 
-Uses Turso (libSQL) — SQLite-compatible.
+Uses Turso/libSQL, which is SQLite-compatible.
 
 **Local/LAN:** `DATABASE_URL="file:./dev.db"` or point to a local `sqld` server.
 **Cloud:** `DATABASE_URL="libsql://your-db.turso.io"` with auth token.
-**Self-hosted:** Run `sqld` via Docker (see docker/docker-compose.yml).
+**Self-hosted:** Run `sqld` via Docker (see `docker/docker-compose.yml`).
 
 After any schema change:
+
 ```bash
 DATABASE_URL="file:./dev.db" npx prisma db push
 ```
@@ -86,26 +91,28 @@ DATABASE_URL="file:./dev.db" npm run db:seed
 ```
 
 Creates:
+
 - Company: "Your Company Name"
 - Branch: Head Office (HQ)
 - Departments: Admin, Operations, Finance, Warehouse, Transport, Production, QC, Maintenance, Procurement, HR
 - Roles: Super Admin, Company Admin, Branch Manager, Dept Head, Management, Auditor
-- All Phase 1 permissions (32 permissions)
+- Permissions for Core, Warehouse, Transport, and Fuel modules
 - Admin user: `admin` / `Admin@1234` (forced password change on first login)
 
 ## Authentication
 
 - JWT stored in HttpOnly Secure SameSite cookie (`erp_session`)
-- Sessions tracked in DB — can be revoked
-- `mustChangePassword=true` forces change before any other action
+- Sessions tracked in DB and can be revoked
+- `mustChangePassword=true` forces password change before any other action
 - Middleware validates JWT and session on every request
-- Permissions fetched from DB on each request (never stored in token)
+- Permissions fetched from DB on each request and never stored in the token
 
 ## Permissions
 
 Pattern: `module:resource:action`
 
 Check in API routes:
+
 ```typescript
 const auth = await requirePermission(request, "users:user:create");
 if ("error" in auth) return auth.error;
@@ -113,6 +120,7 @@ if ("error" in auth) return auth.error;
 ```
 
 Check in UI:
+
 ```tsx
 <PermissionGuard require="users:user:create">
   <Button>Add User</Button>
@@ -121,56 +129,86 @@ Check in UI:
 
 ## Audit Logs
 
-Every write operation calls `createAuditLog()`. Logs are append-only. Passwords and tokens are never logged.
+Every write operation should call `createAuditLog()`. Logs are append-only. Passwords and tokens are never logged.
 
 ```typescript
 await createAuditLog({
-  userId, userName, action: "USER_CREATE",
-  module: "users", resource: "user",
+  userId,
+  userName,
+  action: "USER_CREATE",
+  module: "users",
+  resource: "user",
   recordId: user.id,
   newValue: { username, email },
   description: "Created user",
-  ipAddress, userAgent,
+  ipAddress,
+  userAgent,
 });
 ```
 
-## Adding a New Module (Phases 2+)
+## Implemented Modules
 
-1. Create `src/modules/{module}/` with `{module}.service.ts`, `.validation.ts`, `.types.ts`
-2. Add API routes under `src/app/api/{module}/`
-3. Add UI pages under `src/app/(dashboard)/{module}/`
-4. Add permissions to `prisma/seed.ts` and run seed
-5. Add sidebar nav item in `src/components/layout/Sidebar.tsx`
-6. Connect to approval system if needed via `approvalsService.createRequest()`
-7. All writes must call `createAuditLog()`
+### Phase 1 - Core Foundation
 
-## Deployment
+Status: Complete
 
-### Local / LAN
-```bash
-cd docker
-docker compose up -d
-docker exec ims_app npx prisma db push
-docker exec ims_app npm run db:seed
-```
-Access: `http://<server-ip>:3000`
+- Auth: login, logout, current user, password change, session revocation
+- Middleware-protected dashboard routes
+- Users, roles, permissions, role assignment, password reset, activation/deactivation
+- Company profile, branches, departments, employees
+- Settings, audit log viewer, dashboard stats
+- Approval workflows and approval request lifecycle
+- Shared layout, sidebar, navbar, status badges, tables, search, permission guards, loading/empty states
 
-### Coolify / VPS
-1. Push to GitHub
-2. Create service in Coolify pointing to this repo
-3. Set Dockerfile path: `docker/Dockerfile`
-4. Set all env vars in Coolify
-5. Mount volume to `/app/uploads`
-6. Enable auto-deploy on push
+### Phase 2 - Warehouse Management
+
+Status: Complete
+
+- Prisma schema for warehouses, storage locations, item categories, UOMs, items, stock balances, stock ledger, GRNs, stock transfers, and adjustments
+- Services and API routes for warehouse master data and stock operations
+- Dashboard UI for warehouse overview, warehouses, items, categories, UOMs, stock, GRNs, transfers, and adjustments
+- GRN confirmation updates stock
+- Transfer dispatch/receive workflows
+- Adjustment submission/application workflow hooks
+
+### Phase 3 - Transport & Fleet
+
+Status: Complete
+
+- Prisma schema for vehicles, vehicle documents, drivers, vehicle assignments, trip orders, trip logs, trip cargo, and incidents
+- Services and API routes for vehicles, drivers, assignments, trips, trip lifecycle actions, trip logs, and incidents
+- Dashboard UI for transport overview, vehicles, drivers, assignments, trips, and incidents
+- Trip dispatch, completion, and cancellation actions
+- Vehicle odometer and availability/status updates
+
+### Phase 4 - Fuel Management
+
+Status: Complete
+
+- Prisma schema for fuel tanks, fuel receipts, fuel issues, and fuel prices
+- Seeded permissions and sidebar navigation for Fuel
+- Services and API routes for:
+  - Fuel tanks: list, create, detail, update, activate/deactivate
+  - Fuel receipts: list, create, detail, confirm into tank
+  - Fuel issues: list, create, detail, vehicle assignment, tank deduction, odometer update
+  - Fuel prices: list, create, current price lookup
+  - Reports: consumption by vehicle, consumption by period, tank level history
+- Dashboard UI for:
+  - Fuel overview
+  - Tanks list, create, detail, and status control
+  - Receipts list, create, detail, and confirmation
+  - Issues list, create, and detail
+  - Prices list and price recording
+  - Consumption reports by vehicle and period
 
 ## Module Roadmap
 
 | Phase | Module | Status |
 |---|---|---|
-| 1 | Core Foundation (Auth, Users, Roles, Company, Employees) | ✅ Complete |
-| 2 | Warehouse Management | Planned |
-| 3 | Transport & Fleet | Planned |
-| 4 | Fuel Management | Planned |
+| 1 | Core Foundation (Auth, Users, Roles, Company, Employees) | Complete |
+| 2 | Warehouse Management | Complete |
+| 3 | Transport & Fleet | Complete |
+| 4 | Fuel Management | Complete |
 | 5 | Maintenance & Spare Parts | Planned |
 | 6 | Procurement | Planned |
 | 7 | Production & Brewing | Planned |
@@ -181,11 +219,44 @@ Access: `http://<server-ip>:3000`
 | 12 | Finance Operations | Planned |
 | 13 | Management Analytics | Planned |
 
+## Adding a New Module (Phases 5+)
+
+1. Create `src/modules/{module}/` with `{module}.service.ts`, `.validation.ts`, and `.types.ts` as needed.
+2. Add API routes under `src/app/api/{module}/`.
+3. Add UI pages under `src/app/(dashboard)/{module}/`.
+4. Add permissions to `prisma/seed.ts` and run seed.
+5. Add sidebar nav items in `src/components/layout/Sidebar.tsx`.
+6. Connect to approval workflows when business rules require review/authorization.
+7. All writes must call `createAuditLog()`.
+
+## Deployment
+
+### Local / LAN
+
+```bash
+cd docker
+docker compose up -d
+docker exec ims_app npx prisma db push
+docker exec ims_app npm run db:seed
+```
+
+Access: `http://<server-ip>:3000`
+
+### Coolify / VPS
+
+1. Push to GitHub.
+2. Create service in Coolify pointing to this repo.
+3. Set Dockerfile path: `docker/Dockerfile`.
+4. Set all environment variables in Coolify.
+5. Mount volume to `/app/uploads`.
+6. Enable auto-deploy on push.
+
 ## Key Design Decisions
 
-- **No database arrays** — using join tables for many-to-many relationships (SQLite compatible)
-- **Permissions NOT in JWT** — always fetched from DB to allow real-time role revocation
-- **Append-only audit logs** — no UPDATE/DELETE on `audit_logs` table
-- **String enums** — using plain strings instead of Prisma enums for SQLite compatibility
-- **Draft saving** — `useLocalDraft` hook saves form state to localStorage to survive disconnects
-- **Optimistic UI avoided** for financial/stock/approval records — consistency > speed
+- No database arrays: join tables are used for many-to-many relationships for SQLite compatibility.
+- Permissions are not stored in JWTs: they are fetched from DB for real-time role revocation.
+- Audit logs are append-only: no update/delete operations on `audit_logs`.
+- String enums are used instead of Prisma enums for SQLite compatibility.
+- `useLocalDraft` is available for form state persistence during disconnects.
+- Optimistic UI is avoided for financial, stock, approval, and fuel records where consistency matters more than speed.
+
