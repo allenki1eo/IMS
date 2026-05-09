@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
     const cookieStore = await cookies();
     cookieStore.set("erp_session", result.token, {
       httpOnly: true,
-      secure: process.env.FORCE_HTTPS === "true",
+      secure:
+        process.env.NODE_ENV === "production" ||
+        process.env.FORCE_HTTPS === "true",
       sameSite: "lax",
       expires: result.expiresAt,
       path: "/",
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
     if (message === "Invalid credentials" || message.includes("deactivated")) {
       return badRequest(message, "AUTH_ERROR");
     }
+    console.error("[auth/login] Unexpected login error", err);
     return serverError();
   }
 }
