@@ -1198,3 +1198,118 @@ model PurchaseOrderLine {
   @@index([purchaseOrderId])
   @@map("purchase_order_lines")
 }
+
+// PRODUCTION & BREWING
+
+model ProductionLine {
+  id             String   @id @default(cuid())
+  companyId      String
+  code           String
+  name           String
+  lineType       String   @default("BREWING")
+  location       String?
+  capacityPerDay Float?
+  uom            String   @default("L")
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String
+
+  batches ProductionBatch[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("production_lines")
+}
+
+model ProductionRecipe {
+  id            String   @id @default(cuid())
+  companyId     String
+  code          String
+  name          String
+  productItemId String?
+  productCode   String?
+  productName   String
+  batchSize     Float
+  uom           String   @default("L")
+  version       String   @default("1")
+  status        String   @default("ACTIVE")
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String
+
+  materials RecipeMaterial[]
+  batches   ProductionBatch[]
+
+  @@unique([companyId, code, version])
+  @@index([companyId])
+  @@index([status])
+  @@map("production_recipes")
+}
+
+model RecipeMaterial {
+  id          String @id @default(cuid())
+  recipeId    String
+  itemId      String?
+  itemCode    String?
+  description String
+  quantity    Float
+  uom         String @default("KG")
+  wastagePct  Float  @default(0)
+
+  recipe ProductionRecipe @relation(fields: [recipeId], references: [id])
+
+  @@index([recipeId])
+  @@map("recipe_materials")
+}
+
+model ProductionBatch {
+  id            String    @id @default(cuid())
+  companyId     String
+  lineId        String?
+  recipeId      String?
+  reference     String    @unique
+  batchType     String    @default("BREWING")
+  productItemId String?
+  productCode   String?
+  productName   String
+  plannedQty    Float
+  actualQty     Float?
+  uom           String    @default("L")
+  status        String    @default("PLANNED")
+  plannedStart  DateTime?
+  plannedEnd    DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String
+
+  line      ProductionLine?   @relation(fields: [lineId], references: [id])
+  recipe    ProductionRecipe? @relation(fields: [recipeId], references: [id])
+  materials BatchMaterial[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([lineId])
+  @@map("production_batches")
+}
+
+model BatchMaterial {
+  id          String @id @default(cuid())
+  batchId     String
+  itemId      String?
+  itemCode    String?
+  description String
+  plannedQty  Float
+  issuedQty   Float  @default(0)
+  uom         String @default("KG")
+
+  batch ProductionBatch @relation(fields: [batchId], references: [id])
+
+  @@index([batchId])
+  @@map("batch_materials")
+}

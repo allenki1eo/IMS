@@ -133,6 +133,19 @@ const PERMISSIONS = [
   { module: "procurement", resource: "order", action: "send", description: "Send purchase orders" },
   { module: "procurement", resource: "order", action: "receive", description: "Receive purchase orders" },
   { module: "procurement", resource: "report", action: "read", description: "View procurement reports" },
+  // Production
+  { module: "production", resource: "line", action: "read", description: "View production lines" },
+  { module: "production", resource: "line", action: "create", description: "Create production lines" },
+  { module: "production", resource: "line", action: "update", description: "Edit production lines" },
+  { module: "production", resource: "recipe", action: "read", description: "View production recipes" },
+  { module: "production", resource: "recipe", action: "create", description: "Create production recipes" },
+  { module: "production", resource: "recipe", action: "update", description: "Edit production recipes" },
+  { module: "production", resource: "batch", action: "read", description: "View production batches" },
+  { module: "production", resource: "batch", action: "create", description: "Create production batches" },
+  { module: "production", resource: "batch", action: "update", description: "Edit production batches" },
+  { module: "production", resource: "batch", action: "start", description: "Start production batches" },
+  { module: "production", resource: "batch", action: "complete", description: "Complete production batches" },
+  { module: "production", resource: "report", action: "read", description: "View production reports" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -189,6 +202,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "procurement:request:read", "procurement:request:create", "procurement:request:update", "procurement:request:submit", "procurement:request:approve",
     "procurement:order:read", "procurement:order:create", "procurement:order:update", "procurement:order:send", "procurement:order:receive",
     "procurement:report:read",
+    "production:line:read", "production:line:create", "production:line:update",
+    "production:recipe:read", "production:recipe:create", "production:recipe:update",
+    "production:batch:read", "production:batch:create", "production:batch:update", "production:batch:start", "production:batch:complete",
+    "production:report:read",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -225,6 +242,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "procurement:request:read", "procurement:request:create", "procurement:request:update", "procurement:request:submit", "procurement:request:approve",
     "procurement:order:read", "procurement:order:create", "procurement:order:update", "procurement:order:send", "procurement:order:receive",
     "procurement:report:read",
+    "production:line:read", "production:line:create", "production:line:update",
+    "production:recipe:read", "production:recipe:create", "production:recipe:update",
+    "production:batch:read", "production:batch:create", "production:batch:update", "production:batch:start", "production:batch:complete",
+    "production:report:read",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -250,6 +271,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "procurement:request:read", "procurement:request:create", "procurement:request:update", "procurement:request:submit",
     "procurement:order:read",
     "procurement:report:read",
+    "production:line:read", "production:recipe:read",
+    "production:batch:read", "production:batch:create", "production:batch:update", "production:batch:start", "production:batch:complete",
+    "production:report:read",
   ],
   MANAGEMENT: [
     "auth:session:create",
@@ -267,6 +291,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "maintenance:schedule:read", "maintenance:workorder:read", "maintenance:part:read", "maintenance:report:read",
     "procurement:supplier:read", "procurement:request:read", "procurement:request:approve",
     "procurement:order:read", "procurement:report:read",
+    "production:line:read", "production:recipe:read", "production:batch:read", "production:report:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -285,6 +310,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "maintenance:schedule:read", "maintenance:workorder:read", "maintenance:part:read", "maintenance:report:read",
     "procurement:supplier:read", "procurement:request:read",
     "procurement:order:read", "procurement:report:read",
+    "production:line:read", "production:recipe:read", "production:batch:read", "production:report:read",
   ],
 };
 

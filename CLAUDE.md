@@ -4,9 +4,9 @@
 
 A modular, phased ERP for a manufacturing/distribution company. Built with Next.js 15, TypeScript, Prisma, Turso/libSQL/SQLite, and Tailwind CSS plus shadcn-style UI primitives.
 
-**Current Phase: Phase 6 - Procurement complete**
+**Current Phase: Phase 7 - Production & Brewing complete**
 
-The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, and Procurement modules.
+The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, Procurement, and Production & Brewing modules.
 
 ## Architecture
 
@@ -96,7 +96,7 @@ Creates:
 - Branch: Head Office (HQ)
 - Departments: Admin, Operations, Finance, Warehouse, Transport, Production, QC, Maintenance, Procurement, HR
 - Roles: Super Admin, Company Admin, Branch Manager, Dept Head, Management, Auditor
-- Permissions for Core, Warehouse, Transport, Fuel, Maintenance, and Procurement modules
+- Permissions for Core, Warehouse, Transport, Fuel, Maintenance, Procurement, and Production modules
 - Admin user: `admin` / `Admin@1234` (forced password change on first login)
 
 ## Authentication
@@ -235,6 +235,22 @@ Status: Complete
   - Purchase requests list, create, detail, submit/approve/reject lifecycle, and related orders
   - Purchase orders list, create, detail, send, and receiving updates
 
+### Phase 7 - Production & Brewing
+
+Status: Complete
+
+- Prisma schema for production lines, production recipes, recipe materials, production batches, and batch materials
+- Seeded permissions and sidebar navigation for Production
+- Services and API routes for:
+  - Production lines: list, create, detail, activate/deactivate, and recent batch history
+  - Recipes: list, create, detail, activate/deactivate/archive, material requirements, and recent batches
+  - Batches: list, create, detail, start, complete, cancel, planned/actual quantity tracking, and material capture
+- Dashboard UI for:
+  - Production overview
+  - Lines list, create, detail, status control, and line batch history
+  - Recipes list, create, detail, status control, material list, and recipe batch history
+  - Batches list, create, detail, lifecycle actions, and batch material list
+
 ## Module Roadmap
 
 | Phase | Module | Status |
@@ -245,7 +261,7 @@ Status: Complete
 | 4 | Fuel Management | Complete |
 | 5 | Maintenance & Spare Parts | Complete |
 | 6 | Procurement | Complete |
-| 7 | Production & Brewing | Planned |
+| 7 | Production & Brewing | Complete |
 | 8 | Quality Control & Lab | Planned |
 | 9 | Finished Goods & Dispatch | Planned |
 | 10 | Sales Integration | Planned |
@@ -253,7 +269,7 @@ Status: Complete
 | 12 | Finance Operations | Planned |
 | 13 | Management Analytics | Planned |
 
-## Adding a New Module (Phases 7+)
+## Adding a New Module (Phases 8+)
 
 1. Create `src/modules/{module}/` with `{module}.service.ts`, `.validation.ts`, and `.types.ts` as needed.
 2. Add API routes under `src/app/api/{module}/`.

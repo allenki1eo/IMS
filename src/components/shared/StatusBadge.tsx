@@ -38,6 +38,8 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   PLANNED: { label: "Planned", variant: "info" },
   DISPATCHED: { label: "Dispatched", variant: "info" },
   COMPLETED: { label: "Completed", variant: "success" },
+  IN_PROGRESS: { label: "In Progress", variant: "warning" },
+  ON_HOLD: { label: "On Hold", variant: "warning" },
   // Transport — Assignment
   RETURNED: { label: "Returned", variant: "secondary" },
   // Transport — Incident
@@ -52,6 +54,8 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   SENT: { label: "Sent", variant: "info" },
   PARTIALLY_RECEIVED: { label: "Partially Received", variant: "warning" },
   RECEIVED: { label: "Received", variant: "success" },
+  // Production
+  ARCHIVED: { label: "Archived", variant: "secondary" },
 };
 
 interface StatusBadgeProps {

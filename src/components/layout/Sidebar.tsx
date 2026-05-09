@@ -7,6 +7,7 @@ import {
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
   Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
+  Factory, FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -115,6 +116,17 @@ const NAV: NavItem[] = [
       { label: "Suppliers", href: "/procurement/suppliers", icon: <Handshake className="h-4 w-4" />, permission: "procurement:supplier:read" },
       { label: "Requests", href: "/procurement/requests", icon: <FileCheck className="h-4 w-4" />, permission: "procurement:request:read" },
       { label: "Orders", href: "/procurement/orders", icon: <ShoppingCart className="h-4 w-4" />, permission: "procurement:order:read" },
+    ],
+  },
+  {
+    label: "Production",
+    icon: <Factory className="h-4 w-4" />,
+    permission: "production:batch:read",
+    children: [
+      { label: "Overview", href: "/production", icon: <BarChart3 className="h-4 w-4" />, permission: "production:report:read" },
+      { label: "Batches", href: "/production/batches", icon: <ClipboardList className="h-4 w-4" />, permission: "production:batch:read" },
+      { label: "Recipes", href: "/production/recipes", icon: <FlaskConical className="h-4 w-4" />, permission: "production:recipe:read" },
+      { label: "Lines", href: "/production/lines", icon: <Factory className="h-4 w-4" />, permission: "production:line:read" },
     ],
   },
   {
