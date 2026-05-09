@@ -4,9 +4,9 @@
 
 A modular, phased ERP for a manufacturing/distribution company. Built with Next.js 15, TypeScript, Prisma, Turso/libSQL/SQLite, and Tailwind CSS plus shadcn-style UI primitives.
 
-**Current Phase: Phase 5 - Maintenance & Spare Parts complete**
+**Current Phase: Phase 6 - Procurement complete**
 
-The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, and Maintenance & Spare Parts modules.
+The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, and Procurement modules.
 
 ## Architecture
 
@@ -96,7 +96,7 @@ Creates:
 - Branch: Head Office (HQ)
 - Departments: Admin, Operations, Finance, Warehouse, Transport, Production, QC, Maintenance, Procurement, HR
 - Roles: Super Admin, Company Admin, Branch Manager, Dept Head, Management, Auditor
-- Permissions for Core, Warehouse, Transport, and Fuel modules
+- Permissions for Core, Warehouse, Transport, Fuel, Maintenance, and Procurement modules
 - Admin user: `admin` / `Admin@1234` (forced password change on first login)
 
 ## Authentication
@@ -219,6 +219,22 @@ Status: Complete
   - Spare parts list, create, detail, and stock/transaction views
   - Parts receipts list
 
+### Phase 6 - Procurement
+
+Status: Complete
+
+- Prisma schema for suppliers, purchase requests, purchase request lines, purchase orders, and purchase order lines
+- Seeded permissions and sidebar navigation for Procurement
+- Services and API routes for:
+  - Suppliers: list, create, detail, update, activate/deactivate, and purchase order history
+  - Purchase requests: list, create, detail, submit, approve, reject, line totals, and conversion tracking
+  - Purchase orders: list, create, detail, send to supplier, receive quantities, partial receipt status, and totals
+- Dashboard UI for:
+  - Procurement overview
+  - Suppliers list, create, detail, status control, and order history
+  - Purchase requests list, create, detail, submit/approve/reject lifecycle, and related orders
+  - Purchase orders list, create, detail, send, and receiving updates
+
 ## Module Roadmap
 
 | Phase | Module | Status |
@@ -228,7 +244,7 @@ Status: Complete
 | 3 | Transport & Fleet | Complete |
 | 4 | Fuel Management | Complete |
 | 5 | Maintenance & Spare Parts | Complete |
-| 6 | Procurement | Planned |
+| 6 | Procurement | Complete |
 | 7 | Production & Brewing | Planned |
 | 8 | Quality Control & Lab | Planned |
 | 9 | Finished Goods & Dispatch | Planned |
@@ -237,7 +253,7 @@ Status: Complete
 | 12 | Finance Operations | Planned |
 | 13 | Management Analytics | Planned |
 
-## Adding a New Module (Phases 6+)
+## Adding a New Module (Phases 7+)
 
 1. Create `src/modules/{module}/` with `{module}.service.ts`, `.validation.ts`, and `.types.ts` as needed.
 2. Add API routes under `src/app/api/{module}/`.

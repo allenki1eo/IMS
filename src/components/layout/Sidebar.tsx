@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Shield, Building2, GitBranch, Layers,
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
   Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
-  Fuel, Receipt, TrendingDown, Wrench, PenTool,
+  Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -104,6 +104,17 @@ const NAV: NavItem[] = [
       { label: "Schedules", href: "/maintenance/schedules", icon: <PenTool className="h-4 w-4" />, permission: "maintenance:schedule:read" },
       { label: "Spare Parts", href: "/maintenance/parts", icon: <Package className="h-4 w-4" />, permission: "maintenance:part:read" },
       { label: "Parts Receipts", href: "/maintenance/receipts", icon: <Receipt className="h-4 w-4" />, permission: "maintenance:receipt:read" },
+    ],
+  },
+  {
+    label: "Procurement",
+    icon: <ShoppingCart className="h-4 w-4" />,
+    permission: "procurement:request:read",
+    children: [
+      { label: "Overview", href: "/procurement", icon: <BarChart3 className="h-4 w-4" />, permission: "procurement:report:read" },
+      { label: "Suppliers", href: "/procurement/suppliers", icon: <Handshake className="h-4 w-4" />, permission: "procurement:supplier:read" },
+      { label: "Requests", href: "/procurement/requests", icon: <FileCheck className="h-4 w-4" />, permission: "procurement:request:read" },
+      { label: "Orders", href: "/procurement/orders", icon: <ShoppingCart className="h-4 w-4" />, permission: "procurement:order:read" },
     ],
   },
   {

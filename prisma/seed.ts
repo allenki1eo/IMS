@@ -118,6 +118,21 @@ const PERMISSIONS = [
   { module: "maintenance", resource: "receipt", action: "read", description: "View spare part receipts" },
   { module: "maintenance", resource: "receipt", action: "create", description: "Receive spare parts into stock" },
   { module: "maintenance", resource: "report", action: "read", description: "View maintenance reports" },
+  // Procurement
+  { module: "procurement", resource: "supplier", action: "read", description: "View suppliers" },
+  { module: "procurement", resource: "supplier", action: "create", description: "Create suppliers" },
+  { module: "procurement", resource: "supplier", action: "update", description: "Edit suppliers" },
+  { module: "procurement", resource: "request", action: "read", description: "View purchase requests" },
+  { module: "procurement", resource: "request", action: "create", description: "Create purchase requests" },
+  { module: "procurement", resource: "request", action: "update", description: "Edit purchase requests" },
+  { module: "procurement", resource: "request", action: "submit", description: "Submit purchase requests" },
+  { module: "procurement", resource: "request", action: "approve", description: "Approve purchase requests" },
+  { module: "procurement", resource: "order", action: "read", description: "View purchase orders" },
+  { module: "procurement", resource: "order", action: "create", description: "Create purchase orders" },
+  { module: "procurement", resource: "order", action: "update", description: "Edit purchase orders" },
+  { module: "procurement", resource: "order", action: "send", description: "Send purchase orders" },
+  { module: "procurement", resource: "order", action: "receive", description: "Receive purchase orders" },
+  { module: "procurement", resource: "report", action: "read", description: "View procurement reports" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -170,6 +185,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "maintenance:part:read", "maintenance:part:create", "maintenance:part:update",
     "maintenance:receipt:read", "maintenance:receipt:create",
     "maintenance:report:read",
+    "procurement:supplier:read", "procurement:supplier:create", "procurement:supplier:update",
+    "procurement:request:read", "procurement:request:create", "procurement:request:update", "procurement:request:submit", "procurement:request:approve",
+    "procurement:order:read", "procurement:order:create", "procurement:order:update", "procurement:order:send", "procurement:order:receive",
+    "procurement:report:read",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -202,6 +221,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "maintenance:part:read", "maintenance:part:create", "maintenance:part:update",
     "maintenance:receipt:read", "maintenance:receipt:create",
     "maintenance:report:read",
+    "procurement:supplier:read", "procurement:supplier:create", "procurement:supplier:update",
+    "procurement:request:read", "procurement:request:create", "procurement:request:update", "procurement:request:submit", "procurement:request:approve",
+    "procurement:order:read", "procurement:order:create", "procurement:order:update", "procurement:order:send", "procurement:order:receive",
+    "procurement:report:read",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -223,6 +246,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "maintenance:schedule:read", "maintenance:workorder:read", "maintenance:workorder:create", "maintenance:workorder:update",
     "maintenance:part:read", "maintenance:receipt:read", "maintenance:receipt:create",
     "maintenance:report:read",
+    "procurement:supplier:read",
+    "procurement:request:read", "procurement:request:create", "procurement:request:update", "procurement:request:submit",
+    "procurement:order:read",
+    "procurement:report:read",
   ],
   MANAGEMENT: [
     "auth:session:create",
@@ -238,6 +265,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "transport:vehicle:read", "transport:driver:read", "transport:trip:read", "transport:incident:read",
     "fuel:tank:read", "fuel:receipt:read", "fuel:issue:read", "fuel:price:read", "fuel:report:read",
     "maintenance:schedule:read", "maintenance:workorder:read", "maintenance:part:read", "maintenance:report:read",
+    "procurement:supplier:read", "procurement:request:read", "procurement:request:approve",
+    "procurement:order:read", "procurement:report:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -254,6 +283,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "transport:vehicle:read", "transport:driver:read", "transport:trip:read", "transport:incident:read",
     "fuel:tank:read", "fuel:receipt:read", "fuel:issue:read", "fuel:price:read", "fuel:report:read",
     "maintenance:schedule:read", "maintenance:workorder:read", "maintenance:part:read", "maintenance:report:read",
+    "procurement:supplier:read", "procurement:request:read",
+    "procurement:order:read", "procurement:report:read",
   ],
 };
 

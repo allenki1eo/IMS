@@ -45,6 +45,13 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   INVESTIGATING: { label: "Investigating", variant: "warning" },
   RESOLVED: { label: "Resolved", variant: "success" },
   CLOSED: { label: "Closed", variant: "secondary" },
+  // Procurement
+  DRAFT: { label: "Draft", variant: "secondary" },
+  SUBMITTED: { label: "Submitted", variant: "warning" },
+  CONVERTED: { label: "Converted", variant: "success" },
+  SENT: { label: "Sent", variant: "info" },
+  PARTIALLY_RECEIVED: { label: "Partially Received", variant: "warning" },
+  RECEIVED: { label: "Received", variant: "success" },
 };
 
 interface StatusBadgeProps {
