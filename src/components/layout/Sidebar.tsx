@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Shield, Building2, GitBranch, Layers,
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
-  Menu, X,
+  Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -50,6 +50,22 @@ const NAV: NavItem[] = [
     href: "/employees",
     icon: <UserCircle className="h-4 w-4" />,
     permission: "employees:employee:read",
+  },
+  {
+    label: "Warehouse",
+    icon: <Warehouse className="h-4 w-4" />,
+    permission: "warehouse:warehouse:read",
+    children: [
+      { label: "Overview", href: "/warehouse", icon: <BarChart3 className="h-4 w-4" />, permission: "warehouse:stock:read" },
+      { label: "Warehouses", href: "/warehouse/warehouses", icon: <Warehouse className="h-4 w-4" />, permission: "warehouse:warehouse:read" },
+      { label: "Items", href: "/warehouse/items", icon: <Package className="h-4 w-4" />, permission: "warehouse:item:read" },
+      { label: "Stock", href: "/warehouse/stock", icon: <BarChart3 className="h-4 w-4" />, permission: "warehouse:stock:read" },
+      { label: "GRN", href: "/warehouse/grn", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:grn:read" },
+      { label: "Transfers", href: "/warehouse/transfers", icon: <Truck className="h-4 w-4" />, permission: "warehouse:transfer:read" },
+      { label: "Adjustments", href: "/warehouse/adjustments", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:adjustment:read" },
+      { label: "Categories", href: "/warehouse/categories", icon: <Layers className="h-4 w-4" />, permission: "warehouse:category:read" },
+      { label: "UOM", href: "/warehouse/uom", icon: <Layers className="h-4 w-4" />, permission: "warehouse:uom:read" },
+    ],
   },
   {
     label: "Approvals",

@@ -60,6 +60,7 @@ model Branch {
   departments Department[]
   employees   Employee[]
   userRoles   UserRole[]
+  warehouses  Warehouse[]
 
   @@map("branches")
 }
@@ -369,4 +370,283 @@ model ApprovalAction {
   request ApprovalRequest @relation(fields: [requestId], references: [id])
 
   @@map("approval_actions")
+}
+
+// ─────────────────────────────────────────────
+// WAREHOUSE MANAGEMENT
+// ─────────────────────────────────────────────
+
+model Warehouse {
+  id          String   @id @default(cuid())
+  companyId   String
+  branchId    String?
+  name        String
+  code        String   @unique
+  address     String?
+  managerId   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  branch        Branch?             @relation(fields: [branchId], references: [id])
+  locations     StorageLocation[]
+  stockBalances StockBalance[]
+  stockLedger   StockLedger[]
+  grns          GoodsReceivedNote[]
+  fromTransfers StockTransfer[]     @relation("TransferFrom")
+  toTransfers   StockTransfer[]     @relation("TransferTo")
+  adjustments   StockAdjustment[]
+
+  @@index([companyId])
+  @@map("warehouses")
+}
+
+model StorageLocation {
+  id           String   @id @default(cuid())
+  warehouseId  String
+  parentId     String?
+  name         String
+  code         String
+  locationType String   @default("AREA")
+  capacity     Float?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  warehouse     Warehouse         @relation(fields: [warehouseId], references: [id])
+  parent        StorageLocation?  @relation("LocationHierarchy", fields: [parentId], references: [id])
+  children      StorageLocation[] @relation("LocationHierarchy")
+  stockBalances StockBalance[]
+  grnLines      GRNLine[]
+  adjustLines   StockAdjustmentLine[]
+  fromLines     StockTransferLine[] @relation("TransferLineFrom")
+  toLines       StockTransferLine[] @relation("TransferLineTo")
+
+  @@unique([warehouseId, code])
+  @@map("storage_locations")
+}
+
+model ItemCategory {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  code        String
+  description String?
+  parentId    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  parent   ItemCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children ItemCategory[] @relation("CategoryHierarchy")
+  items    Item[]
+
+  @@unique([companyId, code])
+  @@map("item_categories")
+}
+
+model UnitOfMeasure {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  code      String
+  symbol    String
+  isBase    Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  items Item[]
+
+  @@unique([companyId, code])
+  @@map("units_of_measure")
+}
+
+model Item {
+  id           String   @id @default(cuid())
+  companyId    String
+  code         String
+  name         String
+  description  String?
+  categoryId   String?
+  uomId        String
+  itemType     String   @default("RAW_MATERIAL")
+  minStock     Float    @default(0)
+  maxStock     Float?
+  reorderPoint Float?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+
+  category        ItemCategory?       @relation(fields: [categoryId], references: [id])
+  uom             UnitOfMeasure       @relation(fields: [uomId], references: [id])
+  stockBalances   StockBalance[]
+  stockLedger     StockLedger[]
+  grnLines        GRNLine[]
+  transferLines   StockTransferLine[]
+  adjustmentLines StockAdjustmentLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("items")
+}
+
+model StockBalance {
+  id          String   @id @default(cuid())
+  itemId      String
+  warehouseId String
+  locationId  String?
+  quantity    Float    @default(0)
+  updatedAt   DateTime @updatedAt
+
+  item      Item             @relation(fields: [itemId], references: [id])
+  warehouse Warehouse        @relation(fields: [warehouseId], references: [id])
+  location  StorageLocation? @relation(fields: [locationId], references: [id])
+
+  @@unique([itemId, warehouseId, locationId])
+  @@index([warehouseId])
+  @@map("stock_balances")
+}
+
+model StockLedger {
+  id              String   @id @default(cuid())
+  companyId       String
+  itemId          String
+  warehouseId     String
+  locationId      String?
+  transactionType String
+  quantity        Float
+  balanceAfter    Float
+  unitCost        Float?
+  totalCost       Float?
+  referenceType   String?
+  referenceId     String?
+  notes           String?
+  createdById     String
+  createdAt       DateTime @default(now())
+
+  item      Item      @relation(fields: [itemId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@index([itemId, warehouseId])
+  @@index([referenceType, referenceId])
+  @@index([createdAt])
+  @@map("stock_ledger")
+}
+
+model GoodsReceivedNote {
+  id           String    @id @default(cuid())
+  companyId    String
+  warehouseId  String
+  reference    String    @unique
+  supplierName String?
+  supplierRef  String?
+  status       String    @default("DRAFT")
+  notes        String?
+  receivedById String
+  receivedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  createdById  String
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  lines     GRNLine[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("goods_received_notes")
+}
+
+model GRNLine {
+  id         String  @id @default(cuid())
+  grnId      String
+  itemId     String
+  locationId String?
+  quantity   Float
+  unitCost   Float?
+  totalCost  Float?
+  notes      String?
+
+  grn      GoodsReceivedNote @relation(fields: [grnId], references: [id])
+  item     Item               @relation(fields: [itemId], references: [id])
+  location StorageLocation?   @relation(fields: [locationId], references: [id])
+
+  @@map("grn_lines")
+}
+
+model StockTransfer {
+  id              String    @id @default(cuid())
+  companyId       String
+  fromWarehouseId String
+  toWarehouseId   String
+  reference       String    @unique
+  status          String    @default("DRAFT")
+  notes           String?
+  dispatchedAt    DateTime?
+  receivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+
+  fromWarehouse Warehouse         @relation("TransferFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse         @relation("TransferTo", fields: [toWarehouseId], references: [id])
+  lines         StockTransferLine[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("stock_transfers")
+}
+
+model StockTransferLine {
+  id             String  @id @default(cuid())
+  transferId     String
+  itemId         String
+  fromLocationId String?
+  toLocationId   String?
+  quantity       Float
+
+  transfer     StockTransfer    @relation(fields: [transferId], references: [id])
+  item         Item              @relation(fields: [itemId], references: [id])
+  fromLocation StorageLocation?  @relation("TransferLineFrom", fields: [fromLocationId], references: [id])
+  toLocation   StorageLocation?  @relation("TransferLineTo", fields: [toLocationId], references: [id])
+
+  @@map("stock_transfer_lines")
+}
+
+model StockAdjustment {
+  id                String    @id @default(cuid())
+  companyId         String
+  warehouseId       String
+  reference         String    @unique
+  reason            String
+  notes             String?
+  status            String    @default("DRAFT")
+  approvalRequestId String?
+  submittedAt       DateTime?
+  appliedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdById       String
+
+  warehouse Warehouse             @relation(fields: [warehouseId], references: [id])
+  lines     StockAdjustmentLine[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("stock_adjustments")
+}
+
+model StockAdjustmentLine {
+  id           String  @id @default(cuid())
+  adjustmentId String
+  itemId       String
+  locationId   String?
+  systemQty    Float
+  countedQty   Float
+  difference   Float
+
+  adjustment StockAdjustment  @relation(fields: [adjustmentId], references: [id])
+  item       Item               @relation(fields: [itemId], references: [id])
+  location   StorageLocation?   @relation(fields: [locationId], references: [id])
+
+  @@map("stock_adjustment_lines")
 }
