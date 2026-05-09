@@ -103,12 +103,11 @@ export default function WorkOrderDetailPage() {
     setLoading(true);
     Promise.all([
       fetch(`/api/maintenance/work-orders/${id}`).then((r) => r.json()),
-      fetch(`/api/maintenance/work-orders/${id}/items`).then((r) => r.json()),
       fetch("/api/maintenance/spare-parts?pageSize=200").then((r) => r.json()),
     ])
-      .then(([woData, itemsData, partsData]) => {
+      .then(([woData, partsData]) => {
         setWorkOrder(woData.data);
-        setItems(itemsData.data ?? []);
+        setItems(woData.data?.items ?? []);
         setSpareParts(partsData.data ?? []);
       })
       .catch(() => toast.error("Failed to load work order"))

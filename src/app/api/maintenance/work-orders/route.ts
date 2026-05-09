@@ -16,11 +16,15 @@ export async function GET(request: NextRequest) {
   const vehicleId = searchParams.get("vehicleId") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
   const priority = searchParams.get("priority") ?? undefined;
+  const fromStr = searchParams.get("from");
+  const toStr = searchParams.get("to");
 
   const { data, meta } = await listWorkOrders(companyId, {
     vehicleId,
     status,
     priority,
+    completedFrom: fromStr ? new Date(fromStr) : undefined,
+    completedTo: toStr ? new Date(toStr) : undefined,
     page: pagination.page,
     pageSize: pagination.pageSize,
   });

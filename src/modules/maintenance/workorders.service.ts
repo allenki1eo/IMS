@@ -13,11 +13,13 @@ export async function listWorkOrders(
     vehicleId?: string;
     status?: string;
     priority?: string;
+    completedFrom?: Date;
+    completedTo?: Date;
     page: number;
     pageSize: number;
   }
 ) {
-  const { vehicleId, status, priority, page, pageSize } = params;
+  const { vehicleId, status, priority, completedFrom, completedTo, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
@@ -25,6 +27,14 @@ export async function listWorkOrders(
     ...(vehicleId ? { vehicleId } : {}),
     ...(status ? { status } : {}),
     ...(priority ? { priority } : {}),
+    ...(completedFrom || completedTo
+      ? {
+          completedAt: {
+            ...(completedFrom ? { gte: completedFrom } : {}),
+            ...(completedTo ? { lte: completedTo } : {}),
+          },
+        }
+      : {}),
   };
 
   const [workOrders, total] = await Promise.all([
@@ -122,7 +132,7 @@ export async function createWorkOrder(
       reference,
       maintenanceType: data.maintenanceType,
       description: data.description ?? "",
-      priority: data.priority ?? "NORMAL",
+      priority: data.priority ?? "MEDIUM",
       status: "PENDING",
       requestedById: createdById,
       assignedToId: data.assignedToId ?? null,
@@ -143,7 +153,7 @@ export async function createWorkOrder(
       reference,
       vehicleId: data.vehicleId,
       maintenanceType: data.maintenanceType,
-      priority: data.priority ?? "NORMAL",
+      priority: data.priority ?? "MEDIUM",
     },
     description: `Created work order: ${reference} for vehicle ${vehicle.plateNumber}`,
     ipAddress,
