@@ -686,6 +686,7 @@ model Vehicle {
   trips       TripOrder[]
   incidents   VehicleIncident[]
   documents   VehicleDocument[]
+  fuelIssues  FuelIssue[]
 
   @@index([companyId])
   @@index([status])
@@ -726,6 +727,7 @@ model Driver {
   employee    Employee            @relation(fields: [employeeId], references: [id])
   assignments VehicleAssignment[]
   trips       TripOrder[]
+  fuelIssues  FuelIssue[]
 
   @@index([companyId])
   @@map("drivers")
@@ -837,4 +839,101 @@ model VehicleIncident {
   @@index([vehicleId])
   @@index([status])
   @@map("vehicle_incidents")
+}
+
+// ─────────────────────────────────────────────
+// FUEL MANAGEMENT
+// ─────────────────────────────────────────────
+
+model FuelTank {
+  id           String   @id @default(cuid())
+  companyId    String
+  branchId     String?
+  name         String
+  code         String   @unique
+  fuelType     String   @default("DIESEL")
+  capacity     Float
+  currentLevel Float    @default(0)
+  minLevel     Float    @default(0)
+  isActive     Boolean  @default(true)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+
+  receipts FuelReceipt[]
+  issues   FuelIssue[]
+
+  @@index([companyId])
+  @@map("fuel_tanks")
+}
+
+model FuelReceipt {
+  id               String    @id @default(cuid())
+  companyId        String
+  tankId           String
+  reference        String    @unique
+  supplierName     String?
+  deliveryNoteRef  String?
+  quantityLiters   Float
+  pricePerLiter    Float?
+  totalCost        Float?
+  status           String    @default("DRAFT")
+  notes            String?
+  receivedById     String
+  receivedAt       DateTime?
+  confirmedById    String?
+  confirmedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdById      String
+
+  tank FuelTank @relation(fields: [tankId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@map("fuel_receipts")
+}
+
+model FuelIssue {
+  id              String   @id @default(cuid())
+  companyId       String
+  tankId          String
+  vehicleId       String
+  driverId        String?
+  tripId          String?
+  reference       String   @unique
+  quantityLiters  Float
+  pricePerLiter   Float?
+  totalCost       Float?
+  odometerReading Float?
+  issuedById      String
+  issuedAt        DateTime @default(now())
+  notes           String?
+  createdAt       DateTime @default(now())
+  createdById     String
+
+  tank    FuelTank  @relation(fields: [tankId], references: [id])
+  vehicle Vehicle   @relation(fields: [vehicleId], references: [id])
+  driver  Driver?   @relation(fields: [driverId], references: [id])
+
+  @@index([companyId])
+  @@index([vehicleId])
+  @@index([issuedAt])
+  @@map("fuel_issues")
+}
+
+model FuelPrice {
+  id            String    @id @default(cuid())
+  companyId     String
+  fuelType      String
+  pricePerLiter Float
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  notes         String?
+  recordedById  String
+  createdAt     DateTime  @default(now())
+
+  @@index([companyId, fuelType])
+  @@map("fuel_prices")
 }

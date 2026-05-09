@@ -92,6 +92,18 @@ const PERMISSIONS = [
   { module: "transport", resource: "incident", action: "read", description: "View vehicle incidents" },
   { module: "transport", resource: "incident", action: "create", description: "Report vehicle incidents" },
   { module: "transport", resource: "incident", action: "update", description: "Update incident records" },
+  // Fuel
+  { module: "fuel", resource: "tank", action: "read", description: "View fuel tanks" },
+  { module: "fuel", resource: "tank", action: "create", description: "Create fuel tanks" },
+  { module: "fuel", resource: "tank", action: "update", description: "Edit fuel tanks" },
+  { module: "fuel", resource: "receipt", action: "read", description: "View fuel receipts" },
+  { module: "fuel", resource: "receipt", action: "create", description: "Create fuel receipts" },
+  { module: "fuel", resource: "receipt", action: "confirm", description: "Confirm fuel receipts into tank" },
+  { module: "fuel", resource: "issue", action: "read", description: "View fuel issues" },
+  { module: "fuel", resource: "issue", action: "create", description: "Issue fuel to vehicles" },
+  { module: "fuel", resource: "price", action: "read", description: "View fuel prices" },
+  { module: "fuel", resource: "price", action: "create", description: "Record fuel prices" },
+  { module: "fuel", resource: "report", action: "read", description: "View fuel consumption reports" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -134,6 +146,11 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "transport:assignment:read", "transport:assignment:create", "transport:assignment:update",
     "transport:trip:read", "transport:trip:create", "transport:trip:update", "transport:trip:dispatch", "transport:trip:complete",
     "transport:incident:read", "transport:incident:create", "transport:incident:update",
+    "fuel:tank:read", "fuel:tank:create", "fuel:tank:update",
+    "fuel:receipt:read", "fuel:receipt:create", "fuel:receipt:confirm",
+    "fuel:issue:read", "fuel:issue:create",
+    "fuel:price:read", "fuel:price:create",
+    "fuel:report:read",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -156,6 +173,11 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "transport:assignment:read", "transport:assignment:create", "transport:assignment:update",
     "transport:trip:read", "transport:trip:create", "transport:trip:update", "transport:trip:dispatch", "transport:trip:complete",
     "transport:incident:read", "transport:incident:create", "transport:incident:update",
+    "fuel:tank:read", "fuel:tank:create", "fuel:tank:update",
+    "fuel:receipt:read", "fuel:receipt:create", "fuel:receipt:confirm",
+    "fuel:issue:read", "fuel:issue:create",
+    "fuel:price:read", "fuel:price:create",
+    "fuel:report:read",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -172,6 +194,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "transport:vehicle:read", "transport:driver:read", "transport:assignment:read",
     "transport:trip:read", "transport:trip:create", "transport:trip:update", "transport:trip:dispatch",
     "transport:incident:read", "transport:incident:create",
+    "fuel:tank:read", "fuel:receipt:read", "fuel:issue:read", "fuel:issue:create",
+    "fuel:price:read", "fuel:report:read",
   ],
   MANAGEMENT: [
     "auth:session:create",
@@ -185,6 +209,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:stock:read",
     "warehouse:grn:read", "warehouse:transfer:read", "warehouse:adjustment:read",
     "transport:vehicle:read", "transport:driver:read", "transport:trip:read", "transport:incident:read",
+    "fuel:tank:read", "fuel:receipt:read", "fuel:issue:read", "fuel:price:read", "fuel:report:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -199,6 +224,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:stock:read",
     "warehouse:grn:read", "warehouse:transfer:read", "warehouse:adjustment:read",
     "transport:vehicle:read", "transport:driver:read", "transport:trip:read", "transport:incident:read",
+    "fuel:tank:read", "fuel:receipt:read", "fuel:issue:read", "fuel:price:read", "fuel:report:read",
   ],
 };
 

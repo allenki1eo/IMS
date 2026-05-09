@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Users, Shield, Building2, GitBranch, Layers,
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
   Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
+  Fuel, Receipt, TrendingDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -78,6 +79,19 @@ const NAV: NavItem[] = [
       { label: "Assignments", href: "/transport/assignments", icon: <GitBranch className="h-4 w-4" />, permission: "transport:assignment:read" },
       { label: "Trips", href: "/transport/trips", icon: <MapPin className="h-4 w-4" />, permission: "transport:trip:read" },
       { label: "Incidents", href: "/transport/incidents", icon: <AlertTriangle className="h-4 w-4" />, permission: "transport:incident:read" },
+    ],
+  },
+  {
+    label: "Fuel",
+    icon: <Fuel className="h-4 w-4" />,
+    permission: "fuel:tank:read",
+    children: [
+      { label: "Overview", href: "/fuel", icon: <BarChart3 className="h-4 w-4" />, permission: "fuel:report:read" },
+      { label: "Tanks", href: "/fuel/tanks", icon: <Fuel className="h-4 w-4" />, permission: "fuel:tank:read" },
+      { label: "Receipts", href: "/fuel/receipts", icon: <Receipt className="h-4 w-4" />, permission: "fuel:receipt:read" },
+      { label: "Issues", href: "/fuel/issues", icon: <TrendingDown className="h-4 w-4" />, permission: "fuel:issue:read" },
+      { label: "Prices", href: "/fuel/prices", icon: <BarChart3 className="h-4 w-4" />, permission: "fuel:price:read" },
+      { label: "Reports", href: "/fuel/reports", icon: <ClipboardList className="h-4 w-4" />, permission: "fuel:report:read" },
     ],
   },
   {
