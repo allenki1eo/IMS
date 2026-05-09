@@ -4,9 +4,9 @@
 
 A modular, phased ERP for a manufacturing/distribution company. Built with Next.js 15, TypeScript, Prisma, Turso/libSQL/SQLite, and Tailwind CSS plus shadcn-style UI primitives.
 
-**Current Phase: Phase 7 - Production & Brewing complete**
+**Current Phase: Phase 9 - Finished Goods & Dispatch complete**
 
-The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, Procurement, and Production & Brewing modules.
+The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, Procurement, Production & Brewing, Quality Control & Lab, and Finished Goods & Dispatch modules.
 
 ## Architecture
 
@@ -251,6 +251,38 @@ Status: Complete
   - Recipes list, create, detail, status control, material list, and recipe batch history
   - Batches list, create, detail, lifecycle actions, and batch material list
 
+### Phase 8 - Quality Control & Lab
+
+Status: Complete
+
+- Prisma schema for quality standards, standard parameters, quality tests, test results, and non-conformance reports (NCR)
+- Seeded permissions and sidebar navigation for QC
+- Services and API routes for:
+  - Quality standards: list, create, detail, update, activate/deactivate, and parameter management
+  - Quality tests: list, create, detail, start, complete, cancel, result recording, and pass/fail determination
+  - Non-conformance reports (NCR): list, create, detail, resolve, and close with severity tracking
+- Dashboard UI for:
+  - QC overview
+  - Standards list, create, detail, status control, and parameter list
+  - Tests list, create, detail, lifecycle actions, and result entry
+  - NCR list, create, detail, resolve, and close actions
+
+### Phase 9 - Finished Goods & Dispatch
+
+Status: Complete
+
+- Prisma schema for finished goods products, FG lots/inventory, dispatch orders, and dispatch order lines
+- Seeded permissions and sidebar navigation for Dispatch
+- Services and API routes for:
+  - Finished goods products: list, create, detail, update, and lot history
+  - FG inventory/lots: list, create, detail, update, status tracking, and available quantity
+  - Dispatch orders: list, create, detail, confirm, dispatch, deliver, cancel, and line management
+- Dashboard UI for:
+  - Dispatch overview
+  - Products list, create, detail, and lot history
+  - Inventory list, create, detail, and status tracking
+  - Orders list, create, detail, and lifecycle actions (confirm, dispatch, deliver)
+
 ## Module Roadmap
 
 | Phase | Module | Status |
@@ -262,8 +294,8 @@ Status: Complete
 | 5 | Maintenance & Spare Parts | Complete |
 | 6 | Procurement | Complete |
 | 7 | Production & Brewing | Complete |
-| 8 | Quality Control & Lab | Planned |
-| 9 | Finished Goods & Dispatch | Planned |
+| 8 | Quality Control & Lab | Complete |
+| 9 | Finished Goods & Dispatch | Complete |
 | 10 | Sales Integration | Planned |
 | 11 | HR Integration | Planned |
 | 12 | Finance Operations | Planned |
