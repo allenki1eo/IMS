@@ -1,76 +1,69 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { LoadingState } from "@/components/shared/LoadingState";
+import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate, formatLiters, formatMoney } from "../../_components/fuel-ui";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Receipt {
   id: string;
   reference: string;
+  tank?: { id: string; name: string; currentLevel: number; capacity: number } | null;
   supplierName: string | null;
   deliveryNoteRef: string | null;
-  quantityLiters: number;
+  quantity: number;
   pricePerLiter: number | null;
   totalCost: number | null;
   status: string;
-  createdAt: string;
-  confirmedAt: string | null;
   notes: string | null;
-  tank?: {
-    id: string;
-    name: string;
-    code: string;
-    fuelType: string;
-    capacity: number;
-    currentLevel: number;
-  } | null;
+  createdAt: string;
+  createdBy?: { fullName: string } | null;
 }
 
-export default function FuelReceiptDetailPage() {
-  const params = useParams<{ id: string }>();
+export default function ReceiptDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(true);
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  const load = useCallback(async () => {
+  const loadReceipt = useCallback(() => {
     setLoading(true);
-    try {
-      const res = await fetch(`/api/fuel-receipts/${params.id}`);
-      const json = await res.json();
-      if (!res.ok) { toast.error(json.error ?? "Failed to load receipt"); return; }
-      setReceipt(json.data);
-    } catch {
-      toast.error("Failed to load receipt");
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id]);
+    fetch(`/api/fuel-receipts/${id}`)
+      .then((r) => r.json())
+      .then((d) => setReceipt(d.data))
+      .catch(() => toast.error("Failed to load receipt"))
+      .finally(() => setLoading(false));
+  }, [id]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { loadReceipt(); }, [loadReceipt]);
 
-  async function confirmReceipt() {
-    if (!receipt) return;
+  async function handleConfirm() {
     setConfirming(true);
     try {
-      const res = await fetch(`/api/fuel-receipts/${receipt.id}/confirm`, { method: "POST" });
+      const res = await fetch(`/api/fuel-receipts/${id}/confirm`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to confirm receipt"); return; }
-      toast.success("Fuel receipt confirmed");
-      setConfirmOpen(false);
-      load();
+      toast.success("Receipt confirmed — tank level updated");
+      setShowConfirmDialog(false);
+      loadReceipt();
     } catch {
       toast.error("Network error");
     } finally {
@@ -79,75 +72,172 @@ export default function FuelReceiptDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!receipt) return <div className="text-sm text-muted-foreground">Fuel receipt not found.</div>;
+  if (!receipt) return <div className="text-muted-foreground">Receipt not found.</div>;
+
+  const newLevel = receipt.tank
+    ? Math.min(receipt.tank.currentLevel + receipt.quantity, receipt.tank.capacity)
+    : null;
 
   return (
     <div>
       <PageHeader
         title={receipt.reference}
-        description="Fuel receipt details"
+        description="Fuel Receipt"
         actions={
-          <>
+          <div className="flex gap-2">
+            {receipt.status === "DRAFT" && (
+              <PermissionGuard require="fuel:receipt:confirm">
+                <Button onClick={() => setShowConfirmDialog(true)}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirm Receipt
+                </Button>
+              </PermissionGuard>
+            )}
             <Button variant="outline" asChild>
               <Link href="/fuel/receipts">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Link>
             </Button>
-            {receipt.status === "DRAFT" && (
-              <PermissionGuard require="fuel:receipt:confirm">
-                <Button onClick={() => setConfirmOpen(true)}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirm Receipt
-                </Button>
-              </PermissionGuard>
-            )}
-          </>
+          </div>
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Status</CardTitle></CardHeader>
-          <CardContent><StatusBadge status={receipt.status} /></CardContent>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Receipt Details</CardTitle>
+            <StatusBadge status={receipt.status} />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Reference</p>
+                <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{receipt.reference}</code>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Tank</p>
+                <p className="font-medium">
+                  {receipt.tank ? (
+                    <Link href={`/fuel/tanks/${receipt.tank.id}`} className="hover:underline">
+                      {receipt.tank.name}
+                    </Link>
+                  ) : "—"}
+                </p>
+                {receipt.tank && (
+                  <p className="text-xs text-muted-foreground">
+                    Current: {receipt.tank.currentLevel.toLocaleString()} / {receipt.tank.capacity.toLocaleString()} L
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="text-muted-foreground">Supplier</p>
+                <p className="font-medium">{receipt.supplierName ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Delivery Note Ref</p>
+                <p className="font-medium">{receipt.deliveryNoteRef ?? "—"}</p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Quantity</p>
+                <p className="text-lg font-bold">{receipt.quantity.toLocaleString()} L</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Price / Liter</p>
+                <p className="text-lg font-bold">
+                  {receipt.pricePerLiter != null ? `$${receipt.pricePerLiter.toFixed(3)}` : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Total Cost</p>
+                <p className="text-lg font-bold">
+                  {receipt.totalCost != null
+                    ? `$${receipt.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : "—"}
+                </p>
+              </div>
+            </div>
+
+            {receipt.notes && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                  <p className="text-sm">{receipt.notes}</p>
+                </div>
+              </>
+            )}
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Quantity</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatLiters(receipt.quantityLiters)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Price / Liter</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatMoney(receipt.pricePerLiter)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Total Cost</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatMoney(receipt.totalCost)}</div></CardContent>
-        </Card>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Metadata</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-2">
+              <div>
+                <p className="text-muted-foreground">Created At</p>
+                <p className="font-medium">{format(new Date(receipt.createdAt), "dd MMM yyyy HH:mm")}</p>
+              </div>
+              {receipt.createdBy && (
+                <div>
+                  <p className="text-muted-foreground">Created By</p>
+                  <p className="font-medium">{receipt.createdBy.fullName}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      <Card className="max-w-3xl">
-        <CardHeader><CardTitle className="text-base">Receipt Information</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 text-sm">
-          <div><span className="text-muted-foreground">Tank</span><div className="font-medium">{receipt.tank?.name ?? "-"} {receipt.tank ? `(${receipt.tank.code})` : ""}</div></div>
-          <div><span className="text-muted-foreground">Fuel Type</span><div className="font-medium">{receipt.tank?.fuelType ?? "-"}</div></div>
-          <div><span className="text-muted-foreground">Supplier</span><div className="font-medium">{receipt.supplierName ?? "-"}</div></div>
-          <div><span className="text-muted-foreground">Delivery Note</span><div className="font-medium">{receipt.deliveryNoteRef ?? "-"}</div></div>
-          <div><span className="text-muted-foreground">Created</span><div className="font-medium">{formatDate(receipt.createdAt)}</div></div>
-          <div><span className="text-muted-foreground">Confirmed</span><div className="font-medium">{formatDate(receipt.confirmedAt)}</div></div>
-          {receipt.notes && <div className="sm:col-span-2"><span className="text-muted-foreground">Notes</span><div className="font-medium">{receipt.notes}</div></div>}
-        </CardContent>
-      </Card>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title="Confirm fuel receipt?"
-        description="This will increase the selected tank level and lock the receipt status."
-        confirmLabel="Confirm Receipt"
-        loading={confirming}
-        onConfirm={confirmReceipt}
-      />
+      {/* Confirm Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Receipt</DialogTitle>
+            <DialogDescription>
+              This will mark the receipt as confirmed and update the tank level.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tank</span>
+              <span className="font-medium">{receipt.tank?.name ?? "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Quantity to Add</span>
+              <span className="font-medium text-green-600">+{receipt.quantity.toLocaleString()} L</span>
+            </div>
+            {receipt.tank && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Current Level</span>
+                  <span>{receipt.tank.currentLevel.toLocaleString()} L</span>
+                </div>
+                <div className="flex justify-between border-t pt-3 font-semibold">
+                  <span>New Level</span>
+                  <span className="text-green-600">{newLevel?.toLocaleString()} L</span>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)} disabled={confirming}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirm} disabled={confirming}>
+              {confirming && <LoadingSpinner className="mr-2" />}
+              Confirm Receipt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

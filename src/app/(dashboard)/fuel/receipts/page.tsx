@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
@@ -18,77 +19,109 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
-import { formatDate, formatLiters, formatMoney } from "../_components/fuel-ui";
 
 interface ReceiptRow {
   id: string;
   reference: string;
+  tank?: { id: string; name: string } | null;
   supplierName: string | null;
-  quantityLiters: number;
+  quantity: number;
   pricePerLiter: number | null;
   totalCost: number | null;
   status: string;
+  deliveryNoteRef: string | null;
   createdAt: string;
-  tank?: { name: string; code: string; fuelType: string } | null;
 }
 
-const PAGE_SIZE = 20;
+interface TankOption { id: string; name: string; }
 
-export default function FuelReceiptsPage() {
+const STATUS_FILTERS = [
+  { label: "All Statuses", value: "ALL" },
+  { label: "Draft", value: "DRAFT" },
+  { label: "Confirmed", value: "CONFIRMED" },
+];
+
+export default function ReceiptsPage() {
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [status, setStatus] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [tankFilter, setTankFilter] = useState("ALL");
+  const [tanks, setTanks] = useState<TankOption[]>([]);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  useEffect(() => { setPage(1); }, [debounced, status]);
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    fetch("/api/fuel-tanks?pageSize=200")
+      .then((r) => r.json())
+      .then((d) => setTanks(d.data ?? []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { setPage(1); }, [debounced, statusFilter, tankFilter]);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-
+    if (statusFilter !== "ALL") params.set("status", statusFilter);
+    if (tankFilter !== "ALL") params.set("tankId", tankFilter);
     fetch(`/api/fuel-receipts?${params}`)
-      .then((res) => res.json())
-      .then((json) => {
-        setReceipts(json.data ?? []);
-        setTotal(json.meta?.total ?? 0);
+      .then((r) => r.json())
+      .then((d) => {
+        setReceipts(d.data ?? []);
+        setTotal(d.meta?.total ?? 0);
       })
-      .catch(() => toast.error("Failed to load fuel receipts"))
+      .catch(() => toast.error("Failed to load receipts"))
       .finally(() => setLoading(false));
-  }, [page, debounced, status]);
+  }, [page, debounced, statusFilter, tankFilter]);
 
   const columns = [
     {
       key: "reference",
       header: "Reference",
       cell: (row: ReceiptRow) => (
-        <Link href={`/fuel/receipts/${row.id}`} className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded hover:underline">
-          {row.reference}
-        </Link>
+        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.reference}</code>
       ),
     },
     {
       key: "tank",
       header: "Tank",
-      cell: (row: ReceiptRow) => <span className="font-medium">{row.tank?.name ?? "-"}</span>,
+      cell: (row: ReceiptRow) => (
+        <span className="font-medium">{row.tank?.name ?? "—"}</span>
+      ),
     },
     {
       key: "supplier",
       header: "Supplier",
-      cell: (row: ReceiptRow) => <span className="text-sm text-muted-foreground">{row.supplierName ?? "-"}</span>,
+      cell: (row: ReceiptRow) => (
+        <span className="text-muted-foreground">{row.supplierName ?? "—"}</span>
+      ),
     },
     {
       key: "quantity",
-      header: "Quantity",
-      cell: (row: ReceiptRow) => <span>{formatLiters(row.quantityLiters)}</span>,
+      header: "Qty (L)",
+      cell: (row: ReceiptRow) => <span>{row.quantity.toLocaleString()}</span>,
     },
     {
-      key: "cost",
-      header: "Cost",
-      cell: (row: ReceiptRow) => <span className="text-sm text-muted-foreground">{formatMoney(row.totalCost)}</span>,
+      key: "pricePerLiter",
+      header: "Price/L",
+      cell: (row: ReceiptRow) => (
+        <span className="text-muted-foreground">
+          {row.pricePerLiter != null ? `$${row.pricePerLiter.toFixed(3)}` : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "totalCost",
+      header: "Total Cost",
+      cell: (row: ReceiptRow) => (
+        <span className="font-medium">
+          {row.totalCost != null ? `$${row.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+        </span>
+      ),
     },
     {
       key: "status",
@@ -96,9 +129,22 @@ export default function FuelReceiptsPage() {
       cell: (row: ReceiptRow) => <StatusBadge status={row.status} />,
     },
     {
-      key: "created",
-      header: "Created",
-      cell: (row: ReceiptRow) => <span className="text-sm text-muted-foreground">{formatDate(row.createdAt)}</span>,
+      key: "createdAt",
+      header: "Date",
+      cell: (row: ReceiptRow) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {format(new Date(row.createdAt), "dd MMM yyyy")}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (row: ReceiptRow) => (
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/fuel/receipts/${row.id}`}>View</Link>
+        </Button>
+      ),
     },
   ];
 
@@ -106,7 +152,7 @@ export default function FuelReceiptsPage() {
     <div>
       <PageHeader
         title="Fuel Receipts"
-        description="Record deliveries into fuel tanks and confirm stock updates"
+        description="Track fuel deliveries and receipts"
         actions={
           <PermissionGuard require="fuel:receipt:create">
             <Button asChild>
@@ -120,13 +166,31 @@ export default function FuelReceiptsPage() {
       />
 
       <div className="flex gap-3 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search reference or supplier..." className="max-w-xs" />
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search by reference or supplier..."
+          className="max-w-sm"
+        />
+        <Select value={tankFilter} onValueChange={setTankFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Tanks" />
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All Status</SelectItem>
-            <SelectItem value="DRAFT">Draft</SelectItem>
-            <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+            <SelectItem value="ALL">All Tanks</SelectItem>
+            {tanks.map((t) => (
+              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTERS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -139,10 +203,9 @@ export default function FuelReceiptsPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        emptyTitle="No fuel receipts found"
-        emptyDescription="Record a fuel delivery to increase tank levels."
+        emptyTitle="No receipts found"
+        emptyDescription="Record your first fuel delivery to get started."
       />
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -18,44 +18,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FUEL_TYPES } from "../../_components/fuel-ui";
 
-interface Branch {
-  id: string;
+interface Branch { id: string; name: string; }
+
+interface FormData {
   name: string;
+  code: string;
+  fuelType: string;
+  capacity: string;
+  initialLevel: string;
+  minLevel: string;
+  branchId: string;
+  notes: string;
 }
 
-export default function NewFuelTankPage() {
+const DEFAULT: FormData = {
+  name: "",
+  code: "",
+  fuelType: "DIESEL",
+  capacity: "",
+  initialLevel: "0",
+  minLevel: "0",
+  branchId: "",
+  notes: "",
+};
+
+const FUEL_TYPES = [
+  { value: "DIESEL", label: "Diesel" },
+  { value: "PETROL", label: "Petrol" },
+  { value: "PETROL_95", label: "Petrol 95" },
+  { value: "PETROL_93", label: "Petrol 93" },
+  { value: "ELECTRIC", label: "Electric" },
+];
+
+export default function NewTankPage() {
   const router = useRouter();
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [form, setForm] = useState<FormData>(DEFAULT);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    code: "",
-    branchId: "",
-    fuelType: "DIESEL",
-    capacity: "",
-    currentLevel: "",
-    minLevel: "",
-    notes: "",
-  });
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   useEffect(() => {
     fetch("/api/branches?pageSize=200")
-      .then((res) => res.json())
-      .then((json) => setBranches(json.data ?? []))
+      .then((r) => r.json())
+      .then((d) => setBranches(d.data ?? []))
       .catch(() => {});
   }, []);
 
-  function set(field: string, value: string) {
-    setForm((prev) => ({ ...prev, [field]: field === "code" ? value.toUpperCase() : value }));
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    const { name, value } = e.target;
+    if (name === "code") {
+      setForm((prev) => ({ ...prev, code: value.toUpperCase() }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!form.name.trim()) { toast.error("Tank name is required"); return; }
-    if (!form.code.trim()) { toast.error("Tank code is required"); return; }
-    if (!form.capacity || Number(form.capacity) <= 0) { toast.error("Capacity must be greater than zero"); return; }
+  function handleSelect(name: keyof FormData, value: string) {
+    setForm((prev) => ({ ...prev, [name]: value === "__none" ? "" : value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name || !form.code || !form.fuelType || !form.capacity) {
+      toast.error("Name, code, fuel type, and capacity are required");
+      return;
+    }
+    const capacityNum = parseFloat(form.capacity);
+    const initialLevelNum = parseFloat(form.initialLevel) || 0;
+    const minLevelNum = parseFloat(form.minLevel) || 0;
+    if (isNaN(capacityNum) || capacityNum <= 0) {
+      toast.error("Capacity must be a positive number");
+      return;
+    }
+    if (initialLevelNum > capacityNum) {
+      toast.error("Initial level cannot exceed capacity");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -63,20 +101,20 @@ export default function NewFuelTankPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: form.name.trim(),
-          code: form.code.trim(),
-          branchId: form.branchId || undefined,
+          name: form.name,
+          code: form.code,
           fuelType: form.fuelType,
-          capacity: Number(form.capacity),
-          currentLevel: form.currentLevel ? Number(form.currentLevel) : 0,
-          minLevel: form.minLevel ? Number(form.minLevel) : 0,
-          notes: form.notes.trim() || undefined,
+          capacity: capacityNum,
+          currentLevel: initialLevelNum,
+          minLevel: minLevelNum,
+          branchId: form.branchId || undefined,
+          notes: form.notes || undefined,
         }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to create tank"); return; }
-      toast.success("Fuel tank created");
-      router.push(`/fuel/tanks/${json.data?.id ?? json.id}`);
+      toast.success("Tank created successfully");
+      router.push(`/fuel/tanks/${json.data?.id ?? ""}`);
     } catch {
       toast.error("Network error");
     } finally {
@@ -87,8 +125,8 @@ export default function NewFuelTankPage() {
   return (
     <div>
       <PageHeader
-        title="New Fuel Tank"
-        description="Create a tank for receiving and issuing fuel"
+        title="Add Fuel Tank"
+        description="Register a new fuel storage tank"
         actions={
           <Button variant="outline" asChild>
             <Link href="/fuel/tanks">
@@ -99,60 +137,121 @@ export default function NewFuelTankPage() {
         }
       />
 
-      <Card className="max-w-3xl">
+      <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle className="text-base">Tank Details</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="name">Name <span className="text-destructive">*</span></Label>
-                <Input id="name" value={form.name} onChange={(e) => set("name", e.target.value)} disabled={submitting} placeholder="Main diesel tank" />
+                <Input
+                  id="name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="e.g. Main Diesel Tank"
+                  disabled={submitting}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="code">Code <span className="text-destructive">*</span></Label>
-                <Input id="code" value={form.code} onChange={(e) => set("code", e.target.value)} disabled={submitting} placeholder="FT-001" />
+                <Input
+                  id="code"
+                  name="code"
+                  value={form.code}
+                  onChange={handleChange}
+                  placeholder="e.g. TK-001"
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Fuel Type <span className="text-destructive">*</span></Label>
+              <Select value={form.fuelType} onValueChange={(v) => handleSelect("fuelType", v)} disabled={submitting}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FUEL_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="capacity">Capacity (L) <span className="text-destructive">*</span></Label>
+                <Input
+                  id="capacity"
+                  name="capacity"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.capacity}
+                  onChange={handleChange}
+                  placeholder="e.g. 10000"
+                  disabled={submitting}
+                />
               </div>
               <div className="space-y-1">
-                <Label>Fuel Type</Label>
-                <Select value={form.fuelType} onValueChange={(value) => set("fuelType", value)} disabled={submitting}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {FUEL_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="initialLevel">Initial Level (L)</Label>
+                <Input
+                  id="initialLevel"
+                  name="initialLevel"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.initialLevel}
+                  onChange={handleChange}
+                  disabled={submitting}
+                />
               </div>
               <div className="space-y-1">
-                <Label>Branch</Label>
-                <Select value={form.branchId || "__none"} onValueChange={(value) => set("branchId", value === "__none" ? "" : value)} disabled={submitting}>
-                  <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">None</SelectItem>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="minLevel">Min Level (L)</Label>
+                <Input
+                  id="minLevel"
+                  name="minLevel"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.minLevel}
+                  onChange={handleChange}
+                  disabled={submitting}
+                />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="capacity">Capacity (liters) <span className="text-destructive">*</span></Label>
-                <Input id="capacity" type="number" min="0" step="0.01" value={form.capacity} onChange={(e) => set("capacity", e.target.value)} disabled={submitting} placeholder="10000" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="currentLevel">Opening Level (liters)</Label>
-                <Input id="currentLevel" type="number" min="0" step="0.01" value={form.currentLevel} onChange={(e) => set("currentLevel", e.target.value)} disabled={submitting} placeholder="0" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="minLevel">Minimum Level (liters)</Label>
-                <Input id="minLevel" type="number" min="0" step="0.01" value={form.minLevel} onChange={(e) => set("minLevel", e.target.value)} disabled={submitting} placeholder="1000" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="notes">Notes</Label>
-                <Input id="notes" value={form.notes} onChange={(e) => set("notes", e.target.value)} disabled={submitting} placeholder="Optional notes" />
-              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Branch</Label>
+              <Select value={form.branchId || "__none"} onValueChange={(v) => handleSelect("branchId", v)} disabled={submitting}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">None</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="notes">Notes</Label>
+              <textarea
+                id="notes"
+                name="notes"
+                value={form.notes}
+                onChange={handleChange}
+                rows={3}
+                disabled={submitting}
+                placeholder="Optional notes about this tank..."
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 resize-none"
+              />
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -160,7 +259,7 @@ export default function NewFuelTankPage() {
                 {submitting && <LoadingSpinner className="mr-2" />}
                 Create Tank
               </Button>
-              <Button type="button" variant="outline" asChild>
+              <Button variant="outline" type="button" asChild>
                 <Link href="/fuel/tanks">Cancel</Link>
               </Button>
             </div>
@@ -170,4 +269,3 @@ export default function NewFuelTankPage() {
     </div>
   );
 }
-

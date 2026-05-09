@@ -1,17 +1,17 @@
 "use client";
-
-import { useCallback, useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
+import { format } from "date-fns";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate, formatLiters, formatMoney } from "../../_components/fuel-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
-interface Issue {
+interface FuelIssue {
   id: string;
   reference: string;
   quantityLiters: number;
@@ -20,84 +20,110 @@ interface Issue {
   odometerReading: number | null;
   issuedAt: string;
   notes: string | null;
-  tank?: { id: string; name: string; code: string; fuelType: string; currentLevel: number; capacity: number } | null;
-  vehicle?: { id: string; plateNumber: string; make: string; model: string; odometer: number } | null;
-  driver?: { employee?: { fullName: string; employeeNumber: string; phone: string | null } | null } | null;
+  createdAt: string;
+  tank: { id: string; name: string; code: string; fuelType: string };
+  vehicle: { id: string; plateNumber: string; make: string | null; model: string | null };
+  driver: { id: string; employee: { fullName: string } } | null;
 }
 
 export default function FuelIssueDetailPage() {
-  const params = useParams<{ id: string }>();
-  const [issue, setIssue] = useState<Issue | null>(null);
+  const { id } = useParams<{ id: string }>();
+  const [issue, setIssue] = useState<FuelIssue | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const fetchIssue = useCallback(async () => {
     try {
-      const res = await fetch(`/api/fuel-issues/${params.id}`);
-      const json = await res.json();
-      if (!res.ok) { toast.error(json.error ?? "Failed to load fuel issue"); return; }
-      setIssue(json.data);
-    } catch {
-      toast.error("Failed to load fuel issue");
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id]);
+      const res = await fetch(`/api/fuel-issues/${id}`);
+      if (!res.ok) throw new Error();
+      setIssue(await res.json());
+    } catch { toast.error("Failed to load fuel issue"); }
+    finally { setLoading(false); }
+  }, [id]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { fetchIssue(); }, [fetchIssue]);
 
   if (loading) return <LoadingState />;
-  if (!issue) return <div className="text-sm text-muted-foreground">Fuel issue not found.</div>;
+  if (!issue) return <div className="p-8 text-center text-muted-foreground">Fuel issue not found.</div>;
 
   return (
     <div>
-      <PageHeader
-        title={issue.reference}
-        description="Fuel issue details"
-        actions={
-          <Button variant="outline" asChild>
-            <Link href="/fuel/issues">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
-          </Button>
-        }
-      />
-
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Quantity</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatLiters(issue.quantityLiters)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Price / Liter</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatMoney(issue.pricePerLiter)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Total Cost</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatMoney(issue.totalCost)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Odometer</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{issue.odometerReading ?? "-"}</div></CardContent>
-        </Card>
+      <div className="mb-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/fuel/issues"><ArrowLeft className="h-4 w-4 mr-1" />Back to Issues</Link>
+        </Button>
       </div>
 
-      <Card className="max-w-3xl">
-        <CardHeader><CardTitle className="text-base">Issue Information</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 text-sm">
-          <div><span className="text-muted-foreground">Tank</span><div className="font-medium">{issue.tank?.name ?? "-"} {issue.tank ? `(${issue.tank.code})` : ""}</div></div>
-          <div><span className="text-muted-foreground">Fuel Type</span><div className="font-medium">{issue.tank?.fuelType ?? "-"}</div></div>
-          <div><span className="text-muted-foreground">Vehicle</span><div className="font-medium">{issue.vehicle ? `${issue.vehicle.plateNumber} - ${issue.vehicle.make} ${issue.vehicle.model}` : "-"}</div></div>
-          <div><span className="text-muted-foreground">Driver</span><div className="font-medium">{issue.driver?.employee?.fullName ?? "-"}</div></div>
-          <div><span className="text-muted-foreground">Issued At</span><div className="font-medium">{formatDate(issue.issuedAt)}</div></div>
-          <div><span className="text-muted-foreground">Driver Phone</span><div className="font-medium">{issue.driver?.employee?.phone ?? "-"}</div></div>
-          {issue.notes && <div className="sm:col-span-2"><span className="text-muted-foreground">Notes</span><div className="font-medium">{issue.notes}</div></div>}
-        </CardContent>
-      </Card>
+      <PageHeader
+        title={issue.reference}
+        description={`Issued ${format(new Date(issue.issuedAt), "dd MMM yyyy HH:mm")}`}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader><CardTitle className="text-base">Issue Details</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Reference</span>
+              <code className="font-mono">{issue.reference}</code>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tank</span>
+              <span>{issue.tank.name} <Badge variant="outline" className="ml-1 text-xs">{issue.tank.fuelType}</Badge></span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Quantity</span>
+              <span className="font-semibold">{issue.quantityLiters.toLocaleString()} L</span>
+            </div>
+            {issue.pricePerLiter != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Price / L</span>
+                <span>${issue.pricePerLiter.toFixed(3)}</span>
+              </div>
+            )}
+            {issue.totalCost != null && (
+              <div className="flex justify-between border-t pt-3">
+                <span className="font-semibold">Total Cost</span>
+                <span className="font-semibold text-lg">
+                  ${issue.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Vehicle & Driver</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Vehicle</span>
+              <Link href={`/transport/vehicles/${issue.vehicle.id}`} className="hover:underline font-medium">
+                {issue.vehicle.plateNumber}
+                {issue.vehicle.make && ` — ${issue.vehicle.make}${issue.vehicle.model ? ` ${issue.vehicle.model}` : ""}`}
+              </Link>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Driver</span>
+              <span>{issue.driver ? issue.driver.employee.fullName : "—"}</span>
+            </div>
+            {issue.odometerReading != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Odometer</span>
+                <span>{issue.odometerReading.toLocaleString()} km</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Issued At</span>
+              <span>{format(new Date(issue.issuedAt), "dd MMM yyyy HH:mm")}</span>
+            </div>
+            {issue.notes && (
+              <div className="pt-2 border-t">
+                <span className="text-muted-foreground block mb-1">Notes</span>
+                <p className="text-sm">{issue.notes}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
-

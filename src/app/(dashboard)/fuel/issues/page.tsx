@@ -1,95 +1,159 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
-import { formatDate, formatLiters, formatMoney } from "../_components/fuel-ui";
 
 interface IssueRow {
   id: string;
   reference: string;
-  quantityLiters: number;
-  pricePerLiter: number | null;
-  totalCost: number | null;
+  vehicle?: { id: string; plateNumber: string } | null;
+  driver?: { id: string; firstName: string; lastName: string } | null;
+  tank?: { id: string; name: string } | null;
+  quantity: number;
   odometerReading: number | null;
+  totalCost: number | null;
   issuedAt: string;
-  tank?: { name: string; code: string; fuelType: string } | null;
-  vehicle?: { plateNumber: string; make: string; model: string } | null;
-  driver?: { employee?: { fullName: string } | null } | null;
 }
 
-const PAGE_SIZE = 20;
+interface TankOption { id: string; name: string; }
+interface VehicleOption { id: string; plateNumber: string; }
 
-export default function FuelIssuesPage() {
+export default function IssuesPage() {
   const [issues, setIssues] = useState<IssueRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [tankFilter, setTankFilter] = useState("ALL");
+  const [vehicleFilter, setVehicleFilter] = useState("ALL");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [tanks, setTanks] = useState<TankOption[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  useEffect(() => { setPage(1); }, [debounced]);
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/fuel-tanks?pageSize=200").then((r) => r.json()),
+      fetch("/api/vehicles?pageSize=200").then((r) => r.json()),
+    ])
+      .then(([tanksData, vehiclesData]) => {
+        setTanks(tanksData.data ?? []);
+        setVehicles(vehiclesData.data ?? []);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { setPage(1); }, [debounced, tankFilter, vehicleFilter, fromDate, toDate]);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (debounced) params.set("search", debounced);
-
+    if (tankFilter !== "ALL") params.set("tankId", tankFilter);
+    if (vehicleFilter !== "ALL") params.set("vehicleId", vehicleFilter);
+    if (fromDate) params.set("from", fromDate);
+    if (toDate) params.set("to", toDate);
     fetch(`/api/fuel-issues?${params}`)
-      .then((res) => res.json())
-      .then((json) => {
-        setIssues(json.data ?? []);
-        setTotal(json.meta?.total ?? 0);
+      .then((r) => r.json())
+      .then((d) => {
+        setIssues(d.data ?? []);
+        setTotal(d.meta?.total ?? 0);
       })
       .catch(() => toast.error("Failed to load fuel issues"))
       .finally(() => setLoading(false));
-  }, [page, debounced]);
+  }, [page, debounced, tankFilter, vehicleFilter, fromDate, toDate]);
 
   const columns = [
     {
       key: "reference",
       header: "Reference",
       cell: (row: IssueRow) => (
-        <Link href={`/fuel/issues/${row.id}`} className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded hover:underline">
-          {row.reference}
-        </Link>
+        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.reference}</code>
       ),
     },
     {
       key: "vehicle",
       header: "Vehicle",
-      cell: (row: IssueRow) => <span className="font-medium">{row.vehicle?.plateNumber ?? "-"}</span>,
+      cell: (row: IssueRow) => (
+        <span className="font-medium">{row.vehicle?.plateNumber ?? "—"}</span>
+      ),
     },
     {
       key: "driver",
       header: "Driver",
-      cell: (row: IssueRow) => <span className="text-sm text-muted-foreground">{row.driver?.employee?.fullName ?? "-"}</span>,
+      cell: (row: IssueRow) => (
+        <span className="text-muted-foreground text-sm">
+          {row.driver ? `${row.driver.firstName} ${row.driver.lastName}` : "—"}
+        </span>
+      ),
     },
     {
       key: "tank",
       header: "Tank",
-      cell: (row: IssueRow) => <span className="text-sm">{row.tank?.name ?? "-"}</span>,
+      cell: (row: IssueRow) => (
+        <span className="text-muted-foreground text-sm">{row.tank?.name ?? "—"}</span>
+      ),
     },
     {
       key: "quantity",
-      header: "Quantity",
-      cell: (row: IssueRow) => <span>{formatLiters(row.quantityLiters)}</span>,
+      header: "Qty (L)",
+      cell: (row: IssueRow) => <span>{row.quantity.toLocaleString()}</span>,
     },
     {
-      key: "cost",
-      header: "Cost",
-      cell: (row: IssueRow) => <span className="text-sm text-muted-foreground">{formatMoney(row.totalCost)}</span>,
+      key: "odometer",
+      header: "Odometer",
+      cell: (row: IssueRow) => (
+        <span className="text-muted-foreground">
+          {row.odometerReading != null ? `${row.odometerReading.toLocaleString()} km` : "—"}
+        </span>
+      ),
     },
     {
-      key: "issued",
-      header: "Issued",
-      cell: (row: IssueRow) => <span className="text-sm text-muted-foreground">{formatDate(row.issuedAt)}</span>,
+      key: "totalCost",
+      header: "Total Cost",
+      cell: (row: IssueRow) => (
+        <span className="font-medium">
+          {row.totalCost != null
+            ? `$${row.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "issuedAt",
+      header: "Date",
+      cell: (row: IssueRow) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {format(new Date(row.issuedAt), "dd MMM yyyy")}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (row: IssueRow) => (
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/fuel/issues/${row.id}`}>View</Link>
+        </Button>
+      ),
     },
   ];
 
@@ -97,7 +161,7 @@ export default function FuelIssuesPage() {
     <div>
       <PageHeader
         title="Fuel Issues"
-        description="Issue fuel to vehicles and track consumption"
+        description="Track fuel issued to vehicles and drivers"
         actions={
           <PermissionGuard require="fuel:issue:create">
             <Button asChild>
@@ -111,7 +175,48 @@ export default function FuelIssuesPage() {
       />
 
       <div className="flex gap-3 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search reference or vehicle..." className="max-w-xs" />
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search by reference..."
+          className="max-w-xs"
+        />
+        <Select value={tankFilter} onValueChange={setTankFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All Tanks" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Tanks</SelectItem>
+            {tanks.map((t) => (
+              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All Vehicles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Vehicles</SelectItem>
+            {vehicles.map((v) => (
+              <SelectItem key={v.id} value={v.id}>{v.plateNumber}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="h-10 border rounded px-2 text-sm"
+          title="From date"
+        />
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="h-10 border rounded px-2 text-sm"
+          title="To date"
+        />
       </div>
 
       <DataTable
@@ -123,9 +228,8 @@ export default function FuelIssuesPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No fuel issues found"
-        emptyDescription="Issue fuel to a vehicle to start tracking consumption."
+        emptyDescription="Issue fuel to a vehicle to get started."
       />
     </div>
   );
 }
-
