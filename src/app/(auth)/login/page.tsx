@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/shared/LoadingState";
 import { loginSchema, type LoginInput } from "@/modules/auth/auth.validation";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
@@ -113,5 +113,13 @@ export default function LoginPage() {
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<Card className="w-full max-w-sm shadow-2xl" />}>
+      <LoginForm />
+    </Suspense>
   );
 }
