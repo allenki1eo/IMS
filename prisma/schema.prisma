@@ -233,6 +233,7 @@ model Employee {
   branch     Branch?     @relation(fields: [branchId], references: [id])
   department Department? @relation(fields: [departmentId], references: [id])
   users      User[]
+  driver     Driver?
 
   @@index([companyId])
   @@index([status])
@@ -649,4 +650,191 @@ model StockAdjustmentLine {
   location   StorageLocation?   @relation(fields: [locationId], references: [id])
 
   @@map("stock_adjustment_lines")
+}
+
+// ─────────────────────────────────────────────
+// TRANSPORT & FLEET
+// ─────────────────────────────────────────────
+
+model Vehicle {
+  id               String    @id @default(cuid())
+  companyId        String
+  branchId         String?
+  plateNumber      String    @unique
+  make             String
+  model            String
+  year             Int?
+  vehicleType      String    @default("TRUCK")
+  capacity         Float?
+  fuelType         String    @default("DIESEL")
+  color            String?
+  chassisNumber    String?
+  engineNumber     String?
+  odometer         Float     @default(0)
+  status           String    @default("ACTIVE")
+  insuranceExpiry  DateTime?
+  roadWorthyExpiry DateTime?
+  lastServiceDate  DateTime?
+  nextServiceDate  DateTime?
+  isActive         Boolean   @default(true)
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdById      String
+
+  assignments VehicleAssignment[]
+  trips       TripOrder[]
+  incidents   VehicleIncident[]
+  documents   VehicleDocument[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("vehicles")
+}
+
+model VehicleDocument {
+  id             String    @id @default(cuid())
+  vehicleId      String
+  documentType   String
+  documentNumber String?
+  issuedAt       DateTime?
+  expiresAt      DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  createdById    String
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@map("vehicle_documents")
+}
+
+model Driver {
+  id            String    @id @default(cuid())
+  companyId     String
+  employeeId    String    @unique
+  licenseNumber String?
+  licenseClass  String?
+  licenseExpiry DateTime?
+  medicalExpiry DateTime?
+  isAvailable   Boolean   @default(true)
+  status        String    @default("ACTIVE")
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String
+
+  employee    Employee            @relation(fields: [employeeId], references: [id])
+  assignments VehicleAssignment[]
+  trips       TripOrder[]
+
+  @@index([companyId])
+  @@map("drivers")
+}
+
+model VehicleAssignment {
+  id           String    @id @default(cuid())
+  vehicleId    String
+  driverId     String
+  assignedById String
+  assignedAt   DateTime  @default(now())
+  returnedAt   DateTime?
+  status       String    @default("ACTIVE")
+  notes        String?
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  driver  Driver  @relation(fields: [driverId], references: [id])
+
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("vehicle_assignments")
+}
+
+model TripOrder {
+  id                 String    @id @default(cuid())
+  companyId          String
+  branchId           String?
+  reference          String    @unique
+  vehicleId          String?
+  driverId           String?
+  origin             String
+  destination        String
+  scheduledDeparture DateTime?
+  scheduledArrival   DateTime?
+  actualDeparture    DateTime?
+  actualArrival      DateTime?
+  cargoDescription   String?
+  cargoWeight        Float?
+  status             String    @default("PLANNED")
+  priority           String    @default("NORMAL")
+  approvalRequestId  String?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdById        String
+
+  vehicle   Vehicle?          @relation(fields: [vehicleId], references: [id])
+  driver    Driver?           @relation(fields: [driverId], references: [id])
+  logs      TripLog[]
+  cargo     TripCargo[]
+  incidents VehicleIncident[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("trip_orders")
+}
+
+model TripLog {
+  id           String   @id @default(cuid())
+  tripId       String
+  eventType    String
+  eventTime    DateTime @default(now())
+  location     String?
+  odometer     Float?
+  notes        String?
+  recordedById String
+  createdAt    DateTime @default(now())
+
+  trip TripOrder @relation(fields: [tripId], references: [id])
+
+  @@index([tripId])
+  @@map("trip_logs")
+}
+
+model TripCargo {
+  id            String  @id @default(cuid())
+  tripId        String
+  itemId        String?
+  description   String
+  quantity      Float?
+  uom           String?
+  referenceType String?
+  referenceId   String?
+
+  trip TripOrder @relation(fields: [tripId], references: [id])
+
+  @@map("trip_cargo")
+}
+
+model VehicleIncident {
+  id              String    @id @default(cuid())
+  companyId       String
+  vehicleId       String
+  tripId          String?
+  incidentType    String
+  incidentDate    DateTime
+  location        String?
+  description     String
+  reportedById    String
+  status          String    @default("OPEN")
+  resolutionNotes String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  vehicle Vehicle    @relation(fields: [vehicleId], references: [id])
+  trip    TripOrder? @relation(fields: [tripId], references: [id])
+
+  @@index([vehicleId])
+  @@index([status])
+  @@map("vehicle_incidents")
 }

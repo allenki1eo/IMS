@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Shield, Building2, GitBranch, Layers,
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
-  Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList,
+  Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -65,6 +65,19 @@ const NAV: NavItem[] = [
       { label: "Adjustments", href: "/warehouse/adjustments", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:adjustment:read" },
       { label: "Categories", href: "/warehouse/categories", icon: <Layers className="h-4 w-4" />, permission: "warehouse:category:read" },
       { label: "UOM", href: "/warehouse/uom", icon: <Layers className="h-4 w-4" />, permission: "warehouse:uom:read" },
+    ],
+  },
+  {
+    label: "Transport",
+    icon: <Truck className="h-4 w-4" />,
+    permission: "transport:vehicle:read",
+    children: [
+      { label: "Overview", href: "/transport", icon: <BarChart3 className="h-4 w-4" />, permission: "transport:trip:read" },
+      { label: "Vehicles", href: "/transport/vehicles", icon: <Car className="h-4 w-4" />, permission: "transport:vehicle:read" },
+      { label: "Drivers", href: "/transport/drivers", icon: <UserCircle className="h-4 w-4" />, permission: "transport:driver:read" },
+      { label: "Assignments", href: "/transport/assignments", icon: <GitBranch className="h-4 w-4" />, permission: "transport:assignment:read" },
+      { label: "Trips", href: "/transport/trips", icon: <MapPin className="h-4 w-4" />, permission: "transport:trip:read" },
+      { label: "Incidents", href: "/transport/incidents", icon: <AlertTriangle className="h-4 w-4" />, permission: "transport:incident:read" },
     ],
   },
   {

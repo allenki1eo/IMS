@@ -74,6 +74,24 @@ const PERMISSIONS = [
   { module: "warehouse", resource: "adjustment", action: "create", description: "Create stock adjustments" },
   { module: "warehouse", resource: "adjustment", action: "submit", description: "Submit adjustments for approval" },
   { module: "warehouse", resource: "adjustment", action: "approve", description: "Approve and apply stock adjustments" },
+  // Transport
+  { module: "transport", resource: "vehicle", action: "read", description: "View vehicles" },
+  { module: "transport", resource: "vehicle", action: "create", description: "Create vehicles" },
+  { module: "transport", resource: "vehicle", action: "update", description: "Edit vehicles" },
+  { module: "transport", resource: "driver", action: "read", description: "View drivers" },
+  { module: "transport", resource: "driver", action: "create", description: "Create driver profiles" },
+  { module: "transport", resource: "driver", action: "update", description: "Edit driver profiles" },
+  { module: "transport", resource: "assignment", action: "read", description: "View vehicle assignments" },
+  { module: "transport", resource: "assignment", action: "create", description: "Assign vehicles to drivers" },
+  { module: "transport", resource: "assignment", action: "update", description: "Update vehicle assignments" },
+  { module: "transport", resource: "trip", action: "read", description: "View trip orders" },
+  { module: "transport", resource: "trip", action: "create", description: "Create trip orders" },
+  { module: "transport", resource: "trip", action: "update", description: "Edit trip orders" },
+  { module: "transport", resource: "trip", action: "dispatch", description: "Dispatch trips" },
+  { module: "transport", resource: "trip", action: "complete", description: "Mark trips as completed" },
+  { module: "transport", resource: "incident", action: "read", description: "View vehicle incidents" },
+  { module: "transport", resource: "incident", action: "create", description: "Report vehicle incidents" },
+  { module: "transport", resource: "incident", action: "update", description: "Update incident records" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -111,6 +129,11 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:grn:read", "warehouse:grn:create", "warehouse:grn:confirm",
     "warehouse:transfer:read", "warehouse:transfer:create", "warehouse:transfer:dispatch", "warehouse:transfer:receive",
     "warehouse:adjustment:read", "warehouse:adjustment:create", "warehouse:adjustment:submit", "warehouse:adjustment:approve",
+    "transport:vehicle:read", "transport:vehicle:create", "transport:vehicle:update",
+    "transport:driver:read", "transport:driver:create", "transport:driver:update",
+    "transport:assignment:read", "transport:assignment:create", "transport:assignment:update",
+    "transport:trip:read", "transport:trip:create", "transport:trip:update", "transport:trip:dispatch", "transport:trip:complete",
+    "transport:incident:read", "transport:incident:create", "transport:incident:update",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -128,6 +151,11 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:grn:read", "warehouse:grn:create", "warehouse:grn:confirm",
     "warehouse:transfer:read", "warehouse:transfer:create", "warehouse:transfer:dispatch", "warehouse:transfer:receive",
     "warehouse:adjustment:read", "warehouse:adjustment:create", "warehouse:adjustment:submit", "warehouse:adjustment:approve",
+    "transport:vehicle:read", "transport:vehicle:create", "transport:vehicle:update",
+    "transport:driver:read", "transport:driver:create", "transport:driver:update",
+    "transport:assignment:read", "transport:assignment:create", "transport:assignment:update",
+    "transport:trip:read", "transport:trip:create", "transport:trip:update", "transport:trip:dispatch", "transport:trip:complete",
+    "transport:incident:read", "transport:incident:create", "transport:incident:update",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -141,6 +169,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:grn:read", "warehouse:grn:create",
     "warehouse:transfer:read", "warehouse:transfer:create",
     "warehouse:adjustment:read", "warehouse:adjustment:create", "warehouse:adjustment:submit",
+    "transport:vehicle:read", "transport:driver:read", "transport:assignment:read",
+    "transport:trip:read", "transport:trip:create", "transport:trip:update", "transport:trip:dispatch",
+    "transport:incident:read", "transport:incident:create",
   ],
   MANAGEMENT: [
     "auth:session:create",
@@ -153,6 +184,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:item:read", "warehouse:uom:read", "warehouse:category:read",
     "warehouse:stock:read",
     "warehouse:grn:read", "warehouse:transfer:read", "warehouse:adjustment:read",
+    "transport:vehicle:read", "transport:driver:read", "transport:trip:read", "transport:incident:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -166,6 +198,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "warehouse:item:read", "warehouse:uom:read", "warehouse:category:read",
     "warehouse:stock:read",
     "warehouse:grn:read", "warehouse:transfer:read", "warehouse:adjustment:read",
+    "transport:vehicle:read", "transport:driver:read", "transport:trip:read", "transport:incident:read",
   ],
 };
 
