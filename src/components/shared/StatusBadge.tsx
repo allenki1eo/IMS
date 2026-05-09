@@ -23,6 +23,7 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   ESCALATED: { label: "Escalated", variant: "info" },
   // Priority
   NORMAL: { label: "Normal", variant: "outline" },
+  HIGH: { label: "High", variant: "warning" },
   URGENT: { label: "Urgent", variant: "warning" },
   CRITICAL: { label: "Critical", variant: "destructive" },
   // Employment type
@@ -30,6 +31,20 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   CONTRACT: { label: "Contract", variant: "info" },
   CASUAL: { label: "Casual", variant: "secondary" },
   TEMPORARY: { label: "Temporary", variant: "outline" },
+  // Transport — Vehicle
+  IN_REPAIR: { label: "In Repair", variant: "warning" },
+  RETIRED: { label: "Retired", variant: "secondary" },
+  // Transport — Trip
+  PLANNED: { label: "Planned", variant: "info" },
+  DISPATCHED: { label: "Dispatched", variant: "info" },
+  COMPLETED: { label: "Completed", variant: "success" },
+  // Transport — Assignment
+  RETURNED: { label: "Returned", variant: "secondary" },
+  // Transport — Incident
+  OPEN: { label: "Open", variant: "destructive" },
+  INVESTIGATING: { label: "Investigating", variant: "warning" },
+  RESOLVED: { label: "Resolved", variant: "success" },
+  CLOSED: { label: "Closed", variant: "secondary" },
 };
 
 interface StatusBadgeProps {
