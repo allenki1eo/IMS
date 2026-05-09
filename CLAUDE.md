@@ -4,9 +4,9 @@
 
 A modular, phased ERP for a manufacturing/distribution company. Built with Next.js 15, TypeScript, Prisma, Turso/libSQL/SQLite, and Tailwind CSS plus shadcn-style UI primitives.
 
-**Current Phase: Phase 4 - Fuel Management complete**
+**Current Phase: Phase 5 - Maintenance & Spare Parts complete**
 
-The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, and Fuel Management modules.
+The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, and Maintenance & Spare Parts modules.
 
 ## Architecture
 
@@ -201,6 +201,24 @@ Status: Complete
   - Prices list and price recording
   - Consumption reports by vehicle and period
 
+### Phase 5 - Maintenance & Spare Parts
+
+Status: Complete
+
+- Prisma schema for maintenance schedules, work orders, work order items, spare part categories, spare parts, and spare part transactions
+- Seeded permissions and sidebar navigation for Maintenance
+- Services and API routes for:
+  - Maintenance schedules: list, create, detail, update, vehicle linkage, frequency, and due tracking
+  - Work orders: list, create, detail, update, start, complete, cancel, and item usage
+  - Spare parts: list, create, detail, update, categories, stock levels, and receipt history
+  - Parts receipts: receive spare parts into stock and record stock transactions
+- Dashboard UI for:
+  - Maintenance overview
+  - Work orders list, create, detail, lifecycle actions, and consumed parts
+  - Schedules list, create, and detail
+  - Spare parts list, create, detail, and stock/transaction views
+  - Parts receipts list
+
 ## Module Roadmap
 
 | Phase | Module | Status |
@@ -209,7 +227,7 @@ Status: Complete
 | 2 | Warehouse Management | Complete |
 | 3 | Transport & Fleet | Complete |
 | 4 | Fuel Management | Complete |
-| 5 | Maintenance & Spare Parts | Planned |
+| 5 | Maintenance & Spare Parts | Complete |
 | 6 | Procurement | Planned |
 | 7 | Production & Brewing | Planned |
 | 8 | Quality Control & Lab | Planned |
@@ -219,7 +237,7 @@ Status: Complete
 | 12 | Finance Operations | Planned |
 | 13 | Management Analytics | Planned |
 
-## Adding a New Module (Phases 5+)
+## Adding a New Module (Phases 6+)
 
 1. Create `src/modules/{module}/` with `{module}.service.ts`, `.validation.ts`, and `.types.ts` as needed.
 2. Add API routes under `src/app/api/{module}/`.
