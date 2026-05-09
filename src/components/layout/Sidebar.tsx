@@ -7,7 +7,7 @@ import {
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
   Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
-  Factory, FlaskConical,
+  Factory, FlaskConical, FileSearch, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -127,6 +127,17 @@ const NAV: NavItem[] = [
       { label: "Batches", href: "/production/batches", icon: <ClipboardList className="h-4 w-4" />, permission: "production:batch:read" },
       { label: "Recipes", href: "/production/recipes", icon: <FlaskConical className="h-4 w-4" />, permission: "production:recipe:read" },
       { label: "Lines", href: "/production/lines", icon: <Factory className="h-4 w-4" />, permission: "production:line:read" },
+    ],
+  },
+  {
+    label: "Quality Control",
+    icon: <FlaskConical className="h-4 w-4" />,
+    permission: "qc:test:read",
+    children: [
+      { label: "Overview", href: "/qc", icon: <BarChart3 className="h-4 w-4" />, permission: "qc:test:read" },
+      { label: "Standards", href: "/qc/standards", icon: <FileCheck className="h-4 w-4" />, permission: "qc:standard:read" },
+      { label: "Lab Tests", href: "/qc/tests", icon: <FileSearch className="h-4 w-4" />, permission: "qc:test:read" },
+      { label: "Non-Conformances", href: "/qc/ncr", icon: <XCircle className="h-4 w-4" />, permission: "qc:ncr:read" },
     ],
   },
   {

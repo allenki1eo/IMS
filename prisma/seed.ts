@@ -206,6 +206,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "production:recipe:read", "production:recipe:create", "production:recipe:update",
     "production:batch:read", "production:batch:create", "production:batch:update", "production:batch:start", "production:batch:complete",
     "production:report:read",
+    "qc:standard:read", "qc:standard:create", "qc:standard:update",
+    "qc:test:read", "qc:test:create", "qc:test:update", "qc:test:complete",
+    "qc:ncr:read", "qc:ncr:create", "qc:ncr:update", "qc:ncr:resolve",
+    "qc:report:read",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -246,6 +250,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "production:recipe:read", "production:recipe:create", "production:recipe:update",
     "production:batch:read", "production:batch:create", "production:batch:update", "production:batch:start", "production:batch:complete",
     "production:report:read",
+    "qc:standard:read", "qc:standard:create", "qc:standard:update",
+    "qc:test:read", "qc:test:create", "qc:test:update", "qc:test:complete",
+    "qc:ncr:read", "qc:ncr:create", "qc:ncr:update", "qc:ncr:resolve",
+    "qc:report:read",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -274,6 +282,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "production:line:read", "production:recipe:read",
     "production:batch:read", "production:batch:create", "production:batch:update", "production:batch:start", "production:batch:complete",
     "production:report:read",
+    "qc:standard:read",
+    "qc:test:read", "qc:test:create", "qc:test:update", "qc:test:complete",
+    "qc:ncr:read", "qc:ncr:create", "qc:ncr:update", "qc:ncr:resolve",
+    "qc:report:read",
   ],
   MANAGEMENT: [
     "auth:session:create",
@@ -292,6 +304,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "procurement:supplier:read", "procurement:request:read", "procurement:request:approve",
     "procurement:order:read", "procurement:report:read",
     "production:line:read", "production:recipe:read", "production:batch:read", "production:report:read",
+    "qc:standard:read", "qc:test:read", "qc:ncr:read", "qc:report:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -311,6 +324,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "procurement:supplier:read", "procurement:request:read",
     "procurement:order:read", "procurement:report:read",
     "production:line:read", "production:recipe:read", "production:batch:read", "production:report:read",
+    "qc:standard:read", "qc:test:read", "qc:ncr:read", "qc:report:read",
   ],
 };
 
