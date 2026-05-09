@@ -1,5 +1,5 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { PrismaLibSQL } from "@prisma/adapter-libsql";
+import { PrismaLibSQL } from "@prisma/adapter-libsql/web";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
@@ -8,8 +8,20 @@ const log: Prisma.LogLevel[] =
     ? ["query", "error", "warn"]
     : ["error"];
 
+function getDatabaseUrl(): string {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.TURSO_DATABASE_URL ||
+    "file:./dev.db"
+  );
+}
+
+function getDatabaseAuthToken(): string | undefined {
+  return process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN;
+}
+
 function createPrismaClient(): PrismaClient {
-  const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
+  const databaseUrl = getDatabaseUrl();
 
   // Local SQLite: use standard datasource URL (no adapter needed)
   if (databaseUrl.startsWith("file:")) {
@@ -19,10 +31,11 @@ function createPrismaClient(): PrismaClient {
     });
   }
 
-  // Turso / libSQL remote: use driver adapter with config object
+  // Turso / libSQL remote: use the HTTP-based web adapter so Vercel
+  // serverless builds do not depend on native libSQL binaries.
   const adapter = new PrismaLibSQL({
     url: databaseUrl,
-    authToken: process.env.DATABASE_AUTH_TOKEN,
+    authToken: getDatabaseAuthToken(),
   });
 
   return new PrismaClient({ adapter, log });
