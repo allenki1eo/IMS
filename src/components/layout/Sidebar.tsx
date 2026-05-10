@@ -175,6 +175,12 @@ const NAV: NavItem[] = [
     ],
   },
   {
+    label: "Reports",
+    href: "/reports",
+    icon: <ScrollText className="h-4 w-4" />,
+    permission: "reports:report:read",
+  },
+  {
     label: "Approvals",
     href: "/approvals",
     icon: <CheckCircle className="h-4 w-4" />,

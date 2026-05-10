@@ -168,6 +168,7 @@ const PERMISSIONS = [
   { module: "analytics", resource: "dashboard", action: "read", description: "View analytics dashboard" },
   { module: "analytics", resource: "operations", action: "read", description: "View operational analytics" },
   { module: "analytics", resource: "financial", action: "read", description: "View financial analytics" },
+  { module: "reports", resource: "report", action: "read", description: "View module reports" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -242,6 +243,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:payment:read", "finance:payment:create", "finance:payment:update", "finance:payment:complete", "finance:payment:cancel",
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
+    "reports:report:read",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -296,6 +298,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:payment:read", "finance:payment:create", "finance:payment:update", "finance:payment:complete",
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read",
+    "reports:report:read",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -338,6 +341,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:payment:read", "finance:payment:create",
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
+    "reports:report:read",
   ],
   MANAGEMENT: [
     "auth:session:create",
@@ -366,6 +370,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:payment:read",
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
+    "reports:report:read",
   ],
   AUDITOR: [
     "auth:session:create",

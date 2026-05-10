@@ -325,6 +325,18 @@ Status: Complete
 - Dashboard UI with KPI cards and interactive charts
 - Operational and financial analytics sub-pages with filterable date ranges
 
+### Phase 13b - Reports Module
+
+Status: Complete
+
+- Unified reports service with date-range filtered queries for all 9 modules
+- API routes: `/api/reports/{warehouse,transport,fuel,maintenance,procurement,production,qc,dispatch,finance}`
+- Reports UI with module tabs and date range picker
+- Summary cards for each module report
+- Data tables with charts (GRNs, fuel receipts, work orders, purchase orders, production batches, QC tests, dispatch orders, journal entries, payments)
+- Bar charts for top suppliers and fuel consumption by vehicle
+- Sidebar navigation for Reports
+
 ## Module Roadmap
 
 | Phase | Module | Status |
