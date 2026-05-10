@@ -70,7 +70,7 @@ export default function JournalEntryDetailPage() {
     }
   }
 
-  if (loading) return <LoadingState message="Loading journal entry..." />;
+  if (loading) return <LoadingState text="Loading journal entry..." />;
   if (!entry) return <div className="text-muted-foreground">Journal entry not found</div>;
 
   return (
@@ -100,6 +100,7 @@ export default function JournalEntryDetailPage() {
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Date</CardTitle></CardHeader><CardContent>{new Date(entry.entryDate).toLocaleDateString()}</CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Voucher</CardTitle></CardHeader><CardContent><Badge variant="outline">{entry.voucherType || "JOURNAL"}</Badge></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Status</CardTitle></CardHeader><CardContent><Badge variant={entry.status === "POSTED" ? "default" : entry.status === "REVERSED" ? "destructive" : "secondary"}>{entry.status}</Badge></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Debit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">${entry.totalDebit.toLocaleString()}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Credit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">${entry.totalCredit.toLocaleString()}</div></CardContent></Card>

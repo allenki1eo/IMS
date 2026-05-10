@@ -66,7 +66,7 @@ export default function FinancePage() {
     fetchStats();
   }, []);
 
-  if (loading) return <LoadingState message="Loading finance overview..." />;
+  if (loading) return <LoadingState text="Loading finance overview..." />;
 
   const cards = [
     { label: "Chart of Accounts", value: stats?.totalAccounts || 0, icon: BookOpen, href: "/finance/accounts" },

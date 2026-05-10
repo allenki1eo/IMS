@@ -51,8 +51,8 @@ export default function AccountsPage() {
         </Link>
       ),
     },
-    { key: "name", header: "Name" },
-    { key: "accountType", header: "Type" },
+    { key: "name", header: "Name", cell: (row: any) => row.name },
+    { key: "accountType", header: "Type", cell: (row: any) => row.accountType },
     {
       key: "currentBalance",
       header: "Balance",
@@ -84,13 +84,12 @@ export default function AccountsPage() {
       <SearchInput value={search} onChange={setSearch} placeholder="Search accounts..." />
 
       {loading ? (
-        <LoadingState message="Loading accounts..." />
+        <LoadingState text="Loading accounts..." />
       ) : (
         <DataTable
           columns={columns}
           data={accounts}
-          keyExtractor={(row) => row.id}
-          emptyMessage="No accounts found"
+          emptyTitle="No accounts found"
         />
       )}
     </div>

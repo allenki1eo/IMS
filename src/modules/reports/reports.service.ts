@@ -31,12 +31,12 @@ export async function getWarehouseReport(companyId: string, fromDate?: string, t
       take: 100,
     }),
     db.stockBalance.aggregate({
-      where: { companyId },
-      _sum: { quantity: true, unitCost: true },
+      where: { } as any,
+      _sum: { quantity: true },
     }),
   ]);
 
-  const grnTotal = grns.reduce((sum, g) => sum + (g.totalAmount || 0), 0);
+  const grnTotal = grns.reduce((sum, g) => sum + (g.lines?.reduce((lSum: number, l: any) => lSum + (l.totalCost || 0), 0) || 0), 0);
 
   return {
     summary: {
@@ -60,7 +60,7 @@ export async function getTransportReport(companyId: string, fromDate?: string, t
   const [trips, incidents, fuelConsumption] = await Promise.all([
     db.tripOrder.findMany({
       where: { companyId, createdAt: { gte: from, lte: to } },
-      include: { vehicle: { select: { plateNumber: true } }, driver: { select: { fullName: true } } },
+      include: { vehicle: { select: { plateNumber: true } }, driver: { select: { employee: { select: { fullName: true } } } } },
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
@@ -73,8 +73,8 @@ export async function getTransportReport(companyId: string, fromDate?: string, t
     db.fuelIssue.groupBy({
       by: ["vehicleId"],
       where: { companyId, createdAt: { gte: from, lte: to } },
-      _sum: { quantity: true, totalCost: true },
-      orderBy: { _sum: { quantity: "desc" } },
+      _sum: { quantityLiters: true, totalCost: true },
+      orderBy: { _sum: { quantityLiters: "desc" } },
       take: 20,
     }),
   ]);
@@ -89,14 +89,14 @@ export async function getTransportReport(companyId: string, fromDate?: string, t
     summary: {
       totalTrips: trips.length,
       totalIncidents: incidents.length,
-      totalFuelQuantity: fuelConsumption.reduce((sum, f) => sum + (f._sum.quantity || 0), 0),
+      totalFuelQuantity: fuelConsumption.reduce((sum, f) => sum + (f._sum.quantityLiters || 0), 0),
       totalFuelCost: fuelConsumption.reduce((sum, f) => sum + (f._sum.totalCost || 0), 0),
     },
     trips,
     incidents,
     fuelConsumption: fuelConsumption.map((f) => ({
       vehicle: vehicleMap[f.vehicleId || ""] || f.vehicleId,
-      quantity: f._sum.quantity || 0,
+      quantity: f._sum.quantityLiters || 0,
       cost: f._sum.totalCost || 0,
     })),
   };
@@ -121,8 +121,8 @@ export async function getFuelReport(companyId: string, fromDate?: string, toDate
       take: 100,
     }),
     db.fuelPrice.findMany({
-      where: { companyId, effectiveDate: { gte: from, lte: to } },
-      orderBy: { effectiveDate: "desc" },
+      where: { companyId, effectiveFrom: { gte: from, lte: to } },
+      orderBy: { effectiveFrom: "desc" },
       take: 100,
     }),
   ]);
@@ -131,8 +131,8 @@ export async function getFuelReport(companyId: string, fromDate?: string, toDate
     summary: {
       totalReceipts: receipts.length,
       totalIssues: issues.length,
-      totalReceiptQuantity: receipts.reduce((sum, r) => sum + (r.quantity || 0), 0),
-      totalIssueQuantity: issues.reduce((sum, i) => sum + (i.quantity || 0), 0),
+      totalReceiptQuantity: receipts.reduce((sum, r) => sum + (r.quantityLiters || 0), 0),
+      totalIssueQuantity: issues.reduce((sum, i) => sum + (i.quantityLiters || 0), 0),
       totalReceiptCost: receipts.reduce((sum, r) => sum + (r.totalCost || 0), 0),
       totalIssueCost: issues.reduce((sum, i) => sum + (i.totalCost || 0), 0),
     },
@@ -161,8 +161,8 @@ export async function getMaintenanceReport(companyId: string, fromDate?: string,
       take: 100,
     }),
     db.sparePartTransaction.findMany({
-      where: { companyId, createdAt: { gte: from, lte: to }, type: "RECEIPT" },
-      include: { part: { select: { name: true, code: true } } },
+      where: { companyId, createdAt: { gte: from, lte: to }, transactionType: "RECEIPT" },
+      include: { sparePart: { select: { name: true, code: true } } },
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
@@ -220,7 +220,7 @@ export async function getProcurementReport(companyId: string, fromDate?: string,
     summary: {
       totalRequests: requests.length,
       totalOrders: orders.length,
-      totalOrderValue: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+      totalOrderValue: orders.reduce((sum, o) => sum + (o.lines?.reduce((lSum: number, l: any) => lSum + (l.totalPrice || 0), 0) || 0), 0),
     },
     requests,
     orders,
@@ -255,8 +255,8 @@ export async function getProductionReport(companyId: string, fromDate?: string, 
   ]);
 
   const completedBatches = batches.filter((b) => b.status === "COMPLETED");
-  const totalPlanned = completedBatches.reduce((sum, b) => sum + (b.plannedQuantity || 0), 0);
-  const totalActual = completedBatches.reduce((sum, b) => sum + (b.actualQuantity || 0), 0);
+  const totalPlanned = completedBatches.reduce((sum, b) => sum + (b.plannedQty || 0), 0);
+  const totalActual = completedBatches.reduce((sum, b) => sum + (b.actualQty || 0), 0);
 
   return {
     summary: {
@@ -328,7 +328,7 @@ export async function getDispatchReport(companyId: string, fromDate?: string, to
   return {
     summary: {
       totalOrders: orders.length,
-      totalOrderValue: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+      totalOrderValue: orders.reduce((sum, o) => sum + (o.lines?.reduce((lSum: number, l: any) => lSum + (l.totalPrice || 0), 0) || 0), 0),
       deliveredOrders: orders.filter((o) => o.status === "DELIVERED").length,
       pendingOrders: orders.filter((o) => o.status === "CONFIRMED").length,
       totalProducts: products.length,

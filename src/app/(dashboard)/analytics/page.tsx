@@ -44,7 +44,7 @@ export default function AnalyticsPage() {
     fetchData();
   }, []);
 
-  if (loading) return <LoadingState message="Loading analytics..." />;
+  if (loading) return <LoadingState text="Loading analytics..." />;
 
   const kpiCards = [
     { label: "Users", value: kpis?.totalUsers || 0, icon: Users, href: "/admin/users" },

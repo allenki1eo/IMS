@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 interface Column<T> {
   key: string;
   header: string;
-  cell: (row: T) => React.ReactNode;
+  cell?: (row: T) => React.ReactNode;
   className?: string;
 }
 
@@ -78,7 +78,7 @@ export function DataTable<T extends { id: string }>({
                   <tr key={row.id} className="border-t hover:bg-muted/30 transition-colors">
                     {columns.map((col) => (
                       <td key={col.key} className={cn("px-4 py-3", col.className)}>
-                        {col.cell(row)}
+                        {col.cell ? col.cell(row) : (row as any)[col.key] ?? "-"}
                       </td>
                     ))}
                   </tr>

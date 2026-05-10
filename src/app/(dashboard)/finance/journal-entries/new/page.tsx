@@ -26,6 +26,7 @@ export default function NewJournalEntryPage() {
     entryDate: new Date().toISOString().split("T")[0],
     description: "",
     notes: "",
+    voucherType: "JOURNAL",
   });
   const [lines, setLines] = useState<JournalLine[]>([
     { accountId: "", description: "", debit: "", credit: "" },
@@ -100,10 +101,28 @@ export default function NewJournalEntryPage() {
       <PageHeader title="New Journal Entry" description="Create a new double-entry journal" />
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Entry Date *</Label>
             <Input type="date" value={form.entryDate} onChange={(e) => setForm({ ...form, entryDate: e.target.value })} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Voucher Type *</Label>
+            <select
+              value={form.voucherType}
+              onChange={(e) => setForm({ ...form, voucherType: e.target.value })}
+              className="w-full border rounded px-3 py-2 text-sm"
+              required
+            >
+              <option value="JOURNAL">Journal</option>
+              <option value="PAYMENT">Payment</option>
+              <option value="RECEIPT">Receipt</option>
+              <option value="CONTRA">Contra</option>
+              <option value="SALES">Sales</option>
+              <option value="PURCHASE">Purchase</option>
+              <option value="DEBIT_NOTE">Debit Note</option>
+              <option value="CREDIT_NOTE">Credit Note</option>
+            </select>
           </div>
           <div className="space-y-2">
             <Label>Description *</Label>

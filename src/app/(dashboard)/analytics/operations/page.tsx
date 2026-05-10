@@ -35,7 +35,7 @@ export default function OperationsAnalyticsPage() {
     fetchData();
   }, []);
 
-  if (loading) return <LoadingState message="Loading operational analytics..." />;
+  if (loading) return <LoadingState text="Loading operational analytics..." />;
 
   return (
     <div className="space-y-6">

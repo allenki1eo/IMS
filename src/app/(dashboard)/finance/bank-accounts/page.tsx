@@ -51,9 +51,9 @@ export default function BankAccountsPage() {
         </Link>
       ),
     },
-    { key: "bankName", header: "Bank" },
-    { key: "accountNumber", header: "Account Number" },
-    { key: "accountType", header: "Type" },
+    { key: "bankName", header: "Bank", cell: (row: any) => row.bankName },
+    { key: "accountNumber", header: "Account Number", cell: (row: any) => row.accountNumber },
+    { key: "accountType", header: "Type", cell: (row: any) => row.accountType },
     {
       key: "currentBalance",
       header: "Balance",
@@ -85,9 +85,9 @@ export default function BankAccountsPage() {
       <SearchInput value={search} onChange={setSearch} placeholder="Search bank accounts..." />
 
       {loading ? (
-        <LoadingState message="Loading bank accounts..." />
+        <LoadingState text="Loading bank accounts..." />
       ) : (
-        <DataTable columns={columns} data={accounts} keyExtractor={(row) => row.id} emptyMessage="No bank accounts found" />
+        <DataTable columns={columns} data={accounts} emptyTitle="No bank accounts found" />
       )}
     </div>
   );

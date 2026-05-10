@@ -14,9 +14,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
+  const isClearedParam = searchParams.get("isCleared");
+  const isCleared = isClearedParam === "true" ? true : isClearedParam === "false" ? false : undefined;
 
   try {
-    const { data, meta } = await listBankTransactions(companyId, id, pagination);
+    const { data, meta } = await listBankTransactions(companyId, id, { ...pagination, isCleared });
     return paginated(data, buildMeta(meta.total, pagination));
   } catch {
     return badRequest("Failed to load transactions");

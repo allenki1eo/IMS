@@ -69,7 +69,7 @@ export default function PaymentDetailPage() {
     }
   }
 
-  if (loading) return <LoadingState message="Loading payment..." />;
+  if (loading) return <LoadingState text="Loading payment..." />;
   if (!payment) return <div className="text-muted-foreground">Payment not found</div>;
 
   return (

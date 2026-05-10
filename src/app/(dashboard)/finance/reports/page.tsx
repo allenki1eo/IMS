@@ -80,7 +80,7 @@ export default function FinancialReportsPage() {
         <Button onClick={fetchReport} disabled={loading}>{loading ? "Loading..." : "Generate Report"}</Button>
       </div>
 
-      {loading && <LoadingState message="Generating report..." />}
+      {loading && <LoadingState text="Generating report..." />}
 
       {data && reportType === "trial" && (
         <Card>

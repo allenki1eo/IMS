@@ -12,18 +12,20 @@ export async function listJournalEntries(
   params: {
     search?: string;
     status?: string;
+    voucherType?: string;
     fromDate?: string;
     toDate?: string;
     page: number;
     pageSize: number;
   }
 ) {
-  const { search, status, fromDate, toDate, page, pageSize } = params;
+  const { search, status, voucherType, fromDate, toDate, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
     companyId,
     ...(status ? { status } : {}),
+    ...(voucherType ? { voucherType } : {}),
     ...(fromDate || toDate
       ? {
           entryDate: {
@@ -86,6 +88,7 @@ export async function createJournalEntry(
     entryDate: string;
     description: string;
     notes?: string;
+    voucherType?: string;
     lines: { accountId: string; description?: string; debit: number; credit: number }[];
   },
   userId: string,
@@ -118,6 +121,7 @@ export async function createJournalEntry(
         entryDate: new Date(data.entryDate),
         description: data.description,
         notes: data.notes,
+        voucherType: data.voucherType || "JOURNAL",
         status: "DRAFT",
         totalDebit,
         totalCredit,

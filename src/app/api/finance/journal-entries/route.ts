@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   const pagination = parsePagination(searchParams);
   const search = searchParams.get("search") || undefined;
   const status = searchParams.get("status") || undefined;
+  const voucherType = searchParams.get("voucherType") || undefined;
   const fromDate = searchParams.get("fromDate") || undefined;
   const toDate = searchParams.get("toDate") || undefined;
 
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     const { data, meta } = await listJournalEntries(companyId, {
       search,
       status,
+      voucherType,
       fromDate,
       toDate,
       ...pagination,

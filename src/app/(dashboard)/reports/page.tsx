@@ -104,7 +104,7 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {loading && <LoadingState message={`Loading ${activeModule} report...`} />}
+      {loading && <LoadingState text={`Loading ${activeModule} report...`} />}
 
       {report && (
         <div className="space-y-6">
@@ -140,8 +140,7 @@ export default function ReportsPage() {
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.grns || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No GRNs in this period"
+                emptyTitle="No GRNs in this period"
               />
             </div>
           )}
@@ -178,8 +177,7 @@ export default function ReportsPage() {
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.receipts || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No receipts in this period"
+                emptyTitle="No receipts in this period"
               />
               <h3 className="font-semibold">Fuel Issues</h3>
               <DataTable
@@ -190,8 +188,7 @@ export default function ReportsPage() {
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.issues || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No issues in this period"
+                emptyTitle="No issues in this period"
               />
             </div>
           )}
@@ -208,8 +205,7 @@ export default function ReportsPage() {
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.workOrders || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No work orders in this period"
+                emptyTitle="No work orders in this period"
               />
             </div>
           )}
@@ -242,8 +238,7 @@ export default function ReportsPage() {
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.orders || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No orders in this period"
+                emptyTitle="No orders in this period"
               />
             </div>
           )}
@@ -261,8 +256,7 @@ export default function ReportsPage() {
                   { key: "actualQuantity", header: "Actual" },
                 ]}
                 data={report.batches || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No batches in this period"
+                emptyTitle="No batches in this period"
               />
             </div>
           )}
@@ -279,8 +273,7 @@ export default function ReportsPage() {
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.tests || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No tests in this period"
+                emptyTitle="No tests in this period"
               />
               <h3 className="font-semibold">Non-Conformances</h3>
               <DataTable
@@ -291,8 +284,7 @@ export default function ReportsPage() {
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.ncrs || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No NCRs in this period"
+                emptyTitle="No NCRs in this period"
               />
             </div>
           )}
@@ -309,8 +301,7 @@ export default function ReportsPage() {
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.orders || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No orders in this period"
+                emptyTitle="No orders in this period"
               />
             </div>
           )}
@@ -327,8 +318,7 @@ export default function ReportsPage() {
                   { key: "entryDate", header: "Date", cell: (r: any) => formatDate(r.entryDate) },
                 ]}
                 data={report.journalEntries || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No journal entries in this period"
+                emptyTitle="No journal entries in this period"
               />
               <h3 className="font-semibold">Payments</h3>
               <DataTable
@@ -340,8 +330,7 @@ export default function ReportsPage() {
                   { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
                 ]}
                 data={report.payments || []}
-                keyExtractor={(r) => r.id}
-                emptyMessage="No payments in this period"
+                emptyTitle="No payments in this period"
               />
             </div>
           )}

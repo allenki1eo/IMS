@@ -241,12 +241,13 @@ export async function createBankTransaction(
 export async function listBankTransactions(
   companyId: string,
   bankAccountId: string,
-  params: { page: number; pageSize: number }
+  params: { page: number; pageSize: number; isCleared?: boolean }
 ) {
-  const { page, pageSize } = params;
+  const { page, pageSize, isCleared } = params;
   const skip = (page - 1) * pageSize;
 
-  const where = { companyId, bankAccountId };
+  const where: any = { companyId, bankAccountId };
+  if (isCleared !== undefined) where.cleared = isCleared;
 
   const [transactions, total] = await Promise.all([
     db.bankTransaction.findMany({
@@ -259,4 +260,42 @@ export async function listBankTransactions(
   ]);
 
   return { data: transactions, meta: { total, page, pageSize } };
+}
+
+export async function toggleBankTransactionCleared(
+  companyId: string,
+  transactionId: string,
+  isCleared: boolean,
+  clearedAt?: string,
+  userId?: string,
+  userName?: string,
+  ipAddress?: string
+) {
+  const tx = await db.bankTransaction.findUnique({ where: { id: transactionId } });
+  if (!tx || tx.companyId !== companyId) throw new Error("Transaction not found");
+
+  const updated = await db.bankTransaction.update({
+    where: { id: transactionId },
+    data: {
+      cleared: isCleared,
+      clearedAt: isCleared && clearedAt ? new Date(clearedAt) : null,
+    },
+  });
+
+  if (userId && userName) {
+    await createAuditLog({
+      userId,
+      userName,
+      action: isCleared ? "BANK_TXN_CLEAR" : "BANK_TXN_UNCLEAR",
+      module: "finance",
+      resource: "bank",
+      recordId: transactionId,
+      oldValue: { cleared: tx.cleared },
+      newValue: { cleared: updated.cleared, clearedAt: updated.clearedAt },
+      description: `${isCleared ? "Cleared" : "Uncleared"} bank transaction ${tx.reference || tx.id}`,
+      ipAddress,
+    });
+  }
+
+  return updated;
 }

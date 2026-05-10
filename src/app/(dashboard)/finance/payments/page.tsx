@@ -52,14 +52,14 @@ export default function PaymentsPage() {
         </Link>
       ),
     },
-    { key: "type", header: "Type" },
-    { key: "partyName", header: "Party" },
+    { key: "type", header: "Type", cell: (row: any) => row.type },
+    { key: "partyName", header: "Party", cell: (row: any) => row.partyName },
     {
       key: "amount",
       header: "Amount",
       cell: (row: any) => `$${(row.amount || 0).toLocaleString()}`,
     },
-    { key: "paymentMethod", header: "Method" },
+    { key: "paymentMethod", header: "Method", cell: (row: any) => row.paymentMethod },
     {
       key: "status",
       header: "Status",
@@ -96,9 +96,9 @@ export default function PaymentsPage() {
       </div>
 
       {loading ? (
-        <LoadingState message="Loading payments..." />
+        <LoadingState text="Loading payments..." />
       ) : (
-        <DataTable columns={columns} data={payments} keyExtractor={(row) => row.id} emptyMessage="No payments found" />
+        <DataTable columns={columns} data={payments} emptyTitle="No payments found" />
       )}
     </div>
   );

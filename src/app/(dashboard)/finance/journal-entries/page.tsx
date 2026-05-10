@@ -17,13 +17,14 @@ export default function JournalEntriesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [voucherType, setVoucherType] = useState("");
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 20 });
   const canCreate = usePermission("finance:journal:create");
 
   async function fetchEntries(page = 1) {
     setLoading(true);
     try {
-      const res = await fetch(`/api/finance/journal-entries?page=${page}&pageSize=20&search=${encodeURIComponent(search)}&status=${status}`);
+      const res = await fetch(`/api/finance/journal-entries?page=${page}&pageSize=20&search=${encodeURIComponent(search)}&status=${status}&voucherType=${voucherType}`);
       const json = await res.json();
       if (res.ok) {
         setEntries(json.data || []);
@@ -40,7 +41,7 @@ export default function JournalEntriesPage() {
 
   useEffect(() => {
     fetchEntries();
-  }, [search, status]);
+  }, [search, status, voucherType]);
 
   const columns = [
     {
@@ -53,7 +54,7 @@ export default function JournalEntriesPage() {
       ),
     },
     { key: "entryDate", header: "Date", cell: (row: any) => new Date(row.entryDate).toLocaleDateString() },
-    { key: "description", header: "Description" },
+    { key: "description", header: "Description", cell: (row: any) => row.description },
     {
       key: "totalDebit",
       header: "Debit",
@@ -97,12 +98,23 @@ export default function JournalEntriesPage() {
           <option value="POSTED">Posted</option>
           <option value="REVERSED">Reversed</option>
         </select>
+        <select value={voucherType} onChange={(e) => setVoucherType(e.target.value)} className="border rounded px-3 py-2 text-sm">
+          <option value="">All Vouchers</option>
+          <option value="JOURNAL">Journal</option>
+          <option value="PAYMENT">Payment</option>
+          <option value="RECEIPT">Receipt</option>
+          <option value="CONTRA">Contra</option>
+          <option value="SALES">Sales</option>
+          <option value="PURCHASE">Purchase</option>
+          <option value="DEBIT_NOTE">Debit Note</option>
+          <option value="CREDIT_NOTE">Credit Note</option>
+        </select>
       </div>
 
       {loading ? (
-        <LoadingState message="Loading journal entries..." />
+        <LoadingState text="Loading journal entries..." />
       ) : (
-        <DataTable columns={columns} data={entries} keyExtractor={(row) => row.id} emptyMessage="No journal entries found" />
+        <DataTable columns={columns} data={entries} emptyTitle="No journal entries found" />
       )}
     </div>
   );
