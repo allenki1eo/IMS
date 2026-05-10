@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Users, UserCheck, GitBranch, CheckCircle, TrendingUp } from "lucide-react";
+import {
+  Users, UserCheck, GitBranch, CheckCircle,
+  Car, Fuel, Wrench, Factory, FlaskConical,
+  SendHorizonal, Landmark, Package, ShoppingCart,
+  TrendingUp, AlertTriangle,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
@@ -12,6 +17,15 @@ interface DashboardStats {
   employeeCount: number;
   branchCount: number;
   pendingApprovals: number;
+  vehicleCount: number;
+  fuelTankCount: number;
+  workOrderCount: number;
+  productionBatchCount: number;
+  qcTestCount: number;
+  dispatchOrderCount: number;
+  accountCount: number;
+  warehouseItemCount: number;
+  procurementOrderCount: number;
 }
 
 function StatCard({
@@ -19,13 +33,11 @@ function StatCard({
   value,
   icon: Icon,
   description,
-  className,
 }: {
   title: string;
   value: number | string;
   icon: React.ElementType;
   description?: string;
-  className?: string;
 }) {
   return (
     <Card>
@@ -69,30 +81,19 @@ export default function DashboardPage() {
         <LoadingState />
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Active Users"
-            value={stats?.userCount ?? 0}
-            icon={Users}
-            description="System accounts"
-          />
-          <StatCard
-            title="Active Employees"
-            value={stats?.employeeCount ?? 0}
-            icon={UserCheck}
-            description="Employee records"
-          />
-          <StatCard
-            title="Branches"
-            value={stats?.branchCount ?? 0}
-            icon={GitBranch}
-            description="Operating locations"
-          />
-          <StatCard
-            title="Pending Approvals"
-            value={stats?.pendingApprovals ?? 0}
-            icon={CheckCircle}
-            description="Awaiting action"
-          />
+          <StatCard title="Active Users" value={stats?.userCount ?? 0} icon={Users} description="System accounts" />
+          <StatCard title="Active Employees" value={stats?.employeeCount ?? 0} icon={UserCheck} description="Employee records" />
+          <StatCard title="Branches" value={stats?.branchCount ?? 0} icon={GitBranch} description="Operating locations" />
+          <StatCard title="Pending Approvals" value={stats?.pendingApprovals ?? 0} icon={CheckCircle} description="Awaiting action" />
+          <StatCard title="Vehicles" value={stats?.vehicleCount ?? 0} icon={Car} description="Fleet size" />
+          <StatCard title="Fuel Tanks" value={stats?.fuelTankCount ?? 0} icon={Fuel} description="Storage units" />
+          <StatCard title="Open Work Orders" value={stats?.workOrderCount ?? 0} icon={Wrench} description="Maintenance" />
+          <StatCard title="Active Batches" value={stats?.productionBatchCount ?? 0} icon={Factory} description="Production" />
+          <StatCard title="QC Tests" value={stats?.qcTestCount ?? 0} icon={FlaskConical} description="Quality control" />
+          <StatCard title="Dispatch Orders" value={stats?.dispatchOrderCount ?? 0} icon={SendHorizonal} description="Logistics" />
+          <StatCard title="Finance Accounts" value={stats?.accountCount ?? 0} icon={Landmark} description="Chart of accounts" />
+          <StatCard title="Warehouse Items" value={stats?.warehouseItemCount ?? 0} icon={Package} description="SKU count" />
+          <StatCard title="Purchase Orders" value={stats?.procurementOrderCount ?? 0} icon={ShoppingCart} description="Procurement" />
         </div>
       )}
 
@@ -132,7 +133,7 @@ export default function DashboardPage() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Phase</span>
-                <span className="font-medium">1 — Core Foundation</span>
+                <span className="font-medium">2 — Full Operations</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Version</span>
@@ -140,7 +141,9 @@ export default function DashboardPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Modules Active</span>
-                <span className="font-medium">Auth · Users · Roles · Company</span>
+                <span className="font-medium text-right">
+                  Admin · Company · Employees · Warehouse · Transport · Fuel · Maintenance · Procurement · Production · QC · Dispatch · Finance · Analytics · Reports · Approvals · Audit · Settings
+                </span>
               </div>
             </div>
           </CardContent>
