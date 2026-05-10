@@ -8,7 +8,13 @@ export async function PUT(request: NextRequest) {
   const auth = await requireAuth(request);
   if ("error" in auth) return auth.error;
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return badRequest("Invalid request body");
+  }
+
   const parsed = changePasswordSchema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.errors[0].message);
 
@@ -25,7 +31,14 @@ export async function PUT(request: NextRequest) {
     });
     return success({ message: "Password changed successfully" });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed";
-    return badRequest(message, "AUTH_ERROR");
+    const message = err instanceof Error ? err.message : "";
+    // Known validation errors → 400
+    const knownErrors = ["Current password is incorrect", "Password must be at least", "User not found"];
+    if (knownErrors.some((e) => message.startsWith(e))) {
+      return badRequest(message);
+    }
+    // Database / connection errors → 500
+    console.error("[change-password]", err);
+    return serverError("Database error. Please check server configuration.");
   }
 }

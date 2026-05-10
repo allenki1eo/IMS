@@ -1,40 +1,44 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaLibSQL } from "@prisma/adapter-libsql";
-import { createClient } from "@libsql/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
+import { PrismaLibSQL } from "@prisma/adapter-libsql/web";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-function createPrismaClient(): PrismaClient {
-  const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
+const log: Prisma.LogLevel[] =
+  process.env.NODE_ENV === "development"
+    ? ["query", "error", "warn"]
+    : ["error"];
 
-  // Local SQLite: use standard PrismaClient
+function getDatabaseUrl(): string {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.TURSO_DATABASE_URL ||
+    "file:./dev.db"
+  );
+}
+
+function getDatabaseAuthToken(): string | undefined {
+  return process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN;
+}
+
+function createPrismaClient(): PrismaClient {
+  const databaseUrl = getDatabaseUrl();
+
+  // Local SQLite: use standard datasource URL (no adapter needed)
   if (databaseUrl.startsWith("file:")) {
     return new PrismaClient({
-      datasources: {
-        db: { url: databaseUrl },
-      },
-      log:
-        process.env.NODE_ENV === "development"
-          ? ["query", "error", "warn"]
-          : ["error"],
+      datasources: { db: { url: databaseUrl } },
+      log,
     });
   }
 
-  // Turso / libSQL: use driver adapter
-  const client = createClient({
+  // Turso / libSQL remote: use the HTTP-based web adapter so Vercel
+  // serverless builds do not depend on native libSQL binaries.
+  const adapter = new PrismaLibSQL({
     url: databaseUrl,
-    authToken: process.env.DATABASE_AUTH_TOKEN,
+    authToken: getDatabaseAuthToken(),
   });
 
-  const adapter = new PrismaLibSQL(client);
-
-  return new PrismaClient({
-    adapter,
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"],
-  });
+  return new PrismaClient({ adapter, log });
 }
 
 export const db = globalForPrisma.prisma || createPrismaClient();

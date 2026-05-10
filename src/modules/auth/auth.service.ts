@@ -3,7 +3,6 @@ import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { signToken, signLongToken, getSessionExpiry } from "@/lib/auth";
 import { createSession } from "@/lib/session";
 import { createAuditLog } from "@/lib/audit";
-import { nanoid } from "nanoid";
 
 export interface LoginParams {
   username: string;
@@ -71,7 +70,6 @@ export async function loginService(params: LoginParams): Promise<LoginResult> {
     throw new Error("Invalid credentials");
   }
 
-  const jtiId = nanoid();
   const token = rememberMe
     ? await signLongToken(user.id)
     : await signToken(user.id);

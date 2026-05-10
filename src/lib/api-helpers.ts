@@ -11,10 +11,14 @@ export async function getUser(request: NextRequest): Promise<AuthUser | null> {
 
   if (!userId || !jti) return null;
 
-  const isValid = await validateSession(jti);
-  if (!isValid) return null;
+  try {
+    const isValid = await validateSession(jti);
+    if (!isValid) return null;
 
-  return getAuthUser(userId);
+    return getAuthUser(userId);
+  } catch {
+    return null;
+  }
 }
 
 export async function requireAuth(
