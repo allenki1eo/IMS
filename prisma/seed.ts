@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const db = new PrismaClient();
+import { db } from "../src/lib/db";
 
 // ─── Permission definitions ──────────────────────────────
 const PERMISSIONS = [
