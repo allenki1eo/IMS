@@ -152,6 +152,19 @@ const NAV: NavItem[] = [
     ],
   },
   {
+    label: "Finance",
+    icon: <Landmark className="h-4 w-4" />,
+    permission: "finance:account:read",
+    children: [
+      { label: "Overview", href: "/finance", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
+      { label: "Chart of Accounts", href: "/finance/accounts", icon: <ScrollText className="h-4 w-4" />, permission: "finance:account:read" },
+      { label: "Journal Entries", href: "/finance/journal-entries", icon: <FileCheck className="h-4 w-4" />, permission: "finance:journal:read" },
+      { label: "Bank Accounts", href: "/finance/bank-accounts", icon: <Landmark className="h-4 w-4" />, permission: "finance:bank:read" },
+      { label: "Payments", href: "/finance/payments", icon: <Receipt className="h-4 w-4" />, permission: "finance:payment:read" },
+      { label: "Reports", href: "/finance/reports", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
+    ],
+  },
+  {
     label: "Approvals",
     href: "/approvals",
     icon: <CheckCircle className="h-4 w-4" />,

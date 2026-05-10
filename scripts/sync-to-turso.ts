@@ -78,7 +78,7 @@ async function sync() {
        name`
   );
 
-  const schemaRows = schemaResult.rows as Array<{
+  const schemaRows = schemaResult.rows as unknown as Array<{
     type: string;
     name: string;
     sql: string;
@@ -99,7 +99,7 @@ async function sync() {
   const existingTables = await turso.execute(
     `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`
   );
-  const tableNames = (existingTables.rows as Array<{ name: string }>).map(
+  const tableNames = (existingTables.rows as unknown as Array<{ name: string }>).map(
     (r) => r.name
   );
   for (const name of tableNames.reverse()) {
@@ -129,7 +129,7 @@ async function sync() {
      ORDER BY name`
   );
 
-  const tables = (tablesResult.rows as Array<{ name: string }>).map(
+  const tables = (tablesResult.rows as unknown as Array<{ name: string }>).map(
     (r) => r.name
   );
 

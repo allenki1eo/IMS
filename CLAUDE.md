@@ -4,9 +4,9 @@
 
 A modular, phased ERP for a manufacturing/distribution company. Built with Next.js 15, TypeScript, Prisma, Turso/libSQL/SQLite, and Tailwind CSS plus shadcn-style UI primitives.
 
-**Current Phase: Phase 9 - Finished Goods & Dispatch complete**
+**Current Phase: Phase 12 - Finance Operations complete**
 
-The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, Procurement, Production & Brewing, Quality Control & Lab, and Finished Goods & Dispatch modules.
+The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, Procurement, Production & Brewing, Quality Control & Lab, Finished Goods & Dispatch, and Finance Operations modules.
 
 ## Architecture
 
@@ -283,6 +283,35 @@ Status: Complete
   - Inventory list, create, detail, and status tracking
   - Orders list, create, detail, and lifecycle actions (confirm, dispatch, deliver)
 
+### Phase 10 - Sales Integration
+
+Status: Planned
+
+### Phase 11 - HR Integration
+
+Status: Planned
+
+### Phase 12 - Finance Operations
+
+Status: Complete
+
+- Prisma schema for chart of accounts (Account), journal entries (JournalEntry, JournalEntryLine), bank accounts (BankAccount, BankTransaction), payments (Payment, PaymentAllocation)
+- Seeded permissions and sidebar navigation for Finance
+- Services and API routes for:
+  - Chart of accounts: list, create, detail, update, activate/deactivate, hierarchy, and balance tracking
+  - Journal entries: list, create, detail, debit/credit validation, post, and reverse with automatic account balance updates
+  - Bank accounts: list, create, detail, update, activate/deactivate, and transaction history
+  - Bank transactions: deposits, withdrawals, and balance updates
+  - Payments: list, create, detail, complete, cancel, and bank balance integration
+  - Financial reports: trial balance, income statement (P&L), and balance sheet
+- Dashboard UI for:
+  - Finance overview with key metrics
+  - Chart of accounts list, create, detail, and status control
+  - Journal entries list, create, detail, post, and reverse actions
+  - Bank accounts list, create, detail, and transaction history
+  - Payments list, create, detail, complete, and cancel actions
+  - Financial reports with trial balance, income statement, and balance sheet views
+
 ## Module Roadmap
 
 | Phase | Module | Status |
@@ -298,7 +327,7 @@ Status: Complete
 | 9 | Finished Goods & Dispatch | Complete |
 | 10 | Sales Integration | Planned |
 | 11 | HR Integration | Planned |
-| 12 | Finance Operations | Planned |
+| 12 | Finance Operations | Complete |
 | 13 | Management Analytics | Planned |
 
 ## Adding a New Module (Phases 8+)

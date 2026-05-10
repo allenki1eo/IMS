@@ -1528,3 +1528,157 @@ model DispatchOrderLine {
   @@index([lotId])
   @@map("dispatch_order_lines")
 }
+
+// ─────────────────────────────────────────────
+// FINANCE OPERATIONS
+// ─────────────────────────────────────────────
+
+model Account {
+  id              String  @id @default(cuid())
+  companyId       String
+  code            String
+  name            String
+  accountType     String  // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  parentId        String?
+  description     String?
+  openingBalance  Float   @default(0)
+  currentBalance  Float   @default(0)
+  isActive        Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  parent   Account?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children Account[] @relation("AccountHierarchy")
+  lines    JournalEntryLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([accountType])
+  @@index([isActive])
+  @@map("accounts")
+}
+
+model JournalEntry {
+  id          String   @id @default(cuid())
+  companyId   String
+  reference   String
+  entryDate   DateTime @default(now())
+  description String
+  notes       String?
+  status      String   @default("DRAFT") // DRAFT, POSTED, REVERSED
+  totalDebit  Float    @default(0)
+  totalCredit Float    @default(0)
+  createdById String
+  postedAt    DateTime?
+  reversedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lines JournalEntryLine[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([entryDate])
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id            String  @id @default(cuid())
+  journalEntryId String
+  accountId     String
+  description   String?
+  debit         Float   @default(0)
+  credit        Float   @default(0)
+  createdAt     DateTime @default(now())
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      Account      @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_entry_lines")
+}
+
+model BankAccount {
+  id             String  @id @default(cuid())
+  companyId      String
+  name           String
+  accountNumber  String?
+  bankName       String?
+  branch         String?
+  currency       String  @default("USD")
+  accountType    String  @default("BANK") // BANK, CASH, MOBILE_MONEY
+  currentBalance Float   @default(0)
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  transactions BankTransaction[]
+  payments     Payment[]
+
+  @@index([companyId])
+  @@index([isActive])
+  @@map("bank_accounts")
+}
+
+model BankTransaction {
+  id               String   @id @default(cuid())
+  companyId        String
+  bankAccountId    String
+  type             String   // DEPOSIT, WITHDRAWAL, TRANSFER
+  amount           Float
+  reference        String?
+  description      String?
+  transactionDate  DateTime @default(now())
+  counterparty     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+
+  @@index([companyId])
+  @@index([bankAccountId])
+  @@index([transactionDate])
+  @@map("bank_transactions")
+}
+
+model Payment {
+  id             String   @id @default(cuid())
+  companyId      String
+  paymentNumber  String
+  type           String   // PAYMENT, RECEIPT
+  partyName      String
+  amount         Float
+  currency       String   @default("USD")
+  paymentDate    DateTime @default(now())
+  paymentMethod  String   // CASH, BANK_TRANSFER, CHECK, MOBILE_MONEY
+  bankAccountId  String?
+  reference      String?
+  status         String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  bankAccount   BankAccount?       @relation(fields: [bankAccountId], references: [id])
+  allocations   PaymentAllocation[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([paymentDate])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id           String  @id @default(cuid())
+  paymentId    String
+  documentType String  // PURCHASE_ORDER, DISPATCH_ORDER, INVOICE
+  documentId   String
+  amount       Float
+  createdAt    DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([documentId])
+  @@map("payment_allocations")
+}
