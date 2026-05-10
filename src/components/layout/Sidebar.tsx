@@ -7,7 +7,7 @@ import {
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
   Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
-  Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes,
+  Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
