@@ -144,6 +144,30 @@ const PERMISSIONS = [
   { module: "production", resource: "batch", action: "start", description: "Start production batches" },
   { module: "production", resource: "batch", action: "complete", description: "Complete production batches" },
   { module: "production", resource: "report", action: "read", description: "View production reports" },
+  // Finance
+  { module: "finance", resource: "account", action: "read", description: "View chart of accounts" },
+  { module: "finance", resource: "account", action: "create", description: "Create accounts" },
+  { module: "finance", resource: "account", action: "update", description: "Edit accounts" },
+  { module: "finance", resource: "account", action: "deactivate", description: "Deactivate accounts" },
+  { module: "finance", resource: "journal", action: "read", description: "View journal entries" },
+  { module: "finance", resource: "journal", action: "create", description: "Create journal entries" },
+  { module: "finance", resource: "journal", action: "update", description: "Edit journal entries" },
+  { module: "finance", resource: "journal", action: "post", description: "Post journal entries" },
+  { module: "finance", resource: "journal", action: "reverse", description: "Reverse journal entries" },
+  { module: "finance", resource: "bank", action: "read", description: "View bank accounts" },
+  { module: "finance", resource: "bank", action: "create", description: "Create bank accounts" },
+  { module: "finance", resource: "bank", action: "update", description: "Edit bank accounts" },
+  { module: "finance", resource: "bank", action: "deactivate", description: "Deactivate bank accounts" },
+  { module: "finance", resource: "payment", action: "read", description: "View payments" },
+  { module: "finance", resource: "payment", action: "create", description: "Create payments" },
+  { module: "finance", resource: "payment", action: "update", description: "Edit payments" },
+  { module: "finance", resource: "payment", action: "complete", description: "Complete payments" },
+  { module: "finance", resource: "payment", action: "cancel", description: "Cancel payments" },
+  { module: "finance", resource: "report", action: "read", description: "View financial reports" },
+  // Analytics
+  { module: "analytics", resource: "dashboard", action: "read", description: "View analytics dashboard" },
+  { module: "analytics", resource: "operations", action: "read", description: "View operational analytics" },
+  { module: "analytics", resource: "financial", action: "read", description: "View financial analytics" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -217,6 +241,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:bank:read", "finance:bank:create", "finance:bank:update", "finance:bank:deactivate",
     "finance:payment:read", "finance:payment:create", "finance:payment:update", "finance:payment:complete", "finance:payment:cancel",
     "finance:report:read",
+    "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -270,6 +295,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:bank:read", "finance:bank:create", "finance:bank:update",
     "finance:payment:read", "finance:payment:create", "finance:payment:update", "finance:payment:complete",
     "finance:report:read",
+    "analytics:dashboard:read", "analytics:operations:read",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -311,6 +337,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:bank:read", "finance:bank:create",
     "finance:payment:read", "finance:payment:create",
     "finance:report:read",
+    "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
   ],
   MANAGEMENT: [
     "auth:session:create",
@@ -338,6 +365,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:bank:read",
     "finance:payment:read",
     "finance:report:read",
+    "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -365,6 +393,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:bank:read",
     "finance:payment:read",
     "finance:report:read",
+    "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
   ],
 };
 

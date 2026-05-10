@@ -165,6 +165,16 @@ const NAV: NavItem[] = [
     ],
   },
   {
+    label: "Analytics",
+    icon: <BarChart3 className="h-4 w-4" />,
+    permission: "analytics:dashboard:read",
+    children: [
+      { label: "Dashboard", href: "/analytics", icon: <BarChart3 className="h-4 w-4" />, permission: "analytics:dashboard:read" },
+      { label: "Operations", href: "/analytics/operations", icon: <Factory className="h-4 w-4" />, permission: "analytics:operations:read" },
+      { label: "Financial", href: "/analytics/financial", icon: <Landmark className="h-4 w-4" />, permission: "analytics:financial:read" },
+    ],
+  },
+  {
     label: "Approvals",
     href: "/approvals",
     icon: <CheckCircle className="h-4 w-4" />,

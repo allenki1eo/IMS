@@ -4,9 +4,9 @@
 
 A modular, phased ERP for a manufacturing/distribution company. Built with Next.js 15, TypeScript, Prisma, Turso/libSQL/SQLite, and Tailwind CSS plus shadcn-style UI primitives.
 
-**Current Phase: Phase 12 - Finance Operations complete**
+**Current Phase: Phase 13 - Management Analytics complete**
 
-The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, Procurement, Production & Brewing, Quality Control & Lab, Finished Goods & Dispatch, and Finance Operations modules.
+The application now includes the core ERP foundation, Warehouse Management, Transport & Fleet, Fuel Management, Maintenance & Spare Parts, Procurement, Production & Brewing, Quality Control & Lab, Finished Goods & Dispatch, Finance Operations, and Management Analytics modules.
 
 ## Architecture
 
@@ -312,6 +312,19 @@ Status: Complete
   - Payments list, create, detail, complete, and cancel actions
   - Financial reports with trial balance, income statement, and balance sheet views
 
+### Phase 13 - Management Analytics
+
+Status: Complete
+
+- Cross-module analytics service aggregating data from all ERP modules
+- Executive KPIs: users, inventory, vehicles, fuel, maintenance, procurement, production, QC, dispatch, and finance metrics
+- Monthly trend analysis across GRNs, trips, fuel issues, work orders, purchase orders, production batches, dispatch orders, and journal activity
+- Operational metrics: stock by warehouse, trip status breakdown, work order status, QC test results
+- Financial trends: revenue vs expenses, payments vs receipts over time
+- Recharts-based visualizations: bar charts, line charts, pie charts
+- Dashboard UI with KPI cards and interactive charts
+- Operational and financial analytics sub-pages with filterable date ranges
+
 ## Module Roadmap
 
 | Phase | Module | Status |
@@ -328,7 +341,7 @@ Status: Complete
 | 10 | Sales Integration | Planned |
 | 11 | HR Integration | Planned |
 | 12 | Finance Operations | Complete |
-| 13 | Management Analytics | Planned |
+| 13 | Management Analytics | Complete |
 
 ## Adding a New Module (Phases 8+)
 
