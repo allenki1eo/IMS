@@ -5,6 +5,11 @@ export interface JWTPayload {
   exp: number;
 }
 
+export interface CompanySummary {
+  id: string;
+  name: string;
+}
+
 export interface AuthUser {
   id: string;
   username: string;
@@ -15,4 +20,5 @@ export interface AuthUser {
   mustChangePassword: boolean;
   roles: string[];
   permissions: string[];
+  companies?: CompanySummary[];
 }

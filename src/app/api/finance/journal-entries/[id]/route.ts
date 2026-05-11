@@ -7,7 +7,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const auth = await requirePermission(request, "finance:journal:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;

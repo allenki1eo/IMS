@@ -57,7 +57,11 @@ export function getRequestMeta(request: NextRequest) {
   return { ipAddress, userAgent };
 }
 
-export async function getCompanyId(): Promise<string | null> {
+export async function getCompanyId(request?: NextRequest): Promise<string | null> {
+  if (request) {
+    const companyId = request.headers.get("x-company-id");
+    if (companyId) return companyId;
+  }
   const { db } = await import("./db");
   const company = await db.company.findFirst({ select: { id: true } });
   return company?.id ?? null;

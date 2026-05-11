@@ -7,7 +7,7 @@ import { success, created, badRequest, conflict, serverError } from "@/lib/respo
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "company:branch:read");
   if ("error" in auth) return auth.error;
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
   const { searchParams } = new URL(request.url);
   const branches = await listBranches({
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "company:branch:create");
   if ("error" in auth) return auth.error;
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
   const body = await request.json();
   const parsed = createBranchSchema.safeParse(body);

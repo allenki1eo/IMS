@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "approvals:workflow:manage");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const workflows = await listWorkflows(companyId);
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "approvals:workflow:manage");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();

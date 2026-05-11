@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "analytics:dashboard:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);

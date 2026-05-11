@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:spare_part:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const categories = await listCategories(companyId);
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:spare_part:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();

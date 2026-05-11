@@ -10,7 +10,7 @@ export async function PATCH(
   const auth = await requirePermission(request, "qc:standard:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id, paramId } = await params;
@@ -42,7 +42,7 @@ export async function DELETE(
   const auth = await requirePermission(request, "qc:standard:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id, paramId } = await params;

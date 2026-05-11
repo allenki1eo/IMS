@@ -14,7 +14,7 @@ export async function GET(
   const auth = await requirePermission(request, "maintenance:schedule:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -31,7 +31,7 @@ export async function PATCH(
   const auth = await requirePermission(request, "maintenance:schedule:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -86,7 +86,7 @@ export async function DELETE(
   const auth = await requirePermission(request, "maintenance:schedule:delete");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;

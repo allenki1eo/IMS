@@ -10,7 +10,7 @@ export async function GET(
   const auth = await requirePermission(request, "transport:driver:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;

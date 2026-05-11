@@ -19,6 +19,7 @@ const PERMISSIONS = [
   { module: "roles", resource: "role", action: "deactivate", description: "Deactivate roles" },
   { module: "roles", resource: "permission", action: "assign", description: "Assign permissions to roles" },
   // Company
+  { module: "company", resource: "company", action: "create", description: "Create companies" },
   { module: "company", resource: "company", action: "read", description: "View company profile" },
   { module: "company", resource: "company", action: "update", description: "Edit company profile" },
   { module: "company", resource: "branch", action: "create", description: "Create branches" },
@@ -190,7 +191,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "users:user:reset_password", "users:user:assign_role",
     "roles:role:create", "roles:role:read", "roles:role:update", "roles:role:deactivate",
     "roles:permission:assign",
-    "company:company:read", "company:company:update",
+    "company:company:create", "company:company:read", "company:company:update",
     "company:branch:create", "company:branch:read", "company:branch:update", "company:branch:deactivate",
     "company:department:create", "company:department:read", "company:department:update", "company:department:deactivate",
     "employees:employee:create", "employees:employee:read", "employees:employee:update", "employees:employee:deactivate",

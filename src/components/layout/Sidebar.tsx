@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
 import { Button } from "@/components/ui/button";
+import { CompanySwitcher } from "@/components/shared/CompanySwitcher";
 
 interface NavItem {
   label: string;
@@ -43,6 +44,7 @@ const NAV: NavItem[] = [
     permission: "company:company:read",
     children: [
       { label: "Profile", href: "/company", icon: <Building2 className="h-4 w-4" />, permission: "company:company:read" },
+      { label: "Companies", href: "/companies", icon: <Building2 className="h-4 w-4" />, permission: "company:company:read" },
       { label: "Branches", href: "/company/branches", icon: <GitBranch className="h-4 w-4" />, permission: "company:branch:read" },
       { label: "Departments", href: "/company/departments", icon: <Layers className="h-4 w-4" />, permission: "company:department:read" },
     ],
@@ -289,6 +291,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Company Switcher */}
+        <CompanySwitcher />
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">

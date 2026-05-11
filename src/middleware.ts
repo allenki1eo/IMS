@@ -47,6 +47,11 @@ export async function middleware(request: NextRequest) {
     headers.set("x-user-id", userId);
     headers.set("x-user-jti", jti);
 
+    const companyId = request.cookies.get("erp_company_id")?.value;
+    if (companyId) {
+      headers.set("x-company-id", companyId);
+    }
+
     return NextResponse.next({ request: { headers } });
   } catch {
     if (pathname.startsWith("/api/")) {
