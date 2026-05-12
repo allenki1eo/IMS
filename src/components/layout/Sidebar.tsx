@@ -5,14 +5,13 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Shield, Building2, GitBranch, Layers,
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
-  Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
+  X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
-import { Button } from "@/components/ui/button";
 import { CompanySwitcher } from "@/components/shared/CompanySwitcher";
 
 interface NavItem {
@@ -208,17 +207,48 @@ const NAV: NavItem[] = [
   },
 ];
 
-function NavLink({ item, depth = 0 }: { item: NavItem; depth?: number }) {
+function NavLink({ item, depth = 0, collapsed }: { item: NavItem; depth?: number; collapsed?: boolean }) {
   const pathname = usePathname();
   const hasPermission = usePermission(item.permission ?? "");
   const [open, setOpen] = useState(() => {
     if (!item.children) return false;
     return item.children.some((c) => c.href && pathname.startsWith(c.href));
   });
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
 
   if (item.permission && !hasPermission) return null;
 
   if (item.children) {
+    if (collapsed) {
+      return (
+        <div
+          className="relative"
+          onMouseEnter={() => setFlyoutOpen(true)}
+          onMouseLeave={() => setFlyoutOpen(false)}
+        >
+          <button
+            className={cn(
+              "w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            )}
+            title={item.label}
+          >
+            {item.icon}
+          </button>
+          {flyoutOpen && (
+            <div className="absolute left-full top-0 ml-1 w-52 bg-sidebar border border-sidebar-border rounded-md shadow-lg py-1 z-50">
+              <div className="px-3 py-1.5 text-xs font-semibold text-sidebar-foreground/60 border-b border-sidebar-border mb-1">
+                {item.label}
+              </div>
+              {item.children.map((child) => (
+                <NavLink key={child.href ?? child.label} item={child} depth={0} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div>
         <button
@@ -248,6 +278,23 @@ function NavLink({ item, depth = 0 }: { item: NavItem; depth?: number }) {
 
   const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href!);
 
+  if (collapsed) {
+    return (
+      <Link
+        href={item.href!}
+        title={item.label}
+        className={cn(
+          "flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+          isActive
+            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        )}
+      >
+        {item.icon}
+      </Link>
+    );
+  }
+
   return (
     <Link
       href={item.href!}
@@ -268,9 +315,10 @@ function NavLink({ item, depth = 0 }: { item: NavItem; depth?: number }) {
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  collapsed?: boolean;
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
   return (
     <>
       {/* Mobile overlay */}
@@ -284,36 +332,51 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-sidebar transition-transform duration-200 lg:static lg:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-200 lg:static lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full",
+          collapsed ? "w-16" : "w-60"
         )}
       >
         {/* Logo area */}
-        <div className="flex h-14 items-center justify-between px-4 border-b border-sidebar-border">
-          <span className="text-sidebar-foreground font-bold text-lg tracking-tight">
-            {process.env.NEXT_PUBLIC_APP_NAME ?? "ERP"}
-          </span>
+        <div
+          className={cn(
+            "flex h-14 items-center border-b border-sidebar-border",
+            collapsed ? "justify-center px-2" : "justify-between px-4"
+          )}
+        >
+          {!collapsed && (
+            <span className="text-sidebar-foreground font-bold text-lg tracking-tight">
+              {process.env.NEXT_PUBLIC_APP_NAME ?? "ERP"}
+            </span>
+          )}
           <button onClick={onClose} className="lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Company Switcher */}
-        <CompanySwitcher />
+        {!collapsed && <CompanySwitcher />}
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+        <nav
+          className={cn(
+            "flex-1 overflow-y-auto space-y-0.5",
+            collapsed ? "px-2 py-4" : "px-3 py-4"
+          )}
+        >
           {NAV.map((item) => (
-            <NavLink key={item.href ?? item.label} item={item} />
+            <NavLink key={item.href ?? item.label} item={item} collapsed={collapsed} />
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-sidebar-border">
-          <p className="text-xs text-sidebar-foreground/40">
-            v{process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0"}
-          </p>
-        </div>
+        {!collapsed && (
+          <div className="px-4 py-3 border-t border-sidebar-border">
+            <p className="text-xs text-sidebar-foreground/40">
+              v{process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0"}
+            </p>
+          </div>
+        )}
       </aside>
     </>
   );
