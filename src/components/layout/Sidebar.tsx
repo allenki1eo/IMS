@@ -8,6 +8,7 @@ import {
   Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
+  BookOpen, ArrowRightLeft, Scale, CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
@@ -165,7 +166,9 @@ const NAV: NavItem[] = [
       { label: "Bank Accounts", href: "/finance/bank-accounts", icon: <Landmark className="h-4 w-4" />, permission: "finance:bank:read" },
       { label: "Payments", href: "/finance/payments", icon: <Receipt className="h-4 w-4" />, permission: "finance:payment:read" },
       { label: "Exchange Rates", href: "/finance/exchange-rates", icon: <TrendingDown className="h-4 w-4" />, permission: "finance:report:read" },
-      { label: "Converter", href: "/finance/converter", icon: <Landmark className="h-4 w-4" />, permission: "finance:report:read" },
+      { label: "Converter", href: "/finance/converter", icon: <ArrowRightLeft className="h-4 w-4" />, permission: "finance:report:read" },
+      { label: "Day Book", href: "/finance/day-book", icon: <BookOpen className="h-4 w-4" />, permission: "finance:journal:read" },
+      { label: "Outstanding", href: "/finance/outstanding", icon: <CreditCard className="h-4 w-4" />, permission: "finance:payment:read" },
       { label: "Reports", href: "/finance/reports", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
     ],
   },

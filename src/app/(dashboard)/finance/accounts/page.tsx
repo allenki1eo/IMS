@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -18,15 +18,16 @@ export default function AccountsPage() {
   const [search, setSearch] = useState("");
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 20 });
   const canCreate = usePermission("finance:account:create");
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function fetchAccounts(page = 1) {
+  const fetchAccounts = useCallback(async (page = 1, q = search) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/finance/accounts?page=${page}&pageSize=20&search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/api/finance/accounts?page=${page}&pageSize=20&search=${encodeURIComponent(q)}`);
       const json = await res.json();
       if (res.ok) {
         setAccounts(json.data || []);
-        setMeta(json.meta || meta);
+        setMeta(json.meta || { total: 0, page, pageSize: 20 });
       } else {
         toast.error(json.message || "Failed to load accounts");
       }
@@ -35,11 +36,23 @@ export default function AccountsPage() {
     } finally {
       setLoading(false);
     }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initial load
+  useEffect(() => {
+    fetchAccounts(1, "");
+  }, [fetchAccounts]);
+
+  // Debounced search — 300 ms delay
+  function handleSearch(value: string) {
+    setSearch(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => fetchAccounts(1, value), 300);
   }
 
   useEffect(() => {
-    fetchAccounts();
-  }, [search]);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, []);
 
   const columns = [
     {
@@ -81,7 +94,7 @@ export default function AccountsPage() {
         )}
       </div>
 
-      <SearchInput value={search} onChange={setSearch} placeholder="Search accounts..." />
+      <SearchInput value={search} onChange={handleSearch} placeholder="Search accounts..." />
 
       {loading ? (
         <LoadingState text="Loading accounts..." />
