@@ -170,8 +170,8 @@ export default function DayBookPage() {
           ) : (
             <div className="space-y-6">
               {Array.from(byDate.entries()).map(([date, entries]) => {
-                const dayDr = entries.reduce((s: number, e) => s + e.totalDebit, 0);
-                const dayCr = entries.reduce((s: number, e) => s + e.totalCredit, 0);
+                const dayDr = entries.reduce((s: number, e: DayBookEntry) => s + e.totalDebit, 0);
+                const dayCr = entries.reduce((s: number, e: DayBookEntry) => s + e.totalCredit, 0);
                 return (
                   <div key={date}>
                     {/* Date header */}
