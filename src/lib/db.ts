@@ -4,9 +4,9 @@ import { PrismaLibSQL } from "@prisma/adapter-libsql/web";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 const log: Prisma.LogLevel[] =
-  process.env.NODE_ENV === "development"
+  process.env.DEBUG_PRISMA_QUERIES === "true"
     ? ["query", "error", "warn"]
-    : ["error"];
+    : ["error", "warn"];
 
 function getDatabaseUrl(): string {
   return (

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, type ElementType } from "react";
+import { useEffect, useMemo, useState, type ElementType } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -578,6 +578,41 @@ const ALL_STATS = Array.from(
   ).values(),
 );
 
+const PULSE_STATS: StatDefinition[] = [
+  {
+    title: "Low/empty stock items",
+    stat: "lowStockItems",
+    icon: Package,
+    description: "Needs replenishment",
+    permission: "warehouse:stock:read",
+    tone: "from-amber-500/15 to-amber-500/5 text-amber-700",
+  },
+  {
+    title: "Open incidents",
+    stat: "openIncidents",
+    icon: AlertTriangle,
+    description: "Fleet exceptions",
+    permission: "transport:incident:read",
+    tone: "from-red-500/15 to-red-500/5 text-red-700",
+  },
+  {
+    title: "Open purchase orders",
+    stat: "openPurchaseOrders",
+    icon: ClipboardList,
+    description: "Procurement exposure",
+    permission: "procurement:order:read",
+    tone: "from-purple-500/15 to-purple-500/5 text-purple-700",
+  },
+  {
+    title: "Pending dispatch orders",
+    stat: "pendingDispatchOrders",
+    icon: Truck,
+    description: "Awaiting movement",
+    permission: "dispatch:order:read",
+    tone: "from-sky-500/15 to-sky-500/5 text-sky-700",
+  },
+];
+
 function hasPermission(user: AuthUser | null, permission?: string): boolean {
   if (!permission) return true;
   if (!user) return false;
@@ -644,13 +679,63 @@ export default function DashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [greeting, setGreeting] = useState("Hello");
 
+  const roleKey = getRoleKey(user);
+  const dashboard = ROLE_DASHBOARDS[roleKey];
+  const roleStats = useMemo(
+    () => getVisibleItems(dashboard.stats, user),
+    [dashboard.stats, user],
+  );
+  const fallbackStats = useMemo(
+    () => getVisibleItems(ALL_STATS, user).slice(0, 4),
+    [user],
+  );
+  const visibleStats = roleStats.length > 0 ? roleStats : fallbackStats;
+  const visibleActions = useMemo(
+    () => getVisibleItems(dashboard.actions, user),
+    [dashboard.actions, user],
+  );
+  const visiblePulseStats = useMemo(
+    () => getVisibleItems(PULSE_STATS, user),
+    [user],
+  );
+  const requestedStatKeys = useMemo(() => {
+    return Array.from(
+      new Set([...visibleStats, ...visiblePulseStats].map((item) => item.stat)),
+    );
+  }, [visiblePulseStats, visibleStats]);
+  const showApprovalsLink = hasPermission(user, "approvals:request:read");
+
   useEffect(() => {
+    const currentHour = new Date().getHours();
+    setGreeting(
+      currentHour < 12
+        ? "Good morning"
+        : currentHour < 18
+          ? "Good afternoon"
+          : "Good evening",
+    );
+  }, []);
+
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user) {
+      setStatsLoading(false);
+      return;
+    }
+
     let isMounted = true;
 
     async function loadStats() {
       try {
+        setStatsLoading(true);
         setStatsError(null);
-        const response = await fetch("/api/dashboard/stats");
+        const params = new URLSearchParams();
+        if (requestedStatKeys.length > 0) {
+          params.set("metrics", requestedStatKeys.join(","));
+        }
+        const response = await fetch(
+          `/api/dashboard/stats?${params.toString()}`,
+        );
         if (!response.ok)
           throw new Error(`Dashboard stats request failed: ${response.status}`);
 
@@ -670,27 +755,10 @@ export default function DashboardPage() {
 
     loadStats();
 
-    const currentHour = new Date().getHours();
-    setGreeting(
-      currentHour < 12
-        ? "Good morning"
-        : currentHour < 18
-          ? "Good afternoon"
-          : "Good evening",
-    );
-
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  const roleKey = getRoleKey(user);
-  const dashboard = ROLE_DASHBOARDS[roleKey];
-  const roleStats = getVisibleItems(dashboard.stats, user);
-  const fallbackStats = getVisibleItems(ALL_STATS, user).slice(0, 4);
-  const visibleStats = roleStats.length > 0 ? roleStats : fallbackStats;
-  const visibleActions = getVisibleItems(dashboard.actions, user);
-  const showApprovalsLink = hasPermission(user, "approvals:request:read");
+  }, [requestedStatKeys, user, userLoading]);
 
   return (
     <div className="space-y-8">
@@ -796,6 +864,7 @@ export default function DashboardPage() {
               <Link
                 key={action.href}
                 href={action.href}
+                prefetch={false}
                 className="rounded-2xl border bg-background p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               >
                 <div className="font-semibold">{action.label}</div>
@@ -849,7 +918,9 @@ export default function DashboardPage() {
             {showApprovalsLink && (
               <div className="pt-2">
                 <Button asChild className="w-full" variant="outline">
-                  <Link href="/approvals">Open approvals center</Link>
+                  <Link href="/approvals" prefetch={false}>
+                    Open approvals center
+                  </Link>
                 </Button>
               </div>
             )}

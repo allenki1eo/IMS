@@ -5,13 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Shield, Building2, GitBranch, Layers,
   UserCircle, CheckCircle, ScrollText, Settings, ChevronDown, ChevronRight,
-  Menu, X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
+  X, Warehouse, Package, BarChart3, Truck, ClipboardList, Car, MapPin, AlertTriangle,
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/usePermission";
-import { Button } from "@/components/ui/button";
 
 interface NavItem {
   label: string;
@@ -214,6 +213,7 @@ function NavLink({ item, depth = 0 }: { item: NavItem; depth?: number }) {
   return (
     <Link
       href={item.href!}
+      prefetch={false}
       className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
         depth > 0 && "pl-8",

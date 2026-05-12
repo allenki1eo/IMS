@@ -4,7 +4,24 @@ import type { AuthUser } from "@/types/auth";
 
 let cachedUser: AuthUser | null = null;
 let lastFetched = 0;
+let inFlightUserRequest: Promise<AuthUser | null> | null = null;
 const CACHE_TTL = 30_000; // 30 seconds
+
+async function requestCurrentUser(): Promise<AuthUser | null> {
+  if (!inFlightUserRequest) {
+    inFlightUserRequest = fetch("/api/auth/me")
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.data as AuthUser;
+      })
+      .finally(() => {
+        inFlightUserRequest = null;
+      });
+  }
+
+  return inFlightUserRequest;
+}
 
 export function useCurrentUser() {
   const [user, setUser] = useState<AuthUser | null>(cachedUser);
@@ -18,16 +35,10 @@ export function useCurrentUser() {
       return;
     }
     try {
-      const res = await fetch("/api/auth/me");
-      if (res.ok) {
-        const data = await res.json();
-        cachedUser = data.data;
-        lastFetched = Date.now();
-        setUser(cachedUser);
-      } else {
-        cachedUser = null;
-        setUser(null);
-      }
+      const currentUser = await requestCurrentUser();
+      cachedUser = currentUser;
+      lastFetched = Date.now();
+      setUser(currentUser);
     } catch {
       // offline — keep last known user
     } finally {
