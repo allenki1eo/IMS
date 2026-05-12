@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRightLeft, Calculator, CalendarDays, CircleDollarSign, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRightLeft,
+  Calculator,
+  CalendarDays,
+  CircleDollarSign,
+  RefreshCw,
+} from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,24 +32,15 @@ function today() {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
 
 function formatRate(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 6,
-  }).format(value);
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(value);
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(value));
 }
 
 export default function CurrencyConverterPage() {
@@ -53,6 +51,9 @@ export default function CurrencyConverterPage() {
   const [date, setDate] = useState(today());
   const [result, setResult] = useState<ConversionResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const amountDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const preview = useMemo(() => {
     if (!result) return null;
@@ -61,17 +62,16 @@ export default function CurrencyConverterPage() {
       source: `${formatMoney(sourceAmount)} ${fromCurrency}`,
       target: `${formatMoney(result.convertedAmount)} ${toCurrency}`,
       rate: `1 ${fromCurrency} = ${formatRate(result.rate)} ${toCurrency}`,
+      inverse: `1 ${toCurrency} = ${formatRate(1 / result.rate)} ${fromCurrency}`,
     };
   }, [amount, fromCurrency, result, toCurrency]);
 
-  async function handleConvert() {
-    const numericAmount = Number(amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      toast.error("Enter a valid amount");
-      return;
-    }
+  async function convert(overrideAmount?: string) {
+    const numericAmount = Number(overrideAmount ?? amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
 
     setLoading(true);
+    setError(null);
     try {
       const url = new URL("/api/finance/exchange-rates/convert", window.location.origin);
       url.searchParams.set("from", fromCurrency);
@@ -82,10 +82,9 @@ export default function CurrencyConverterPage() {
       const response = await fetch(url.toString());
       const payload = await response.json();
       if (!response.ok) {
-        toast.error(payload.error ?? "Conversion failed");
+        setError(payload.error ?? "No rate found for this pair");
         return;
       }
-
       setResult(payload.data ?? payload);
     } catch {
       toast.error("Network error while converting currency");
@@ -94,8 +93,30 @@ export default function CurrencyConverterPage() {
     }
   }
 
+  // Auto-convert when currencies or date settings change
   useEffect(() => {
-    handleConvert();
+    const numericAmount = Number(amount);
+    if (Number.isFinite(numericAmount) && numericAmount > 0) {
+      convert();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromCurrency, toCurrency, useToday, date]);
+
+  // Debounced auto-convert when amount changes
+  function handleAmountChange(value: string) {
+    setAmount(value);
+    if (amountDebounce.current) clearTimeout(amountDebounce.current);
+    amountDebounce.current = setTimeout(() => {
+      const num = Number(value);
+      if (Number.isFinite(num) && num > 0) convert(value);
+    }, 500);
+  }
+
+  useEffect(() => {
+    convert();
+    return () => {
+      if (amountDebounce.current) clearTimeout(amountDebounce.current);
+    };
     // Run once on first load with the default pair.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -103,7 +124,7 @@ export default function CurrencyConverterPage() {
   function swapCurrencies() {
     setFromCurrency(toCurrency);
     setToCurrency(fromCurrency);
-    setResult(null);
+    // effect will trigger auto-convert after state updates
   }
 
   return (
@@ -122,13 +143,14 @@ export default function CurrencyConverterPage() {
       />
 
       <section className="grid gap-6 xl:grid-cols-[minmax(360px,520px)_1fr]">
+        {/* Input card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Calculator className="h-4 w-4 text-primary" />
               Convert Amount
             </CardTitle>
-            <CardDescription>Select a saved pair and optional historical date.</CardDescription>
+            <CardDescription>Results update automatically as you type or change currencies.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
@@ -138,7 +160,7 @@ export default function CurrencyConverterPage() {
                 min="0"
                 step="0.01"
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(e) => handleAmountChange(e.target.value)}
               />
             </div>
 
@@ -148,9 +170,7 @@ export default function CurrencyConverterPage() {
                 <Select value={fromCurrency} onValueChange={setFromCurrency}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CURRENCIES.map((currency) => (
-                      <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                    ))}
+                    {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -162,9 +182,7 @@ export default function CurrencyConverterPage() {
                 <Select value={toCurrency} onValueChange={setToCurrency}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CURRENCIES.map((currency) => (
-                      <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                    ))}
+                    {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -175,37 +193,50 @@ export default function CurrencyConverterPage() {
                 <input
                   type="checkbox"
                   checked={useToday}
-                  onChange={(event) => setUseToday(event.target.checked)}
+                  onChange={(e) => setUseToday(e.target.checked)}
                   className="h-4 w-4 rounded border-input"
                 />
-                Use today's latest available rate
+                Use today&apos;s latest available rate
               </label>
               {!useToday && (
                 <div className="mt-3 space-y-1.5">
                   <Label>As Of Date</Label>
-                  <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                 </div>
               )}
             </div>
 
-            <Button onClick={handleConvert} disabled={loading} className="w-full">
+            <Button onClick={() => convert()} disabled={loading} className="w-full">
               {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
               {loading ? "Converting..." : "Convert"}
             </Button>
           </CardContent>
         </Card>
 
+        {/* Result card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <CircleDollarSign className="h-4 w-4 text-primary" />
               Result
+              {loading && <RefreshCw className="ml-auto h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </CardTitle>
             <CardDescription>The converter uses the latest saved rate on or before the selected date.</CardDescription>
           </CardHeader>
           <CardContent>
-            {preview && result ? (
-              <div className="space-y-6">
+            {error ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-center">
+                <p className="text-sm font-medium text-destructive">{error}</p>
+                <p className="text-xs text-muted-foreground">
+                  Add a rate for {fromCurrency} → {toCurrency} in the{" "}
+                  <Link href="/finance/exchange-rates" className="underline underline-offset-2">
+                    Exchange Rates
+                  </Link>{" "}
+                  page first.
+                </p>
+              </div>
+            ) : preview && result ? (
+              <div className={`space-y-6 transition-opacity duration-150 ${loading ? "opacity-50" : "opacity-100"}`}>
                 <div className="rounded-lg border bg-muted/40 p-6">
                   <div className="text-sm text-muted-foreground">{preview.source}</div>
                   <div className="mt-2 text-3xl font-bold tracking-normal">{preview.target}</div>
@@ -228,10 +259,15 @@ export default function CurrencyConverterPage() {
                     <div className="mt-1 text-2xl font-semibold">{toCurrency}</div>
                   </div>
                 </div>
+
+                <div className="rounded-md border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Inverse: </span>
+                  {preview.inverse}
+                </div>
               </div>
             ) : (
               <div className="flex min-h-[260px] items-center justify-center rounded-lg border border-dashed text-center text-sm text-muted-foreground">
-                Enter an amount and convert to see the result.
+                {loading ? "Converting..." : "Enter an amount and convert to see the result."}
               </div>
             )}
           </CardContent>

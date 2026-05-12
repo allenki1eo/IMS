@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -9,6 +9,7 @@ import {
   Calculator,
   CircleDollarSign,
   Filter,
+  LayoutGrid,
   Plus,
   RefreshCw,
   Search,
@@ -47,14 +48,34 @@ interface FormState {
 const CURRENCIES = ["TZS", "USD", "EUR", "GBP", "KES", "UGX", "RWF", "ZAR", "CNY", "INR"];
 const ALL = "ALL";
 
+const CURRENCY_COLORS: Record<string, string> = {
+  TZS: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+  USD: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  EUR: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+  GBP: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+  KES: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  UGX: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  RWF: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
+  ZAR: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+  CNY: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
+  INR: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300",
+};
+
+function CurrencyChip({ code }: { code: string }) {
+  const cls = CURRENCY_COLORS[code] ?? "bg-muted text-muted-foreground";
+  return (
+    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-bold tracking-wide ${cls}`}>
+      {code}
+    </span>
+  );
+}
+
 function today() {
   return new Date().toISOString().split("T")[0];
 }
 
 function formatRate(rate: number) {
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 6,
-  }).format(rate);
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(rate);
 }
 
 function formatDate(date: string) {
@@ -77,6 +98,7 @@ export default function ExchangeRatesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
   const [filterFrom, setFilterFrom] = useState(ALL);
   const [filterTo, setFilterTo] = useState(ALL);
   const [search, setSearch] = useState("");
@@ -88,6 +110,8 @@ export default function ExchangeRatesPage() {
     effectiveDate: today(),
     notes: "",
   });
+
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchRates = useCallback(async (showSpinner = false) => {
     if (showSpinner) setRefreshing(true);
@@ -102,7 +126,6 @@ export default function ExchangeRatesPage() {
         toast.error(payload.error ?? "Failed to load exchange rates");
         return;
       }
-
       setRates(payload.data ?? []);
     } catch {
       toast.error("Failed to load exchange rates");
@@ -116,55 +139,57 @@ export default function ExchangeRatesPage() {
     fetchRates();
   }, [fetchRates]);
 
+  useEffect(() => {
+    return () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    };
+  }, []);
+
   const filteredRates = useMemo(() => {
     const term = search.trim().toUpperCase();
     if (!term) return rates;
-    return rates.filter((rate) =>
-      [rate.fromCurrency, rate.toCurrency, rate.source, rate.notes ?? ""]
-        .join(" ")
-        .toUpperCase()
-        .includes(term)
+    return rates.filter((r) =>
+      [r.fromCurrency, r.toCurrency, r.source, r.notes ?? ""].join(" ").toUpperCase().includes(term)
     );
   }, [rates, search]);
 
-  const activePair = useMemo(() => {
-    return rates.find(
-      (rate) =>
-        rate.fromCurrency === form.fromCurrency &&
-        rate.toCurrency === form.toCurrency
+  // Latest rate per pair for the Rate Board
+  const latestByPair = useMemo(() => {
+    const map = new Map<string, ExchangeRate>();
+    for (const r of rates) {
+      const key = `${r.fromCurrency}-${r.toCurrency}`;
+      const existing = map.get(key);
+      if (!existing || r.effectiveDate > existing.effectiveDate) map.set(key, r);
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      `${a.fromCurrency}-${a.toCurrency}`.localeCompare(`${b.fromCurrency}-${b.toCurrency}`)
     );
-  }, [form.fromCurrency, form.toCurrency, rates]);
-
-  const uniquePairs = useMemo(() => {
-    return new Set(rates.map((rate) => `${rate.fromCurrency}-${rate.toCurrency}`)).size;
   }, [rates]);
 
-  const marketRateCount = useMemo(() => rates.filter((rate) => rate.source === "MARKET").length, [rates]);
+  const activePair = useMemo(
+    () => rates.find((r) => r.fromCurrency === form.fromCurrency && r.toCurrency === form.toCurrency),
+    [form.fromCurrency, form.toCurrency, rates]
+  );
+
+  const uniquePairs = useMemo(
+    () => new Set(rates.map((r) => `${r.fromCurrency}-${r.toCurrency}`)).size,
+    [rates]
+  );
+  const marketRateCount = useMemo(() => rates.filter((r) => r.source === "MARKET").length, [rates]);
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function swapPair() {
-    setForm((current) => ({
-      ...current,
-      fromCurrency: current.toCurrency,
-      toCurrency: current.fromCurrency,
-    }));
+    setForm((prev) => ({ ...prev, fromCurrency: prev.toCurrency, toCurrency: prev.fromCurrency }));
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-
     const rate = Number(form.rate);
-    if (form.fromCurrency === form.toCurrency) {
-      toast.error("Choose two different currencies");
-      return;
-    }
-    if (!Number.isFinite(rate) || rate <= 0) {
-      toast.error("Enter a valid positive rate");
-      return;
-    }
+    if (form.fromCurrency === form.toCurrency) { toast.error("Choose two different currencies"); return; }
+    if (!Number.isFinite(rate) || rate <= 0) { toast.error("Enter a valid positive rate"); return; }
 
     setSubmitting(true);
     try {
@@ -181,14 +206,22 @@ export default function ExchangeRatesPage() {
         }),
       });
       const payload = await response.json();
-      if (!response.ok) {
-        toast.error(payload.error ?? "Failed to add exchange rate");
-        return;
-      }
+      if (!response.ok) { toast.error(payload.error ?? "Failed to add exchange rate"); return; }
 
+      const newRecord: ExchangeRate = payload.data ?? payload;
       toast.success("Exchange rate added");
-      setForm((current) => ({ ...current, rate: "", notes: "" }));
-      fetchRates(true);
+
+      // Optimistic insert — prepend without clearing the list or resetting filters
+      setRates((prev) => [newRecord, ...prev]);
+      setNewlyAddedId(newRecord.id);
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+      highlightTimer.current = setTimeout(() => setNewlyAddedId(null), 3000);
+
+      // Keep the currency pair and source so the user can add the next date's rate easily
+      setForm((prev) => ({ ...prev, rate: "", notes: "" }));
+
+      // Silent background sync to reconcile server state
+      fetchRates(false);
     } catch {
       toast.error("Network error while adding rate");
     } finally {
@@ -197,22 +230,16 @@ export default function ExchangeRatesPage() {
   }
 
   async function handleDelete(rate: ExchangeRate) {
-    const confirmed = window.confirm(
-      `Delete ${rate.fromCurrency} to ${rate.toCurrency} at ${formatRate(rate.rate)}?`
-    );
-    if (!confirmed) return;
+    if (!window.confirm(`Delete ${rate.fromCurrency} → ${rate.toCurrency} at ${formatRate(rate.rate)}?`)) return;
 
     setDeletingId(rate.id);
     try {
       const response = await fetch(`/api/finance/exchange-rates/${rate.id}`, { method: "DELETE" });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        toast.error(payload.error ?? "Failed to delete exchange rate");
-        return;
-      }
+      if (!response.ok) { toast.error(payload.error ?? "Failed to delete exchange rate"); return; }
 
       toast.success("Exchange rate deleted");
-      fetchRates(true);
+      setRates((prev) => prev.filter((r) => r.id !== rate.id));
     } catch {
       toast.error("Network error while deleting rate");
     } finally {
@@ -242,6 +269,7 @@ export default function ExchangeRatesPage() {
         }
       />
 
+      {/* Stats */}
       <section className="grid gap-4 md:grid-cols-3">
         <Card className="border-l-4 border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -275,6 +303,40 @@ export default function ExchangeRatesPage() {
         </Card>
       </section>
 
+      {/* Rate Board */}
+      {latestByPair.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <LayoutGrid className="h-4 w-4 text-primary" />
+              Rate Board
+            </CardTitle>
+            <CardDescription>Latest saved rate per currency pair.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {latestByPair.map((pair) => (
+                <div
+                  key={`${pair.fromCurrency}-${pair.toCurrency}`}
+                  className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <CurrencyChip code={pair.fromCurrency} />
+                    <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+                    <CurrencyChip code={pair.toCurrency} />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold tabular-nums">{formatRate(pair.rate)}</div>
+                    <div className="text-xs text-muted-foreground">{formatDate(pair.effectiveDate)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add Rate + Register */}
       <section className="grid gap-6 xl:grid-cols-[420px_1fr]">
         <Card>
           <CardHeader>
@@ -282,21 +344,17 @@ export default function ExchangeRatesPage() {
               <Plus className="h-4 w-4 text-primary" />
               Add Rate
             </CardTitle>
-            <CardDescription>
-              Enter one unit of the source currency in the target currency.
-            </CardDescription>
+            <CardDescription>Enter one unit of the source currency in the target currency.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
                 <div className="space-y-1.5">
                   <Label>From</Label>
-                  <Select value={form.fromCurrency} onValueChange={(value) => updateForm("fromCurrency", value)}>
+                  <Select value={form.fromCurrency} onValueChange={(v) => updateForm("fromCurrency", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {CURRENCIES.map((currency) => (
-                        <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                      ))}
+                      {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -305,12 +363,10 @@ export default function ExchangeRatesPage() {
                 </Button>
                 <div className="space-y-1.5">
                   <Label>To</Label>
-                  <Select value={form.toCurrency} onValueChange={(value) => updateForm("toCurrency", value)}>
+                  <Select value={form.toCurrency} onValueChange={(v) => updateForm("toCurrency", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {CURRENCIES.map((currency) => (
-                        <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                      ))}
+                      {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -321,7 +377,7 @@ export default function ExchangeRatesPage() {
                   <div className="font-medium">Latest saved rate for this pair</div>
                   <div className="mt-1 text-muted-foreground">
                     1 {activePair.fromCurrency} = {formatRate(activePair.rate)} {activePair.toCurrency}
-                    {" "}on {formatDate(activePair.effectiveDate)}
+                    {" "}· {formatDate(activePair.effectiveDate)}
                   </div>
                 </div>
               )}
@@ -334,7 +390,7 @@ export default function ExchangeRatesPage() {
                     min="0"
                     step="0.000001"
                     value={form.rate}
-                    onChange={(event) => updateForm("rate", event.target.value)}
+                    onChange={(e) => updateForm("rate", e.target.value)}
                     placeholder="2600.00"
                   />
                 </div>
@@ -343,14 +399,14 @@ export default function ExchangeRatesPage() {
                   <Input
                     type="date"
                     value={form.effectiveDate}
-                    onChange={(event) => updateForm("effectiveDate", event.target.value)}
+                    onChange={(e) => updateForm("effectiveDate", e.target.value)}
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label>Source</Label>
-                <Select value={form.source} onValueChange={(value) => updateForm("source", value)}>
+                <Select value={form.source} onValueChange={(v) => updateForm("source", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="MANUAL">Manual</SelectItem>
@@ -364,13 +420,13 @@ export default function ExchangeRatesPage() {
                 <Label>Notes</Label>
                 <Input
                   value={form.notes}
-                  onChange={(event) => updateForm("notes", event.target.value)}
+                  onChange={(e) => updateForm("notes", e.target.value)}
                   placeholder="Optional reference or source note"
                 />
               </div>
 
               <Button type="submit" disabled={submitting} className="w-full">
-                <Plus className="h-4 w-4" />
+                {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 {submitting ? "Adding..." : "Add Exchange Rate"}
               </Button>
             </form>
@@ -393,7 +449,7 @@ export default function ExchangeRatesPage() {
                   <Input
                     className="pl-9"
                     value={search}
-                    onChange={(event) => setSearch(event.target.value)}
+                    onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search"
                   />
                 </div>
@@ -401,18 +457,14 @@ export default function ExchangeRatesPage() {
                   <SelectTrigger><SelectValue placeholder="From" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ALL}>All from</SelectItem>
-                    {CURRENCIES.map((currency) => (
-                      <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                    ))}
+                    {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filterTo} onValueChange={setFilterTo}>
                   <SelectTrigger><SelectValue placeholder="To" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ALL}>All to</SelectItem>
-                    {CURRENCIES.map((currency) => (
-                      <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                    ))}
+                    {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -440,18 +492,25 @@ export default function ExchangeRatesPage() {
                     </tr>
                   ) : (
                     filteredRates.map((rate) => (
-                      <tr key={rate.id} className="border-b transition-colors hover:bg-muted/30">
+                      <tr
+                        key={rate.id}
+                        className={`border-b transition-colors duration-300 ${
+                          newlyAddedId === rate.id
+                            ? "bg-emerald-50 dark:bg-emerald-950/20"
+                            : "hover:bg-muted/30"
+                        }`}
+                      >
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2 font-medium">
-                            <span>{rate.fromCurrency}</span>
+                          <div className="flex items-center gap-2">
+                            <CurrencyChip code={rate.fromCurrency} />
                             <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{rate.toCurrency}</span>
+                            <CurrencyChip code={rate.toCurrency} />
                           </div>
                           <div className="mt-0.5 text-xs text-muted-foreground">
                             1 {rate.fromCurrency} in {rate.toCurrency}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right font-semibold">{formatRate(rate.rate)}</td>
+                        <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatRate(rate.rate)}</td>
                         <td className="px-4 py-3">
                           <Badge variant={sourceVariant(rate.source)}>{rate.source}</Badge>
                         </td>
@@ -471,7 +530,10 @@ export default function ExchangeRatesPage() {
                             onClick={() => handleDelete(rate)}
                             disabled={deletingId === rate.id}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            {deletingId === rate.id
+                              ? <RefreshCw className="h-4 w-4 animate-spin" />
+                              : <Trash2 className="h-4 w-4 text-destructive" />
+                            }
                           </Button>
                         </td>
                       </tr>
