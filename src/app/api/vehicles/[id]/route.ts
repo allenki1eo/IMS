@@ -14,9 +14,8 @@ export async function GET(
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
-  const vehicle = await getVehicleById(id);
+  const vehicle = await getVehicleById(id, companyId);
   if (!vehicle) return notFound("Vehicle not found");
-  if (vehicle.companyId !== companyId) return notFound("Vehicle not found");
 
   return success(vehicle);
 }

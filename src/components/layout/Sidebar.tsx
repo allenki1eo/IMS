@@ -129,6 +129,7 @@ const NAV: NavItem[] = [
       { label: "Batches", href: "/production/batches", icon: <ClipboardList className="h-4 w-4" />, permission: "production:batch:read" },
       { label: "Recipes", href: "/production/recipes", icon: <FlaskConical className="h-4 w-4" />, permission: "production:recipe:read" },
       { label: "Lines", href: "/production/lines", icon: <Factory className="h-4 w-4" />, permission: "production:line:read" },
+      { label: "Daystore", href: "/production/daystore", icon: <Package className="h-4 w-4" />, permission: "production:batch:read" },
     ],
   },
   {
@@ -163,6 +164,8 @@ const NAV: NavItem[] = [
       { label: "Journal Entries", href: "/finance/journal-entries", icon: <FileCheck className="h-4 w-4" />, permission: "finance:journal:read" },
       { label: "Bank Accounts", href: "/finance/bank-accounts", icon: <Landmark className="h-4 w-4" />, permission: "finance:bank:read" },
       { label: "Payments", href: "/finance/payments", icon: <Receipt className="h-4 w-4" />, permission: "finance:payment:read" },
+      { label: "Exchange Rates", href: "/finance/exchange-rates", icon: <TrendingDown className="h-4 w-4" />, permission: "finance:report:read" },
+      { label: "Converter", href: "/finance/converter", icon: <Landmark className="h-4 w-4" />, permission: "finance:report:read" },
       { label: "Reports", href: "/finance/reports", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
     ],
   },

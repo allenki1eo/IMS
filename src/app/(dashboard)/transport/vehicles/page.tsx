@@ -27,6 +27,7 @@ interface VehicleRow {
   make: string;
   model: string;
   vehicleType: string;
+  usageType: string;
   capacity: number | null;
   status: string;
   insuranceExpiry: string | null;
@@ -114,6 +115,13 @@ export default function VehiclesPage() {
       header: "Type",
       cell: (row: VehicleRow) => (
         <Badge variant="secondary">{row.vehicleType}</Badge>
+      ),
+    },
+    {
+      key: "usageType",
+      header: "Usage",
+      cell: (row: VehicleRow) => (
+        <Badge variant={row.usageType === "PRIVATE" ? "default" : "outline"}>{row.usageType}</Badge>
       ),
     },
     {

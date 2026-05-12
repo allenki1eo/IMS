@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { convertAmount } from "@/modules/finance/exchange-rates.service";
 
 function generateRef(): string {
   const d = new Date();
@@ -89,6 +90,8 @@ export async function createPurchaseOrder(
     expectedDelivery?: Date | string | null;
     taxAmount?: number;
     currency?: string;
+    exchangeRate?: number | null;
+    baseCurrencyAmount?: number | null;
     notes?: string | null;
     lines: OrderLineInput[];
   },
@@ -114,6 +117,15 @@ export async function createPurchaseOrder(
 
   const reference = generateRef();
   const totals = computeTotals(data.lines, data.taxAmount ?? 0);
+  const currency = data.currency ?? "TZS";
+  let exchangeRate = data.exchangeRate ?? null;
+  let baseCurrencyAmount = data.baseCurrencyAmount ?? null;
+
+  if (currency !== "TZS" && !exchangeRate) {
+    const conversion = await convertAmount(companyId, currency, "TZS", totals.totalAmount);
+    exchangeRate = conversion.rate;
+    baseCurrencyAmount = conversion.convertedAmount;
+  }
 
   const order = await db.$transaction(async (tx) => {
     const created = await tx.purchaseOrder.create({
@@ -126,7 +138,9 @@ export async function createPurchaseOrder(
         subtotal: totals.subtotal,
         taxAmount: totals.taxAmount,
         totalAmount: totals.totalAmount,
-        currency: data.currency ?? "USD",
+        currency,
+        exchangeRate,
+        baseCurrencyAmount,
         notes: data.notes ?? null,
         createdById,
         lines: {

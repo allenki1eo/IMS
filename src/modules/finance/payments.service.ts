@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { convertAmount } from "./exchange-rates.service";
 
 function generateRef(prefix: string): string {
   const d = new Date();
@@ -82,6 +83,8 @@ export async function createPayment(
     partyName: string;
     amount: number;
     currency?: string;
+    exchangeRate?: number | null;
+    baseCurrencyAmount?: number | null;
     paymentDate: string;
     paymentMethod: string;
     bankAccountId?: string;
@@ -98,6 +101,16 @@ export async function createPayment(
     if (!bank || bank.companyId !== companyId) throw new Error("Bank account not found");
   }
 
+  const currency = data.currency || "TZS";
+  let exchangeRate = data.exchangeRate ?? null;
+  let baseCurrencyAmount = data.baseCurrencyAmount ?? null;
+
+  if (currency !== "TZS" && !exchangeRate) {
+    const conversion = await convertAmount(companyId, currency, "TZS", data.amount);
+    exchangeRate = conversion.rate;
+    baseCurrencyAmount = conversion.convertedAmount;
+  }
+
   const prefix = data.type === "RECEIPT" ? "RCPT" : "PAY";
 
   const payment = await db.payment.create({
@@ -107,7 +120,9 @@ export async function createPayment(
       type: data.type,
       partyName: data.partyName,
       amount: data.amount,
-      currency: data.currency || "USD",
+      currency,
+      exchangeRate,
+      baseCurrencyAmount,
       paymentDate: new Date(data.paymentDate),
       paymentMethod: data.paymentMethod,
       bankAccountId: data.bankAccountId || null,

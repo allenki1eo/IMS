@@ -3,9 +3,9 @@ import { createAuditLog } from "@/lib/audit";
 
 export async function listWarehouses(
   companyId: string,
-  params: { search?: string; branchId?: string; isActive?: boolean }
+  params: { search?: string; branchId?: string; isActive?: boolean; warehouseType?: string }
 ) {
-  const { search, branchId, isActive } = params;
+  const { search, branchId, isActive, warehouseType } = params;
 
   const where = {
     companyId,
@@ -19,6 +19,7 @@ export async function listWarehouses(
       : {}),
     ...(branchId ? { branchId } : {}),
     ...(isActive !== undefined ? { isActive } : {}),
+    ...(warehouseType ? { warehouseType } : {}),
   };
 
   const warehouses = await db.warehouse.findMany({
@@ -56,6 +57,7 @@ export async function createWarehouse(params: {
   code: string;
   address?: string | null;
   managerId?: string | null;
+  warehouseType?: string | null;
   createdById: string;
   userName: string;
   ipAddress?: string;
@@ -64,7 +66,7 @@ export async function createWarehouse(params: {
   const { createdById, userName, ipAddress, userAgent, ...data } = params;
 
   const warehouse = await db.warehouse.create({
-    data: { ...data, createdById },
+    data: { ...data, warehouseType: data.warehouseType ?? "MAIN", createdById },
   });
 
   await createAuditLog({
@@ -92,6 +94,7 @@ export async function updateWarehouse(params: {
     address?: string | null;
     branchId?: string | null;
     managerId?: string | null;
+    warehouseType?: string | null;
   };
   updatedById: string;
   userName: string;
@@ -103,7 +106,7 @@ export async function updateWarehouse(params: {
   const existing = await db.warehouse.findUnique({ where: { id } });
   if (!existing) throw new Error("Warehouse not found");
 
-  const updated = await db.warehouse.update({ where: { id }, data });
+  const updated = await db.warehouse.update({ where: { id }, data: data as any });
 
   await createAuditLog({
     userId: updatedById,

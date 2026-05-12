@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
         requestId: requestId ?? null,
         expectedDelivery: expectedDelivery ?? null,
         taxAmount: taxAmount == null || taxAmount === "" ? 0 : Number(taxAmount),
-        currency: currency ?? "USD",
+        currency: currency ?? "TZS",
+        exchangeRate: body.exchangeRate ?? null,
+        baseCurrencyAmount: body.baseCurrencyAmount ?? null,
         notes: notes ?? null,
         lines: lines.map((line: OrderLineBody) => ({
           itemId: line.itemId ?? null,

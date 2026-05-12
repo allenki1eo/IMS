@@ -29,8 +29,10 @@ export default function NewVehiclePage() {
     model: "",
     year: "",
     vehicleType: "",
+    usageType: "",
     fuelType: "",
     capacity: "",
+    fuelTankCapacity: "",
     color: "",
     chassisNo: "",
     engineNo: "",
@@ -63,8 +65,10 @@ export default function NewVehiclePage() {
           model: form.model.trim(),
           year: form.year ? Number(form.year) : undefined,
           vehicleType: form.vehicleType,
+          usageType: form.usageType || undefined,
           fuelType: form.fuelType || undefined,
           capacity: form.capacity ? Number(form.capacity) : undefined,
+          fuelTankCapacity: form.fuelTankCapacity ? Number(form.fuelTankCapacity) : undefined,
           color: form.color.trim() || undefined,
           chassisNo: form.chassisNo.trim() || undefined,
           engineNo: form.engineNo.trim() || undefined,
@@ -174,6 +178,18 @@ export default function NewVehiclePage() {
                 </Select>
               </div>
               <div className="space-y-1">
+                <Label>Usage Type</Label>
+                <Select value={form.usageType || "__none"} onValueChange={(v) => set("usageType", v === "__none" ? "" : v)} disabled={submitting}>
+                  <SelectTrigger><SelectValue placeholder="Select usage" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Select usage</SelectItem>
+                    <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                    <SelectItem value="PRIVATE">Private</SelectItem>
+                    <SelectItem value="TRAVEL">Travel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
                 <Label>Fuel Type</Label>
                 <Select value={form.fuelType || "__none"} onValueChange={(v) => set("fuelType", v === "__none" ? "" : v)} disabled={submitting}>
                   <SelectTrigger><SelectValue placeholder="Select fuel" /></SelectTrigger>
@@ -195,6 +211,19 @@ export default function NewVehiclePage() {
                   value={form.capacity}
                   onChange={(e) => set("capacity", e.target.value)}
                   placeholder="e.g. 5.0"
+                  disabled={submitting}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="fuelTankCapacity">Fuel Tank Capacity (L)</Label>
+                <Input
+                  id="fuelTankCapacity"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={form.fuelTankCapacity}
+                  onChange={(e) => set("fuelTankCapacity", e.target.value)}
+                  placeholder="e.g. 60"
                   disabled={submitting}
                 />
               </div>

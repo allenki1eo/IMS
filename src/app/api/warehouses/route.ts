@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
   const branchId = searchParams.get("branchId") ?? undefined;
+  const warehouseType = searchParams.get("warehouseType") ?? undefined;
   const isActiveParam = searchParams.get("isActive");
   const isActive =
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
@@ -21,6 +22,7 @@ export async function GET(request: NextRequest) {
     search,
     branchId,
     isActive,
+    warehouseType,
   });
 
   return success({ data: warehouses, meta: { total: warehouses.length } });
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { name, code, address, branchId, managerId } = body;
+  const { name, code, address, branchId, managerId, warehouseType } = body;
 
   if (!name || typeof name !== "string") return badRequest("name is required");
   if (!code || typeof code !== "string") return badRequest("code is required");
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
       address: address ?? null,
       branchId: branchId ?? null,
       managerId: managerId ?? null,
+      warehouseType: warehouseType ?? null,
       createdById: auth.user.id,
       userName: auth.user.fullName,
       ipAddress,

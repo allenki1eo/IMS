@@ -36,8 +36,11 @@ interface Warehouse {
   code: string;
   address: string | null;
   status: string;
+  warehouseType: string;
   branch?: { id: string; name: string } | null;
 }
+
+const WAREHOUSE_TYPES = ["MAIN", "DAYSTORE", "COLD_STORAGE", "PRODUCTION_FLOOR"];
 
 interface Location {
   id: string;
@@ -73,6 +76,7 @@ export default function WarehouseDetailPage() {
     name: "",
     code: "",
     address: "",
+    warehouseType: "MAIN",
   });
 
   const fetchWarehouse = useCallback(async () => {
@@ -85,6 +89,7 @@ export default function WarehouseDetailPage() {
         name: w.name ?? "",
         code: w.code ?? "",
         address: w.address ?? "",
+        warehouseType: w.warehouseType ?? "MAIN",
       });
     } catch {
       toast.error("Failed to load warehouse");
@@ -120,6 +125,7 @@ export default function WarehouseDetailPage() {
           name: editForm.name,
           code: editForm.code,
           address: editForm.address || undefined,
+          warehouseType: editForm.warehouseType,
         }),
       });
       const json = await res.json();
@@ -248,6 +254,23 @@ export default function WarehouseDetailPage() {
                     disabled={saving}
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label>Warehouse Type</Label>
+                  <Select
+                    value={editForm.warehouseType}
+                    onValueChange={(v) => setEditForm((p) => ({ ...p, warehouseType: v }))}
+                    disabled={saving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WAREHOUSE_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button type="submit" disabled={saving}>
                   {saving && <LoadingSpinner className="mr-2" />}
                   Save Changes
@@ -265,6 +288,9 @@ export default function WarehouseDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <StatusBadge status={warehouse.status} />
+              <p className="text-sm text-muted-foreground">
+                Type: <span className="text-foreground font-medium">{warehouse.warehouseType.replace(/_/g, " ")}</span>
+              </p>
               {warehouse.branch && (
                 <>
                   <Separator />

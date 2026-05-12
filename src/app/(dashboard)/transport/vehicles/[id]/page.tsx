@@ -64,8 +64,10 @@ interface Vehicle {
   model: string;
   year: number | null;
   vehicleType: string;
+  usageType: string;
   fuelType: string | null;
   capacity: number | null;
+  fuelTankCapacity: number | null;
   color: string | null;
   chassisNo: string | null;
   engineNo: string | null;
@@ -73,6 +75,9 @@ interface Vehicle {
   insuranceExpiry: string | null;
   roadWorthyExpiry: string | null;
   nextServiceDate: string | null;
+  lastRefuelAt: string | null;
+  nextRefuelAt: string | null;
+  averageConsumption: number | null;
   notes: string | null;
   status: string;
   documents?: VehicleDocument[];
@@ -313,12 +318,20 @@ export default function VehicleDetailPage() {
                   <dd className="mt-0.5"><Badge variant="secondary">{vehicle.vehicleType}</Badge></dd>
                 </div>
                 <div>
+                  <dt className="text-muted-foreground font-medium">Usage</dt>
+                  <dd className="mt-0.5"><Badge variant={vehicle.usageType === "PRIVATE" ? "default" : "outline"}>{vehicle.usageType}</Badge></dd>
+                </div>
+                <div>
                   <dt className="text-muted-foreground font-medium">Fuel Type</dt>
                   <dd className="mt-0.5">{vehicle.fuelType ?? "—"}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground font-medium">Capacity</dt>
                   <dd className="mt-0.5">{vehicle.capacity != null ? `${vehicle.capacity} t` : "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground font-medium">Tank Capacity</dt>
+                  <dd className="mt-0.5">{vehicle.fuelTankCapacity != null ? `${vehicle.fuelTankCapacity} L` : "—"}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground font-medium">Color</dt>
@@ -344,6 +357,18 @@ export default function VehicleDetailPage() {
                   <dt className="text-muted-foreground font-medium">Next Service</dt>
                   <dd className="mt-0.5"><ExpiryDate date={vehicle.nextServiceDate} /></dd>
                 </div>
+                {vehicle.usageType === "PRIVATE" && (
+                  <>
+                    <div>
+                      <dt className="text-muted-foreground font-medium">Avg Consumption</dt>
+                      <dd className="mt-0.5">{vehicle.averageConsumption != null ? `${vehicle.averageConsumption.toFixed(1)} km/L` : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground font-medium">Next Refuel</dt>
+                      <dd className="mt-0.5">{vehicle.nextRefuelAt ? <ExpiryDate date={vehicle.nextRefuelAt} /> : "—"}</dd>
+                    </div>
+                  </>
+                )}
               </dl>
               {vehicle.notes && (
                 <>

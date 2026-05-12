@@ -24,7 +24,7 @@ model Company {
   email              String?
   website            String?
   logoPath           String?
-  currency           String   @default("USD")
+  currency           String   @default("TZS")
   dateFormat         String   @default("YYYY-MM-DD")
   fiscalYearStart    Int      @default(1)
   isActive           Boolean  @default(true)
@@ -384,6 +384,7 @@ model Warehouse {
   code        String   @unique
   address     String?
   managerId   String?
+  warehouseType String @default("MAIN")
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -667,8 +668,10 @@ model Vehicle {
   model            String
   year             Int?
   vehicleType      String    @default("TRUCK")
+  usageType        String    @default("COMMERCIAL")
   capacity         Float?
   fuelType         String    @default("DIESEL")
+  fuelTankCapacity Float?
   color            String?
   chassisNumber    String?
   engineNumber     String?
@@ -678,6 +681,9 @@ model Vehicle {
   roadWorthyExpiry DateTime?
   lastServiceDate  DateTime?
   nextServiceDate  DateTime?
+  lastRefuelAt     DateTime?
+  nextRefuelAt     DateTime?
+  averageConsumption Float?
   isActive         Boolean   @default(true)
   notes            String?
   createdAt        DateTime  @default(now())
@@ -875,24 +881,27 @@ model FuelTank {
 }
 
 model FuelReceipt {
-  id               String    @id @default(cuid())
-  companyId        String
-  tankId           String
-  reference        String    @unique
-  supplierName     String?
-  deliveryNoteRef  String?
-  quantityLiters   Float
-  pricePerLiter    Float?
-  totalCost        Float?
-  status           String    @default("DRAFT")
-  notes            String?
-  receivedById     String
-  receivedAt       DateTime?
-  confirmedById    String?
-  confirmedAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  createdById      String
+  id                 String    @id @default(cuid())
+  companyId          String
+  tankId             String
+  reference          String    @unique
+  supplierName       String?
+  deliveryNoteRef    String?
+  quantityLiters     Float
+  pricePerLiter      Float?
+  totalCost          Float?
+  currency           String    @default("TZS")
+  exchangeRate       Float?
+  baseCurrencyAmount Float?
+  status             String    @default("DRAFT")
+  notes              String?
+  receivedById       String
+  receivedAt         DateTime?
+  confirmedById      String?
+  confirmedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdById        String
 
   tank FuelTank @relation(fields: [tankId], references: [id])
 
@@ -1167,13 +1176,15 @@ model PurchaseOrder {
   subtotal         Float     @default(0)
   taxAmount        Float     @default(0)
   totalAmount      Float     @default(0)
-  currency         String    @default("USD")
-  notes            String?
-  sentAt           DateTime?
-  receivedAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  createdById      String
+  currency           String    @default("TZS")
+  exchangeRate       Float?
+  baseCurrencyAmount Float?
+  notes              String?
+  sentAt             DateTime?
+  receivedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdById        String
 
   supplier Supplier         @relation(fields: [supplierId], references: [id])
   request  PurchaseRequest? @relation(fields: [requestId], references: [id])
@@ -1569,6 +1580,8 @@ model JournalEntry {
   status      String   @default("DRAFT") // DRAFT, POSTED, REVERSED
   totalDebit  Float    @default(0)
   totalCredit Float    @default(0)
+  currency    String   @default("TZS")
+  exchangeRate Float?
   createdById String
   postedAt    DateTime?
   reversedAt  DateTime?
@@ -1607,7 +1620,7 @@ model BankAccount {
   accountNumber  String?
   bankName       String?
   branch         String?
-  currency       String  @default("USD")
+  currency       String  @default("TZS")
   accountType    String  @default("BANK") // BANK, CASH, MOBILE_MONEY
   currentBalance Float   @default(0)
   isActive       Boolean @default(true)
@@ -1652,7 +1665,9 @@ model Payment {
   type           String   // PAYMENT, RECEIPT
   partyName      String
   amount         Float
-  currency       String   @default("USD")
+  currency       String   @default("TZS")
+  exchangeRate   Float?
+  baseCurrencyAmount Float?
   paymentDate    DateTime @default(now())
   paymentMethod  String   // CASH, BANK_TRANSFER, CHECK, MOBILE_MONEY
   bankAccountId  String?
@@ -1684,4 +1699,23 @@ model PaymentAllocation {
   @@index([paymentId])
   @@index([documentId])
   @@map("payment_allocations")
+}
+
+model ExchangeRate {
+  id            String   @id @default(cuid())
+  companyId     String
+  fromCurrency  String
+  toCurrency    String
+  rate          Float
+  source        String   @default("MANUAL") // MANUAL | MARKET
+  effectiveDate DateTime @default(now())
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String
+
+  @@unique([companyId, fromCurrency, toCurrency, effectiveDate])
+  @@index([companyId])
+  @@index([fromCurrency, toCurrency])
+  @@map("exchange_rates")
 }

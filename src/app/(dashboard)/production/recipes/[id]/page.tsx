@@ -28,17 +28,30 @@ interface Recipe {
   batches: Array<{ id: string; reference: string; productName: string; plannedQty: number; uom: string; status: string; line?: { name: string } | null }>;
 }
 
+interface CapacityData {
+  maxUnits: number;
+  batchSize: number;
+  limitingMaterial?: { description: string; requiredPerBatch: number; availableStock: number } | null;
+  materials: Array<{ description: string; requiredPerBatch: number; availableStock: number; maxUnits: number; status: string }>;
+}
+
 export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [capacity, setCapacity] = useState<CapacityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
   const loadRecipe = useCallback(() => {
     setLoading(true);
-    fetch(`/api/production/recipes/${id}`)
-      .then((r) => r.json())
-      .then((d) => setRecipe(d.data ?? null))
+    Promise.all([
+      fetch(`/api/production/recipes/${id}`).then((r) => r.json()),
+      fetch(`/api/production/recipes/${id}/capacity`).then((r) => r.json()),
+    ])
+      .then(([recipeData, capacityData]) => {
+        setRecipe(recipeData.data ?? null);
+        setCapacity(capacityData.data ?? null);
+      })
       .catch(() => toast.error("Failed to load recipe"))
       .finally(() => setLoading(false));
   }, [id]);
@@ -87,6 +100,32 @@ export default function RecipeDetailPage() {
             </PermissionGuard>
           </CardContent>
         </Card>
+        {capacity && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">Production Capacity</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Max Units</span>
+                <span className={`text-lg font-bold ${capacity.maxUnits === 0 ? "text-destructive" : "text-green-600"}`}>
+                  {capacity.maxUnits.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Batch Size</span>
+                <span>{qty(capacity.batchSize, recipe.uom)}</span>
+              </div>
+              {capacity.limitingMaterial && (
+                <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-2.5">
+                  <p className="text-amber-700 dark:text-amber-400 font-medium text-xs mb-0.5">Limiting Material</p>
+                  <p className="text-foreground">{capacity.limitingMaterial.description}</p>
+                  <p className="text-muted-foreground text-xs">
+                    Needs {qty(capacity.limitingMaterial.requiredPerBatch, "")} per batch · {qty(capacity.limitingMaterial.availableStock, "")} in stock
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
       <Card className="mb-6">
         <CardHeader><CardTitle className="text-base">Materials</CardTitle></CardHeader>

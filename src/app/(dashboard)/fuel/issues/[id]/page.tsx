@@ -22,7 +22,7 @@ interface FuelIssue {
   notes: string | null;
   createdAt: string;
   tank: { id: string; name: string; code: string; fuelType: string };
-  vehicle: { id: string; plateNumber: string; make: string | null; model: string | null };
+  vehicle: { id: string; plateNumber: string; make: string | null; model: string | null; usageType?: string; nextRefuelAt?: string | null };
   driver: { id: string; employee: { fullName: string } } | null;
 }
 
@@ -109,6 +109,12 @@ export default function FuelIssueDetailPage() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Odometer</span>
                 <span>{issue.odometerReading.toLocaleString()} km</span>
+              </div>
+            )}
+            {issue.vehicle.usageType === "PRIVATE" && issue.vehicle.nextRefuelAt && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Next Refuel</span>
+                <span className="text-amber-600 font-medium">{format(new Date(issue.vehicle.nextRefuelAt), "dd MMM yyyy")}</span>
               </div>
             )}
             <div className="flex justify-between">

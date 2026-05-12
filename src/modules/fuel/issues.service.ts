@@ -7,6 +7,59 @@ function generateRef(prefix: string): string {
   return `${prefix}-${date}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
 }
 
+async function predictNextRefuel(
+  vehicleId: string,
+  currentOdometer: number | null,
+  currentQuantity: number
+) {
+  const issues = await db.fuelIssue.findMany({
+    where: { vehicleId, odometerReading: { not: null } },
+    orderBy: { issuedAt: "desc" },
+    take: 3,
+  });
+
+  const now = new Date();
+  let avgKmPerLiter: number | null = null;
+  let dailyKm: number | null = null;
+
+  if (issues.length >= 2) {
+    const sorted = [...issues].sort((a, b) => a.issuedAt.getTime() - b.issuedAt.getTime());
+    const totalKm =
+      (sorted[sorted.length - 1].odometerReading ?? 0) -
+      (sorted[0].odometerReading ?? 0);
+    const totalLiters = sorted.slice(0, -1).reduce((sum, i) => sum + i.quantityLiters, 0);
+    const daysDiff = Math.max(
+      1,
+      (sorted[sorted.length - 1].issuedAt.getTime() - sorted[0].issuedAt.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    if (totalLiters > 0) {
+      avgKmPerLiter = totalKm / totalLiters;
+    }
+    if (daysDiff > 0) {
+      dailyKm = totalKm / daysDiff;
+    }
+  }
+
+  if (avgKmPerLiter == null || avgKmPerLiter <= 0) avgKmPerLiter = 12;
+  if (dailyKm == null || dailyKm <= 0) dailyKm = 50;
+
+  const vehicle = await db.vehicle.findUnique({
+    where: { id: vehicleId },
+    select: { fuelTankCapacity: true },
+  });
+  const tankCapacity = vehicle?.fuelTankCapacity ?? currentQuantity;
+
+  const rangeKm = tankCapacity * avgKmPerLiter;
+  const daysUntilRefuel = Math.max(1, Math.round(rangeKm / dailyKm));
+
+  const nextRefuelAt = new Date(now);
+  nextRefuelAt.setDate(nextRefuelAt.getDate() + daysUntilRefuel);
+
+  return { nextRefuelAt, avgKmPerLiter, lastRefuelAt: now };
+}
+
 export async function listIssues(
   companyId: string,
   params: {
@@ -58,7 +111,7 @@ export async function listIssues(
           select: { id: true, name: true, code: true, fuelType: true },
         },
         vehicle: {
-          select: { id: true, plateNumber: true, make: true, model: true },
+          select: { id: true, plateNumber: true, make: true, model: true, usageType: true, nextRefuelAt: true },
         },
         driver: {
           include: {
@@ -73,8 +126,8 @@ export async function listIssues(
   return { data: issues, meta: { total, page, pageSize } };
 }
 
-export async function getIssueById(id: string) {
-  return db.fuelIssue.findUnique({
+export async function getIssueById(id: string, companyId?: string) {
+  const issue = await db.fuelIssue.findUnique({
     where: { id },
     include: {
       tank: {
@@ -88,7 +141,7 @@ export async function getIssueById(id: string) {
         },
       },
       vehicle: {
-        select: { id: true, plateNumber: true, make: true, model: true, odometer: true },
+        select: { id: true, plateNumber: true, make: true, model: true, odometer: true, usageType: true, fuelTankCapacity: true, lastRefuelAt: true, nextRefuelAt: true, averageConsumption: true },
       },
       driver: {
         include: {
@@ -97,6 +150,8 @@ export async function getIssueById(id: string) {
       },
     },
   });
+  if (companyId && issue && issue.companyId !== companyId) return null;
+  return issue;
 }
 
 export async function createIssue(params: {
@@ -127,6 +182,7 @@ export async function createIssue(params: {
 
   const vehicle = await db.vehicle.findUnique({ where: { id: data.vehicleId } });
   if (!vehicle) throw new Error("Vehicle not found");
+  if (vehicle.companyId !== data.companyId) throw new Error("Vehicle not found");
 
   const reference = generateRef("FIS");
   const totalCost =
@@ -160,11 +216,27 @@ export async function createIssue(params: {
       data: { currentLevel: newTankLevel },
     });
 
-    // Update vehicle odometer if provided and greater than current
     if (data.odometerReading != null && data.odometerReading > vehicle.odometer) {
       await tx.vehicle.update({
         where: { id: vehicle.id },
         data: { odometer: data.odometerReading },
+      });
+    }
+
+    // Predict next refuel for private cars
+    if (vehicle.usageType === "PRIVATE") {
+      const prediction = await predictNextRefuel(
+        vehicle.id,
+        data.odometerReading ?? null,
+        data.quantityLiters
+      );
+      await tx.vehicle.update({
+        where: { id: vehicle.id },
+        data: {
+          lastRefuelAt: prediction.lastRefuelAt,
+          nextRefuelAt: prediction.nextRefuelAt,
+          averageConsumption: prediction.avgKmPerLiter,
+        },
       });
     }
 

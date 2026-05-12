@@ -14,9 +14,8 @@ export async function GET(
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
-  const issue = await getIssueById(id);
+  const issue = await getIssueById(id, companyId);
   if (!issue) return notFound("Fuel issue not found");
-  if (issue.companyId !== companyId) return notFound("Fuel issue not found");
 
   return success(issue);
 }

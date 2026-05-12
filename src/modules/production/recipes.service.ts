@@ -117,6 +117,103 @@ export async function createProductionRecipe(
   return recipe;
 }
 
+export async function calculateRecipeCapacity(
+  companyId: string,
+  recipeId: string
+) {
+  const recipe = await db.productionRecipe.findUnique({
+    where: { id: recipeId },
+    include: { materials: true },
+  });
+  if (!recipe || recipe.companyId !== companyId) return null;
+
+  // Gather item identifiers
+  const itemIds: string[] = [];
+  const itemCodes: string[] = [];
+  for (const mat of recipe.materials) {
+    if (mat.itemId) itemIds.push(mat.itemId);
+    else if (mat.itemCode) itemCodes.push(mat.itemCode);
+  }
+
+  // Resolve codes to IDs
+  const itemsByCode =
+    itemCodes.length > 0
+      ? await db.item.findMany({
+          where: { companyId, code: { in: itemCodes } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const codeToItemId = new Map(itemsByCode.map((i) => [i.code, i.id]));
+
+  // Fetch stock balances for all resolved items
+  const allItemIds = Array.from(
+    new Set([...itemIds, ...itemsByCode.map((i) => i.id)])
+  );
+  const stockBalances =
+    allItemIds.length > 0
+      ? await db.stockBalance.findMany({
+          where: { itemId: { in: allItemIds } },
+          select: { itemId: true, quantity: true },
+        })
+      : [];
+
+  const stockByItem = new Map<string, number>();
+  for (const sb of stockBalances) {
+    stockByItem.set(sb.itemId, (stockByItem.get(sb.itemId) ?? 0) + (sb.quantity ?? 0));
+  }
+
+  interface MaterialCapacity {
+    description: string;
+    requiredPerBatch: number;
+    availableStock: number;
+    maxUnits: number;
+    status: "OK" | "SHORTAGE" | "UNKNOWN";
+  }
+
+  const materials: MaterialCapacity[] = [];
+  let maxUnits = Infinity;
+  let limitingMaterial: MaterialCapacity | undefined;
+
+  for (const mat of recipe.materials) {
+    const resolvedItemId = mat.itemId ?? codeToItemId.get(mat.itemCode ?? "") ?? null;
+    const availableStock = resolvedItemId ? (stockByItem.get(resolvedItemId) ?? 0) : 0;
+    const requiredPerBatch = mat.quantity;
+
+    let matMaxUnits: number;
+    let status: MaterialCapacity["status"];
+
+    if (!resolvedItemId || requiredPerBatch <= 0) {
+      matMaxUnits = 0;
+      status = "UNKNOWN";
+    } else {
+      matMaxUnits = Math.floor(availableStock / requiredPerBatch);
+      status = matMaxUnits > 0 ? "OK" : "SHORTAGE";
+    }
+
+    const matCap: MaterialCapacity = {
+      description: mat.description,
+      requiredPerBatch,
+      availableStock,
+      maxUnits: matMaxUnits,
+      status,
+    };
+
+    materials.push(matCap);
+
+    if (matMaxUnits < maxUnits) {
+      maxUnits = matMaxUnits;
+      limitingMaterial = matCap;
+    }
+  }
+
+  return {
+    maxUnits: Number.isFinite(maxUnits) ? maxUnits : 0,
+    batchSize: recipe.batchSize,
+    limitingMaterial,
+    materials,
+  };
+}
+
 export async function updateProductionRecipeStatus(
   companyId: string,
   id: string,

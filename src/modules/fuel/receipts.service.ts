@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { convertAmount } from "@/modules/finance/exchange-rates.service";
 
 function generateRef(prefix: string): string {
   const d = new Date();
@@ -53,8 +54,8 @@ export async function listReceipts(
   return { data: receipts, meta: { total, page, pageSize } };
 }
 
-export async function getReceiptById(id: string) {
-  return db.fuelReceipt.findUnique({
+export async function getReceiptById(id: string, companyId?: string) {
+  const receipt = await db.fuelReceipt.findUnique({
     where: { id },
     include: {
       tank: {
@@ -62,6 +63,8 @@ export async function getReceiptById(id: string) {
       },
     },
   });
+  if (companyId && receipt && receipt.companyId !== companyId) return null;
+  return receipt;
 }
 
 export async function createReceipt(params: {
@@ -71,6 +74,9 @@ export async function createReceipt(params: {
   deliveryNoteRef?: string | null;
   quantityLiters: number;
   pricePerLiter?: number | null;
+  currency?: string;
+  exchangeRate?: number | null;
+  baseCurrencyAmount?: number | null;
   notes?: string | null;
   createdById: string;
   userName: string;
@@ -88,6 +94,16 @@ export async function createReceipt(params: {
       ? data.quantityLiters * data.pricePerLiter
       : null;
 
+  const currency = data.currency ?? "TZS";
+  let exchangeRate = data.exchangeRate ?? null;
+  let baseCurrencyAmount = data.baseCurrencyAmount ?? null;
+
+  if (currency !== "TZS" && totalCost != null && !exchangeRate) {
+    const conversion = await convertAmount(data.companyId, currency, "TZS", totalCost);
+    exchangeRate = conversion.rate;
+    baseCurrencyAmount = conversion.convertedAmount;
+  }
+
   const receipt = await db.fuelReceipt.create({
     data: {
       companyId: data.companyId,
@@ -98,6 +114,9 @@ export async function createReceipt(params: {
       quantityLiters: data.quantityLiters,
       pricePerLiter: data.pricePerLiter ?? null,
       totalCost,
+      currency,
+      exchangeRate,
+      baseCurrencyAmount,
       status: "DRAFT",
       notes: data.notes ?? null,
       receivedById: createdById,
@@ -128,12 +147,14 @@ export async function createReceipt(params: {
 
 export async function confirmReceipt(
   id: string,
+  companyId: string,
   confirmedById: string,
   userName: string,
   ipAddress?: string
 ) {
   const receipt = await db.fuelReceipt.findUnique({ where: { id } });
   if (!receipt) throw new Error("Fuel receipt not found");
+  if (receipt.companyId !== companyId) throw new Error("Fuel receipt not found");
   if (receipt.status !== "DRAFT") throw new Error("Only DRAFT receipts can be confirmed");
 
   const tank = await db.fuelTank.findUnique({ where: { id: receipt.tankId } });

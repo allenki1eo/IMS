@@ -440,7 +440,7 @@ async function main() {
     create: {
       id: "company_main",
       name: "Your Company Name",
-      currency: "USD",
+      currency: "TZS",
       dateFormat: "YYYY-MM-DD",
       fiscalYearStart: 1,
     },
@@ -567,6 +567,36 @@ async function main() {
         data: { userId: adminUser.id, roleId: superAdminRoleId, assignedById: "system" },
       });
     }
+  }
+
+  // ── 9. Exchange Rates ────────────────────────────────────
+  console.log("  → Creating exchange rates...");
+  const rates = [
+    { fromCurrency: "USD", toCurrency: "TZS", rate: 2600, source: "MANUAL" },
+    { fromCurrency: "EUR", toCurrency: "TZS", rate: 2800, source: "MANUAL" },
+    { fromCurrency: "GBP", toCurrency: "TZS", rate: 3300, source: "MANUAL" },
+  ];
+  for (const r of rates) {
+    await db.exchangeRate.upsert({
+      where: {
+        companyId_fromCurrency_toCurrency_effectiveDate: {
+          companyId: company.id,
+          fromCurrency: r.fromCurrency,
+          toCurrency: r.toCurrency,
+          effectiveDate: new Date(),
+        },
+      },
+      update: { rate: r.rate },
+      create: {
+        companyId: company.id,
+        fromCurrency: r.fromCurrency,
+        toCurrency: r.toCurrency,
+        rate: r.rate,
+        source: r.source,
+        effectiveDate: new Date(),
+        createdById: "system",
+      },
+    });
   }
 
   console.log("");

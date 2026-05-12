@@ -31,6 +31,9 @@ interface Receipt {
   quantity: number;
   pricePerLiter: number | null;
   totalCost: number | null;
+  currency: string;
+  exchangeRate: number | null;
+  baseCurrencyAmount: number | null;
   status: string;
   notes: string | null;
   createdAt: string;
@@ -150,16 +153,21 @@ export default function ReceiptDetailPage() {
               <div>
                 <p className="text-muted-foreground">Price / Liter</p>
                 <p className="text-lg font-bold">
-                  {receipt.pricePerLiter != null ? `$${receipt.pricePerLiter.toFixed(3)}` : "—"}
+                  {receipt.pricePerLiter != null ? receipt.pricePerLiter.toLocaleString(undefined, { style: "currency", currency: receipt.currency || "TZS" }) : "—"}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Total Cost</p>
                 <p className="text-lg font-bold">
                   {receipt.totalCost != null
-                    ? `$${receipt.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ? receipt.totalCost.toLocaleString(undefined, { style: "currency", currency: receipt.currency || "TZS" })
                     : "—"}
                 </p>
+                {receipt.currency && receipt.currency !== "TZS" && receipt.baseCurrencyAmount != null && (
+                  <p className="text-xs text-muted-foreground">
+                    ≈ {receipt.baseCurrencyAmount.toLocaleString(undefined, { style: "currency", currency: "TZS" })} @ {receipt.exchangeRate}
+                  </p>
+                )}
               </div>
             </div>
 

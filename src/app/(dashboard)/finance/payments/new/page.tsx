@@ -23,11 +23,15 @@ export default function NewPaymentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [baseAmount, setBaseAmount] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
+  const CURRENCIES = ["TZS", "USD", "EUR", "GBP"];
   const [form, setForm] = useState({
     type: "PAYMENT",
     partyName: "",
     amount: "",
-    currency: "USD",
+    currency: "TZS",
     paymentDate: new Date().toISOString().split("T")[0],
     paymentMethod: "",
     bankAccountId: "",
@@ -42,17 +46,45 @@ export default function NewPaymentPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const amt = parseFloat(form.amount) || 0;
+    if (form.currency === "TZS" || !amt) {
+      setExchangeRate(null);
+      setBaseAmount(null);
+      return;
+    }
+    setRateLoading(true);
+    fetch(`/api/finance/exchange-rates/latest?from=${form.currency}&to=TZS`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) {
+          setExchangeRate(json.data.rate);
+          setBaseAmount(amt * json.data.rate);
+        } else {
+          setExchangeRate(null);
+          setBaseAmount(null);
+        }
+      })
+      .catch(() => { setExchangeRate(null); setBaseAmount(null); })
+      .finally(() => setRateLoading(false));
+  }, [form.currency, form.amount]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
+      const body: any = {
+        ...form,
+        amount: parseFloat(form.amount) || 0,
+      };
+      if (form.currency !== "TZS" && exchangeRate != null) {
+        body.exchangeRate = exchangeRate;
+        body.baseCurrencyAmount = baseAmount;
+      }
       const res = await fetch("/api/finance/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          amount: parseFloat(form.amount) || 0,
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (res.ok) {
@@ -94,16 +126,39 @@ export default function NewPaymentPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="amount">Amount *</Label>
             <Input id="amount" type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Currency</Label>
+            <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="paymentDate">Date *</Label>
             <Input id="paymentDate" type="date" value={form.paymentDate} onChange={(e) => setForm({ ...form, paymentDate: e.target.value })} required />
           </div>
         </div>
+        {form.currency !== "TZS" && (
+          <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Exchange Rate</span>
+              <span className="font-medium">{rateLoading ? "Loading..." : exchangeRate != null ? `${exchangeRate.toLocaleString()} TZS/${form.currency}` : "No rate found"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Base Amount (TZS)</span>
+              <span className="font-medium">{baseAmount != null ? baseAmount.toLocaleString(undefined, { style: "currency", currency: "TZS" }) : "—"}</span>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">

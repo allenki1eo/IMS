@@ -94,7 +94,9 @@ export default function PaymentDetailPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Type</CardTitle></CardHeader><CardContent><Badge>{payment.type}</Badge></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Status</CardTitle></CardHeader><CardContent><Badge variant={payment.status === "COMPLETED" ? "default" : payment.status === "CANCELLED" ? "destructive" : "secondary"}>{payment.status}</Badge></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Amount</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">${payment.amount.toLocaleString()}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Amount</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{payment.amount.toLocaleString(undefined, { style: "currency", currency: payment.currency || "TZS" })}</div>{payment.currency && payment.currency !== "TZS" && payment.baseCurrencyAmount != null && (
+          <p className="text-xs text-muted-foreground mt-1">≈ {payment.baseCurrencyAmount.toLocaleString(undefined, { style: "currency", currency: "TZS" })} @ {payment.exchangeRate}</p>
+        )}</CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Method</CardTitle></CardHeader><CardContent>{payment.paymentMethod}</CardContent></Card>
       </div>
 
@@ -103,7 +105,13 @@ export default function PaymentDetailPage() {
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-muted-foreground">Party</span><span>{payment.partyName}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span>{new Date(payment.paymentDate).toLocaleDateString()}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Currency</span><span>{payment.currency}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Currency</span><span>{payment.currency || "TZS"}</span></div>
+          {payment.currency && payment.currency !== "TZS" && (
+            <>
+              <div className="flex justify-between"><span className="text-muted-foreground">Exchange Rate</span><span>{payment.exchangeRate != null ? payment.exchangeRate.toLocaleString() : "—"}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Base Amount (TZS)</span><span>{payment.baseCurrencyAmount != null ? payment.baseCurrencyAmount.toLocaleString(undefined, { style: "currency", currency: "TZS" }) : "—"}</span></div>
+            </>
+          )}
           <div className="flex justify-between"><span className="text-muted-foreground">Reference</span><span>{payment.reference || "-"}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Bank Account</span><span>{payment.bankAccount?.name || "-"}</span></div>
           {payment.notes && <div className="pt-2 border-t"><span className="text-muted-foreground">Notes</span><p className="mt-1">{payment.notes}</p></div>}

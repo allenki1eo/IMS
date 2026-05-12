@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { convertAmount } from "./exchange-rates.service";
 
 function generateRef(): string {
   const d = new Date();
@@ -89,6 +90,8 @@ export async function createJournalEntry(
     description: string;
     notes?: string;
     voucherType?: string;
+    currency?: string;
+    exchangeRate?: number | null;
     lines: { accountId: string; description?: string; debit: number; credit: number }[];
   },
   userId: string,
@@ -113,6 +116,14 @@ export async function createJournalEntry(
   if (accounts.length !== accountIds.length) throw new Error("One or more accounts not found");
   if (accounts.some((a) => !a.isActive)) throw new Error("One or more accounts are inactive");
 
+  const currency = data.currency ?? "TZS";
+  let exchangeRate = data.exchangeRate ?? null;
+
+  if (currency !== "TZS" && !exchangeRate) {
+    const conversion = await convertAmount(companyId, currency, "TZS", 1);
+    exchangeRate = conversion.rate;
+  }
+
   const entry = await db.$transaction(async (tx) => {
     const je = await tx.journalEntry.create({
       data: {
@@ -125,6 +136,8 @@ export async function createJournalEntry(
         status: "DRAFT",
         totalDebit,
         totalCredit,
+        currency,
+        exchangeRate,
         createdById: userId,
         lines: {
           create: data.lines.map((l) => ({

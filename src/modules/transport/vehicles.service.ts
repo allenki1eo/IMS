@@ -56,8 +56,8 @@ export async function listVehicles(
   return { data: vehicles, meta: { total, page, pageSize } };
 }
 
-export async function getVehicleById(id: string) {
-  return db.vehicle.findUnique({
+export async function getVehicleById(id: string, companyId?: string) {
+  const vehicle = await db.vehicle.findUnique({
     where: { id },
     include: {
       documents: {
@@ -101,6 +101,8 @@ export async function getVehicleById(id: string) {
       },
     },
   });
+  if (companyId && vehicle && vehicle.companyId !== companyId) return null;
+  return vehicle;
 }
 
 export async function createVehicle(params: {
@@ -111,8 +113,10 @@ export async function createVehicle(params: {
   model: string;
   year?: number | null;
   vehicleType?: string;
+  usageType?: string;
   capacity?: number | null;
   fuelType?: string;
+  fuelTankCapacity?: number | null;
   color?: string | null;
   chassisNumber?: string | null;
   engineNumber?: string | null;
@@ -135,8 +139,10 @@ export async function createVehicle(params: {
       model: data.model,
       year: data.year ?? null,
       vehicleType: data.vehicleType ?? "TRUCK",
+      usageType: data.usageType ?? "COMMERCIAL",
       capacity: data.capacity ?? null,
       fuelType: data.fuelType ?? "DIESEL",
+      fuelTankCapacity: data.fuelTankCapacity ?? null,
       color: data.color ?? null,
       chassisNumber: data.chassisNumber ?? null,
       engineNumber: data.engineNumber ?? null,
@@ -178,8 +184,10 @@ export async function updateVehicle(params: {
     model?: string;
     year?: number | null;
     vehicleType?: string;
+    usageType?: string;
     capacity?: number | null;
     fuelType?: string;
+    fuelTankCapacity?: number | null;
     color?: string | null;
     chassisNumber?: string | null;
     engineNumber?: string | null;

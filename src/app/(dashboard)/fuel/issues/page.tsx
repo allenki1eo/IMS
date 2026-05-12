@@ -22,7 +22,7 @@ import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 interface IssueRow {
   id: string;
   reference: string;
-  vehicle?: { id: string; plateNumber: string } | null;
+  vehicle?: { id: string; plateNumber: string; usageType?: string; nextRefuelAt?: string | null } | null;
   driver?: { id: string; firstName: string; lastName: string } | null;
   tank?: { id: string; name: string } | null;
   quantity: number;
@@ -93,7 +93,14 @@ export default function IssuesPage() {
       key: "vehicle",
       header: "Vehicle",
       cell: (row: IssueRow) => (
-        <span className="font-medium">{row.vehicle?.plateNumber ?? "—"}</span>
+        <div>
+          <span className="font-medium">{row.vehicle?.plateNumber ?? "—"}</span>
+          {row.vehicle?.usageType === "PRIVATE" && row.vehicle?.nextRefuelAt && (
+            <p className="text-xs text-amber-600">
+              Refill by {format(new Date(row.vehicle.nextRefuelAt), "dd MMM yyyy")}
+            </p>
+          )}
+        </div>
       ),
     },
     {

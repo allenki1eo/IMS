@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { tankId, supplierName, deliveryNoteRef, quantityLiters, pricePerLiter, notes } = body;
+  const { tankId, supplierName, deliveryNoteRef, quantityLiters, pricePerLiter, currency, exchangeRate, baseCurrencyAmount, notes } = body;
 
   if (!tankId || typeof tankId !== "string") return badRequest("tankId is required");
   if (quantityLiters == null || typeof quantityLiters !== "number" || quantityLiters <= 0)
@@ -52,6 +52,9 @@ export async function POST(request: NextRequest) {
       deliveryNoteRef: deliveryNoteRef ?? null,
       quantityLiters,
       pricePerLiter: pricePerLiter ?? null,
+      currency: currency ?? "TZS",
+      exchangeRate: exchangeRate ?? null,
+      baseCurrencyAmount: baseCurrencyAmount ?? null,
       notes: notes ?? null,
       createdById: auth.user.id,
       userName: auth.user.fullName,
