@@ -15,16 +15,25 @@ const DASHBOARD_STAT_KEYS = [
   "warehouseCount",
   "lowStockItems",
   "activeVehicles",
+  "vehicleCount",
   "activeDrivers",
   "activeTrips",
   "openIncidents",
   "activeFuelTanks",
+  "fuelTankCount",
   "openWorkOrders",
+  "workOrderCount",
   "pendingPurchaseRequests",
   "openPurchaseOrders",
+  "procurementOrderCount",
   "activeProductionBatches",
+  "productionBatchCount",
   "openQualityIssues",
+  "qcTestCount",
   "pendingDispatchOrders",
+  "dispatchOrderCount",
+  "warehouseItemCount",
+  "accountCount",
   "auditLogCount",
 ] as const;
 
@@ -35,6 +44,21 @@ const EMPTY_STATS = DASHBOARD_STAT_KEYS.reduce((stats, key) => {
   stats[key] = 0;
   return stats;
 }, {} as DashboardStats);
+
+async function countLowStockItems() {
+  const balances = await db.stockBalance.findMany({
+    where: { item: { reorderPoint: { not: null } } },
+    select: {
+      quantity: true,
+      item: { select: { reorderPoint: true } },
+    },
+  });
+
+  return balances.filter((balance) => {
+    const reorderPoint = balance.item.reorderPoint;
+    return reorderPoint !== null && balance.quantity <= reorderPoint;
+  }).length;
+}
 
 const STAT_QUERIES: Record<
   DashboardStatKey,
@@ -70,11 +94,15 @@ const STAT_QUERIES: Record<
   },
   lowStockItems: {
     permission: "warehouse:stock:read",
-    count: () => db.stockBalance.count({ where: { quantity: { lte: 0 } } }),
+    count: countLowStockItems,
   },
   activeVehicles: {
     permission: "transport:vehicle:read",
     count: () => db.vehicle.count({ where: { isActive: true } }),
+  },
+  vehicleCount: {
+    permission: "transport:vehicle:read",
+    count: () => db.vehicle.count(),
   },
   activeDrivers: {
     permission: "transport:driver:read",
@@ -98,12 +126,21 @@ const STAT_QUERIES: Record<
     permission: "fuel:tank:read",
     count: () => db.fuelTank.count({ where: { isActive: true } }),
   },
+  fuelTankCount: {
+    permission: "fuel:tank:read",
+    count: () => db.fuelTank.count(),
+  },
   openWorkOrders: {
     permission: "maintenance:workorder:read",
     count: () =>
       db.workOrder.count({
         where: { status: { notIn: ["COMPLETED", "CANCELLED"] } },
       }),
+  },
+  workOrderCount: {
+    permission: "maintenance:workorder:read",
+    count: () =>
+      db.workOrder.count({ where: { status: { not: "COMPLETED" } } }),
   },
   pendingPurchaseRequests: {
     permission: "procurement:request:read",
@@ -119,12 +156,21 @@ const STAT_QUERIES: Record<
         where: { status: { notIn: ["RECEIVED", "CANCELLED", "CLOSED"] } },
       }),
   },
+  procurementOrderCount: {
+    permission: "procurement:order:read",
+    count: () => db.purchaseOrder.count(),
+  },
   activeProductionBatches: {
     permission: "production:batch:read",
     count: () =>
       db.productionBatch.count({
         where: { status: { in: ["PLANNED", "IN_PROGRESS"] } },
       }),
+  },
+  productionBatchCount: {
+    permission: "production:batch:read",
+    count: () =>
+      db.productionBatch.count({ where: { status: { not: "COMPLETED" } } }),
   },
   openQualityIssues: {
     permission: "qc:ncr:read",
@@ -133,12 +179,28 @@ const STAT_QUERIES: Record<
         where: { status: { notIn: ["CLOSED", "RESOLVED"] } },
       }),
   },
+  qcTestCount: {
+    permission: "qc:test:read",
+    count: () => db.qualityTest.count(),
+  },
   pendingDispatchOrders: {
     permission: "dispatch:order:read",
     count: () =>
       db.dispatchOrder.count({
         where: { status: { in: ["DRAFT", "CONFIRMED", "DISPATCHED"] } },
       }),
+  },
+  dispatchOrderCount: {
+    permission: "dispatch:order:read",
+    count: () => db.dispatchOrder.count(),
+  },
+  warehouseItemCount: {
+    permission: "warehouse:item:read",
+    count: () => db.item.count(),
+  },
+  accountCount: {
+    permission: "finance:account:read",
+    count: async () => 0,
   },
   auditLogCount: {
     permission: "audit:log:read",

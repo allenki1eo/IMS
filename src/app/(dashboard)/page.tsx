@@ -45,16 +45,25 @@ interface DashboardStats {
   warehouseCount: number;
   lowStockItems: number;
   activeVehicles: number;
+  vehicleCount: number;
   activeDrivers: number;
   activeTrips: number;
   openIncidents: number;
   activeFuelTanks: number;
+  fuelTankCount: number;
   openWorkOrders: number;
+  workOrderCount: number;
   pendingPurchaseRequests: number;
   openPurchaseOrders: number;
+  procurementOrderCount: number;
   activeProductionBatches: number;
+  productionBatchCount: number;
   openQualityIssues: number;
+  qcTestCount: number;
   pendingDispatchOrders: number;
+  dispatchOrderCount: number;
+  warehouseItemCount: number;
+  accountCount: number;
   auditLogCount: number;
 }
 
