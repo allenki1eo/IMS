@@ -184,7 +184,7 @@ export default function DayBookPage() {
 
                     {/* Entries for this date */}
                     <div className="space-y-3">
-                      {entries.map((entry) => (
+                      {entries.map((entry: DayBookEntry) => (
                         <Card key={entry.id} className="overflow-hidden">
                           <div className="flex items-center justify-between border-b bg-muted/20 px-4 py-2">
                             <div className="flex items-center gap-3">
