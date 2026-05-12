@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Wifi,
   Trash2,
   TrendingDown,
 } from "lucide-react";
@@ -96,6 +97,7 @@ export default function ExchangeRatesPage() {
   const [rates, setRates] = useState<ExchangeRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
@@ -176,6 +178,25 @@ export default function ExchangeRatesPage() {
     [rates]
   );
   const marketRateCount = useMemo(() => rates.filter((r) => r.source === "MARKET").length, [rates]);
+
+  async function handleSync(base = "USD") {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/finance/exchange-rates/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base }),
+      });
+      const payload = await res.json();
+      if (!res.ok) { toast.error(payload.error ?? "Sync failed"); return; }
+      toast.success(payload.data?.message ?? "Rates synced");
+      fetchRates(true);
+    } catch {
+      toast.error("Network error during sync");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -261,6 +282,10 @@ export default function ExchangeRatesPage() {
                 <Calculator className="h-4 w-4" />
                 Converter
               </Link>
+            </Button>
+            <Button variant="outline" onClick={() => handleSync("USD")} disabled={syncing}>
+              <Wifi className={syncing ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+              {syncing ? "Syncing…" : "Sync Live Rates"}
             </Button>
             <Button variant="outline" onClick={() => fetchRates(true)} disabled={refreshing}>
               <RefreshCw className={refreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />

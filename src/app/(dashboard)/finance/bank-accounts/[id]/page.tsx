@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Power, PowerOff, CheckCircle, Circle } from "lucide-react";
+import { ArrowLeft, Power, PowerOff, CheckCircle, Circle, Scale } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { Button } from "@/components/ui/button";
@@ -118,12 +118,20 @@ export default function BankAccountDetailPage() {
 
       <div className="flex items-center justify-between">
         <PageHeader title={account.name} description={account.bankName || "Bank / Cash account"} />
-        {canUpdate && (
-          <Button variant="outline" onClick={toggleStatus}>
-            {account.isActive ? <PowerOff className="mr-2 h-4 w-4" /> : <Power className="mr-2 h-4 w-4" />}
-            {account.isActive ? "Deactivate" : "Activate"}
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/finance/bank-accounts/${id}/reconcile`}>
+              <Scale className="mr-2 h-4 w-4" />
+              Reconcile
+            </Link>
           </Button>
-        )}
+          {canUpdate && (
+            <Button variant="outline" onClick={toggleStatus}>
+              {account.isActive ? <PowerOff className="mr-2 h-4 w-4" /> : <Power className="mr-2 h-4 w-4" />}
+              {account.isActive ? "Deactivate" : "Activate"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
