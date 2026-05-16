@@ -148,7 +148,7 @@ export default function ItemDetailPage() {
     setSaving(true);
     try {
       const res = await fetch(`/api/items/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,

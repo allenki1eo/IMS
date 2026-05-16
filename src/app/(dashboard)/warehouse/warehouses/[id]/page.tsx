@@ -119,7 +119,7 @@ export default function WarehouseDetailPage() {
     setSaving(true);
     try {
       const res = await fetch(`/api/warehouses/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editForm.name,

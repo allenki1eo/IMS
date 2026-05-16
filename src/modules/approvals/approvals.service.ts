@@ -75,6 +75,62 @@ export async function createWorkflow(params: {
   return workflow;
 }
 
+export async function updateWorkflow(params: {
+  id: string;
+  name: string;
+  description?: string;
+  steps: Array<{
+    id?: string;
+    stepNumber: number;
+    name: string;
+    approverType: string;
+    approverRoleId?: string;
+  }>;
+  updatedById: string;
+  userName: string;
+  ipAddress?: string;
+}) {
+  const { id, name, description, steps, updatedById, userName, ipAddress } = params;
+
+  const existing = await db.approvalWorkflow.findUnique({ where: { id } });
+  if (!existing) throw new Error("Approval workflow not found");
+
+  const workflow = await db.$transaction(async (tx) => {
+    await tx.approvalWorkflowStep.deleteMany({ where: { workflowId: id } });
+    return tx.approvalWorkflow.update({
+      where: { id },
+      data: {
+        name,
+        description: description ?? null,
+        steps: {
+          create: steps.map((s) => ({
+            stepNumber: s.stepNumber,
+            name: s.name,
+            approverType: s.approverType,
+            approverRoleId: s.approverRoleId ?? null,
+          })),
+        },
+      },
+      include: { steps: { orderBy: { stepNumber: "asc" }, include: { role: true } } },
+    });
+  });
+
+  await createAuditLog({
+    userId: updatedById,
+    userName,
+    action: "WORKFLOW_UPDATE",
+    module: "approvals",
+    resource: "approval_workflow",
+    recordId: id,
+    newValue: { name, stepCount: steps.length },
+    description: `Updated approval workflow: ${name}`,
+    ipAddress,
+    companyId: existing.companyId,
+  });
+
+  return workflow;
+}
+
 export async function listApprovalRequests(params: {
   page: number;
   pageSize: number;
