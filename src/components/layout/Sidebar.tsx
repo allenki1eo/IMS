@@ -9,6 +9,7 @@ import {
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
+  TrendingUp, ShoppingBag, UserCheck, Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -144,6 +145,22 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Products", href: "/dispatch/products", icon: <Package className="h-4 w-4" />, permission: "dispatch:product:read" },
           { label: "Inventory", href: "/dispatch/inventory", icon: <Boxes className="h-4 w-4" />, permission: "dispatch:lot:read" },
           { label: "Dispatch Orders", href: "/dispatch/orders", icon: <SendHorizonal className="h-4 w-4" />, permission: "dispatch:order:read" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "Sales",
+    items: [
+      {
+        label: "Sales",
+        icon: <TrendingUp className="h-4 w-4" />,
+        permission: "sales:order:read",
+        children: [
+          { label: "Overview", href: "/sales", icon: <BarChart3 className="h-4 w-4" />, permission: "sales:order:read" },
+          { label: "Orders", href: "/sales/orders", icon: <ShoppingBag className="h-4 w-4" />, permission: "sales:order:read" },
+          { label: "Customers", href: "/sales/customers", icon: <UserCheck className="h-4 w-4" />, permission: "sales:customer:read" },
+          { label: "KPIs & Targets", href: "/sales/kpis", icon: <Target className="h-4 w-4" />, permission: "sales:kpi:read" },
         ],
       },
     ],
