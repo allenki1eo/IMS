@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
   "/api/settings", // public settings
+  "/api/webhooks/", // webhook receivers use HMAC, not session auth
   "/_next",
   "/favicon.ico",
   "/placeholder-logo.svg",
