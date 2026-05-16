@@ -34,7 +34,7 @@ export default function AnalyticsPage() {
         const kpiJson = await kpiRes.json();
         const trendJson = await trendRes.json();
         if (kpiRes.ok) setKpis(kpiJson.data);
-        if (trendRes.ok) setTrends(trendJson.data);
+        if (trendRes.ok) setTrends(trendJson.data ?? []);
       } catch {
         toast.error("Failed to load analytics");
       } finally {

@@ -24,7 +24,7 @@ export function NotificationBell() {
       try {
         const [approvals, workOrders, lowStock] = await Promise.allSettled([
           fetch("/api/approval-requests?status=PENDING&pageSize=1").then((r) => r.json()),
-          fetch("/api/work-orders?status=OPEN&pageSize=1").then((r) => r.json()),
+          fetch("/api/maintenance/work-orders?status=OPEN&pageSize=1").then((r) => r.json()),
           fetch("/api/items?lowStock=true&pageSize=1").then((r) => r.json()),
         ]);
 
