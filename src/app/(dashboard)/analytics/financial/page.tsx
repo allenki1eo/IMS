@@ -24,7 +24,7 @@ export default function FinancialAnalyticsPage() {
       const res = await fetch(`/api/analytics/financial?months=${months}`);
       const json = await res.json();
       if (res.ok) {
-        setData(json.data);
+        setData(json.data ?? []);
       } else {
         toast.error(json.message || "Failed to load financial trends");
       }
