@@ -373,19 +373,21 @@ function ModuleCard({ module, stats }: { module: ModuleConfig; stats: DashboardS
   const Icon = module.icon;
   return (
     <Link href={module.href} className="group block">
-      <div className="flex items-center gap-3 p-3 rounded-lg border hover:border-foreground/20 hover:bg-muted/30 transition-all">
-        <div className="shrink-0 rounded-md border bg-background p-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col gap-2 p-3 rounded-lg border hover:border-foreground/20 hover:bg-muted/30 transition-all sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="shrink-0 rounded-md border bg-background p-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{module.title}</p>
+            <p className="text-xs text-muted-foreground truncate">{module.description}</p>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{module.title}</p>
-          <p className="text-xs text-muted-foreground truncate">{module.description}</p>
-        </div>
-        <div className="shrink-0 flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-4 text-xs pl-[36px] sm:pl-0 sm:shrink-0 sm:gap-3">
           {module.stats.map((s) => (
-            <div key={s.label} className="text-right">
-              <div className="font-semibold tabular-nums">{formatNumber(stats[s.key])}</div>
-              <div className="text-muted-foreground">{s.label}</div>
+            <div key={s.label} className="text-left sm:text-right">
+              <span className="font-semibold tabular-nums">{formatNumber(stats[s.key])}</span>
+              <span className="text-muted-foreground ml-1 sm:ml-0 sm:block">{s.label}</span>
             </div>
           ))}
         </div>
