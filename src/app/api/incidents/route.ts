@@ -18,16 +18,21 @@ export async function GET(request: NextRequest) {
   const incidentType = searchParams.get("incidentType") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { data, meta } = await listIncidents(companyId, {
-    search,
-    vehicleId,
-    incidentType,
-    status,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { data, meta } = await listIncidents(companyId, {
+      search,
+      vehicleId,
+      incidentType,
+      status,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, paginationParams));
+    return paginated(data, buildMeta(meta.total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

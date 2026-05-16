@@ -16,14 +16,19 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { transfers, total } = await listTransfers(companyId, {
-    search,
-    status,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { transfers, total } = await listTransfers(companyId, {
+      search,
+      status,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(transfers, buildMeta(total, paginationParams));
+    return paginated(transfers, buildMeta(total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

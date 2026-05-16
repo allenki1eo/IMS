@@ -22,13 +22,18 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
-  const { data, meta } = await listProductionRecipes(companyId, {
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
-  return paginated(data, buildMeta(meta.total, pagination));
+  try {
+    const { data, meta } = await listProductionRecipes(companyId, {
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

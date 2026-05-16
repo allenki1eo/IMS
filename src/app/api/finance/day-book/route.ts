@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest } from "@/lib/response";
+import { success, badRequest , serverError} from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "finance:journal:read");
@@ -17,29 +17,34 @@ export async function GET(request: NextRequest) {
 
   if (!fromDate || !toDate) return badRequest("fromDate and toDate are required");
 
-  const entries = await db.journalEntry.findMany({
-    where: {
-      companyId,
-      status: "POSTED",
-      entryDate: {
-        gte: new Date(fromDate),
-        lte: new Date(new Date(toDate).setHours(23, 59, 59, 999)),
-      },
-      ...(voucherType ? { voucherType } : {}),
-    },
-    include: {
-      lines: {
-        include: {
-          account: { select: { id: true, code: true, name: true } },
+  try {
+    const entries = await db.journalEntry.findMany({
+      where: {
+        companyId,
+        status: "POSTED",
+        entryDate: {
+          gte: new Date(fromDate),
+          lte: new Date(new Date(toDate).setHours(23, 59, 59, 999)),
         },
-        orderBy: { debit: "desc" },
+        ...(voucherType ? { voucherType } : {}),
       },
-    },
-    orderBy: [{ entryDate: "asc" }, { createdAt: "asc" }],
-  });
+      include: {
+        lines: {
+          include: {
+            account: { select: { id: true, code: true, name: true } },
+          },
+          orderBy: { debit: "desc" },
+        },
+      },
+      orderBy: [{ entryDate: "asc" }, { createdAt: "asc" }],
+    });
 
-  const totalDebit = entries.reduce((sum, e) => sum + (e.totalDebit ?? 0), 0);
-  const totalCredit = entries.reduce((sum, e) => sum + (e.totalCredit ?? 0), 0);
+    const totalDebit = entries.reduce((sum, e) => sum + (e.totalDebit ?? 0), 0);
+    const totalCredit = entries.reduce((sum, e) => sum + (e.totalCredit ?? 0), 0);
 
-  return success({ entries, totalDebit, totalCredit, count: entries.length });
+    return success({ entries, totalDebit, totalCredit, count: entries.length });
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }

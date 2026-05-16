@@ -17,15 +17,20 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") ?? undefined;
   const warehouseId = searchParams.get("warehouseId") ?? undefined;
 
-  const { adjustments, total } = await listAdjustments(companyId, {
-    search,
-    status,
-    warehouseId,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { adjustments, total } = await listAdjustments(companyId, {
+      search,
+      status,
+      warehouseId,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(adjustments, buildMeta(total, paginationParams));
+    return paginated(adjustments, buildMeta(total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

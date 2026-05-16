@@ -17,15 +17,20 @@ export async function GET(request: NextRequest) {
   const severity = searchParams.get("severity") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { data, meta } = await listNCRs(companyId, {
-    testId,
-    severity,
-    status,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listNCRs(companyId, {
+      testId,
+      severity,
+      status,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

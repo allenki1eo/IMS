@@ -28,8 +28,13 @@ export async function GET(request: NextRequest) {
   const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
-  const workflows = await listWorkflows(companyId);
-  return success(workflows);
+  try {
+    const workflows = await listWorkflows(companyId);
+    return success(workflows);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

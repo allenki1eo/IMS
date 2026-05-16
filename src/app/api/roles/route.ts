@@ -9,11 +9,16 @@ export async function GET(request: NextRequest) {
   if ("error" in auth) return auth.error;
 
   const { searchParams } = new URL(request.url);
-  const roles = await listRoles({
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-  });
-  return success(roles);
+  try {
+    const roles = await listRoles({
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+    });
+    return success(roles);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

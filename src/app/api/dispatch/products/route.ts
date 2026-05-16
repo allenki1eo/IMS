@@ -17,14 +17,19 @@ export async function GET(request: NextRequest) {
   const isActiveStr = searchParams.get("isActive");
   const isActive = isActiveStr === "true" ? true : isActiveStr === "false" ? false : undefined;
 
-  const { data, meta } = await listProducts(companyId, {
-    search,
-    isActive,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listProducts(companyId, {
+      search,
+      isActive,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

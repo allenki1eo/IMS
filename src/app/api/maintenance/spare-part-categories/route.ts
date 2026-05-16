@@ -10,8 +10,13 @@ export async function GET(request: NextRequest) {
   const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
-  const categories = await listCategories(companyId);
-  return success(categories);
+  try {
+    const categories = await listCategories(companyId);
+    return success(categories);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

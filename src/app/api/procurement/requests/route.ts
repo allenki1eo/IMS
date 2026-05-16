@@ -26,15 +26,20 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") ?? undefined;
   const priority = searchParams.get("priority") ?? undefined;
 
-  const { data, meta } = await listPurchaseRequests(companyId, {
-    search,
-    status,
-    priority,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listPurchaseRequests(companyId, {
+      search,
+      status,
+      priority,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

@@ -1,13 +1,18 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api-helpers";
 import { listCompanies } from "@/modules/company/company.service";
-import { success } from "@/lib/response";
+import { success , serverError} from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if ("error" in auth) return auth.error;
 
-  const companies = await listCompanies();
+  try {
+    const companies = await listCompanies();
 
-  return success({ ...auth.user, companies });
+    return success({ ...auth.user, companies });
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }

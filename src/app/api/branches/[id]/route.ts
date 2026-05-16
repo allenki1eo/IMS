@@ -8,9 +8,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const auth = await requirePermission(request, "company:branch:read");
   if ("error" in auth) return auth.error;
   const { id } = await params;
-  const branch = await getBranchById(id);
-  if (!branch) return notFound("Branch not found");
-  return success(branch);
+  try {
+    const branch = await getBranchById(id);
+    if (!branch) return notFound("Branch not found");
+    return success(branch);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

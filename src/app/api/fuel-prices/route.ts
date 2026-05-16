@@ -13,8 +13,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const fuelType = searchParams.get("fuelType") ?? undefined;
 
-  const prices = await listPrices(companyId, { fuelType });
-  return success(prices);
+  try {
+    const prices = await listPrices(companyId, { fuelType });
+    return success(prices);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

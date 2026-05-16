@@ -12,15 +12,20 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
-  const departments = await listDepartments({
-    companyId,
-    branchId: searchParams.get("branchId") ?? undefined,
-    parentId: searchParams.has("parentId") ? (searchParams.get("parentId") ?? null) : undefined,
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-  });
+  try {
+    const departments = await listDepartments({
+      companyId,
+      branchId: searchParams.get("branchId") ?? undefined,
+      parentId: searchParams.has("parentId") ? (searchParams.get("parentId") ?? null) : undefined,
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+    });
 
-  return success(departments);
+    return success(departments);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

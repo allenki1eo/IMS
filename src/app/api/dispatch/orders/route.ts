@@ -16,14 +16,19 @@ export async function GET(request: NextRequest) {
   const customerName = searchParams.get("customerName") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { data, meta } = await listOrders(companyId, {
-    customerName,
-    status,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listOrders(companyId, {
+      customerName,
+      status,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

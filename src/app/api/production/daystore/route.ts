@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getDaystorePlan } from "@/modules/production/daystore.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest } from "@/lib/response";
+import { success, badRequest , serverError} from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "production:batch:read");
@@ -18,6 +18,11 @@ export async function GET(request: NextRequest) {
     return badRequest("Invalid date");
   }
 
-  const plan = await getDaystorePlan(companyId, date);
-  return success(plan);
+  try {
+    const plan = await getDaystorePlan(companyId, date);
+    return success(plan);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
