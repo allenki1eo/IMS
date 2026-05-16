@@ -74,6 +74,7 @@ export async function getStockLedger(
       include: {
         item: { select: { id: true, name: true, code: true } },
         warehouse: { select: { id: true, name: true, code: true } },
+        location: { select: { id: true, name: true, code: true } },
       },
     }),
     db.stockLedger.count({ where }),
