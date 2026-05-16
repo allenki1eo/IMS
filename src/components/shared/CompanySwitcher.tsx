@@ -54,7 +54,7 @@ export function CompanySwitcher() {
   return (
     <div className="px-3 py-2">
       <DropdownMenu>
-        <DropdownMenuTrigger className="w-full flex items-center justify-between gap-2 rounded-md border border-sidebar-border bg-sidebar-accent/50 px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
+        <DropdownMenuTrigger className="w-full flex items-center justify-between gap-2 rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
           <span className="flex items-center gap-2 truncate">
             <Building2 className="h-4 w-4 shrink-0" />
             <span className="truncate">{activeCompany?.name ?? "Select company"}</span>
