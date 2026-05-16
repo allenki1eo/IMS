@@ -89,4 +89,29 @@
 @media print {
   .no-print { display: none !important; }
   .print-only { display: block !important; }
+
+  /* Hide navigation chrome */
+  aside, header, nav, footer,
+  [data-sidebar], [data-navbar] { display: none !important; }
+
+  /* Reset layout for print */
+  body { background: white !important; font-size: 12px; }
+  main { padding: 0 !important; overflow: visible !important; }
+  .p-6 { padding: 0 !important; }
+
+  /* Show borders on cards */
+  .rounded-lg, .rounded-md { border-radius: 0 !important; }
+  .shadow-sm, .shadow-md { box-shadow: none !important; }
+
+  /* Table readability */
+  table { border-collapse: collapse !important; width: 100% !important; }
+  th, td { border: 1px solid #e5e7eb !important; padding: 6px 10px !important; font-size: 11px; }
+  thead { background: #f9fafb !important; }
+
+  /* Page breaks */
+  .print-break-before { page-break-before: always; }
+  .print-break-avoid { page-break-inside: avoid; }
+
+  /* Force black text */
+  * { color: #000 !important; -webkit-print-color-adjust: exact; }
 }

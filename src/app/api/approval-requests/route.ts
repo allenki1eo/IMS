@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     ...params,
     status: searchParams.get("status") ?? undefined,
     module: searchParams.get("module") ?? undefined,
+    recordId: searchParams.get("recordId") ?? undefined,
   });
 
   return paginated(requests, buildMeta(total, params));

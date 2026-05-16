@@ -80,17 +80,19 @@ export async function listApprovalRequests(params: {
   pageSize: number;
   status?: string;
   module?: string;
+  recordId?: string;
   companyId: string;
   forUserId?: string;
   userRoleCodes?: string[];
 }) {
-  const { page, pageSize, status, module, companyId, forUserId, userRoleCodes } = params;
+  const { page, pageSize, status, module, recordId, companyId, forUserId, userRoleCodes } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
     companyId,
     ...(status ? { status } : {}),
     ...(module ? { module } : {}),
+    ...(recordId ? { recordId } : {}),
   };
 
   const [requests, total] = await Promise.all([
