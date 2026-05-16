@@ -170,6 +170,16 @@ const PERMISSIONS = [
   { module: "analytics", resource: "operations", action: "read", description: "View operational analytics" },
   { module: "analytics", resource: "financial", action: "read", description: "View financial analytics" },
   { module: "reports", resource: "report", action: "read", description: "View module reports" },
+  // Sales
+  { module: "sales", resource: "customer", action: "read", description: "View customers" },
+  { module: "sales", resource: "customer", action: "create", description: "Create customers" },
+  { module: "sales", resource: "customer", action: "update", description: "Edit customers" },
+  { module: "sales", resource: "order", action: "read", description: "View sales orders" },
+  { module: "sales", resource: "order", action: "create", description: "Create sales orders" },
+  { module: "sales", resource: "order", action: "update", description: "Update sales orders" },
+  { module: "sales", resource: "kpi", action: "read", description: "View sales KPIs" },
+  { module: "sales", resource: "kpi", action: "manage", description: "Manage sales KPI targets" },
+  { module: "sales", resource: "webhook", action: "manage", description: "Manage sales webhook settings" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
