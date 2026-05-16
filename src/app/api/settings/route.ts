@@ -19,12 +19,17 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
-  const settings = await getSettings({
-    companyId,
-    category: searchParams.get("category") ?? undefined,
-  });
+  try {
+    const settings = await getSettings({
+      companyId,
+      category: searchParams.get("category") ?? undefined,
+    });
 
-  return success(settings);
+    return success(settings);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function PUT(request: NextRequest) {

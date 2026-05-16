@@ -10,12 +10,17 @@ export async function GET(request: NextRequest) {
   const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
   const { searchParams } = new URL(request.url);
-  const branches = await listBranches({
-    companyId,
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-  });
-  return success(branches);
+  try {
+    const branches = await listBranches({
+      companyId,
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+    });
+    return success(branches);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

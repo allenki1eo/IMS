@@ -20,18 +20,23 @@ export async function GET(request: NextRequest) {
   const from = searchParams.get("from") ?? undefined;
   const to = searchParams.get("to") ?? undefined;
 
-  const { data, meta } = await listIssues(companyId, {
-    search,
-    tankId,
-    vehicleId,
-    driverId,
-    from,
-    to,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { data, meta } = await listIssues(companyId, {
+      search,
+      tankId,
+      vehicleId,
+      driverId,
+      from,
+      to,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, paginationParams));
+    return paginated(data, buildMeta(meta.total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

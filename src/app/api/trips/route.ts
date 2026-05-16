@@ -18,16 +18,21 @@ export async function GET(request: NextRequest) {
   const vehicleId = searchParams.get("vehicleId") ?? undefined;
   const driverId = searchParams.get("driverId") ?? undefined;
 
-  const { data, meta } = await listTrips(companyId, {
-    search,
-    status,
-    vehicleId,
-    driverId,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { data, meta } = await listTrips(companyId, {
+      search,
+      status,
+      vehicleId,
+      driverId,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, paginationParams));
+    return paginated(data, buildMeta(meta.total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

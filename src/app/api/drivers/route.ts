@@ -19,15 +19,20 @@ export async function GET(request: NextRequest) {
   const isAvailable =
     isAvailableParam === "true" ? true : isAvailableParam === "false" ? false : undefined;
 
-  const { data, meta } = await listDrivers(companyId, {
-    search,
-    status,
-    isAvailable,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { data, meta } = await listDrivers(companyId, {
+      search,
+      status,
+      isAvailable,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, paginationParams));
+    return paginated(data, buildMeta(meta.total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

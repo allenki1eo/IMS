@@ -11,10 +11,15 @@ export async function GET(request: NextRequest) {
   const companyId = await getCompanyId(request);
   if (!companyId) return notFound("Company not configured");
 
-  const company = await getCompanyById(companyId);
-  if (!company) return notFound("Company not found");
+  try {
+    const company = await getCompanyById(companyId);
+    if (!company) return notFound("Company not found");
 
-  return success(company);
+    return success(company);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

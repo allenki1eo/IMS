@@ -18,14 +18,19 @@ export async function GET(request: NextRequest) {
   const isActive =
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
 
-  const warehouses = await listWarehouses(companyId, {
-    search,
-    branchId,
-    isActive,
-    warehouseType,
-  });
+  try {
+    const warehouses = await listWarehouses(companyId, {
+      search,
+      branchId,
+      isActive,
+      warehouseType,
+    });
 
-  return success({ data: warehouses, meta: { total: warehouses.length } });
+    return success({ data: warehouses, meta: { total: warehouses.length } });
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

@@ -17,15 +17,20 @@ export async function GET(request: NextRequest) {
   const warehouseId = searchParams.get("warehouseId") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { grns, total } = await listGRNs(companyId, {
-    search,
-    warehouseId,
-    status,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { grns, total } = await listGRNs(companyId, {
+      search,
+      warehouseId,
+      status,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(grns, buildMeta(total, paginationParams));
+    return paginated(grns, buildMeta(total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

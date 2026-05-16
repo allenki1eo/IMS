@@ -18,8 +18,13 @@ export async function GET(request: NextRequest) {
   const isActive =
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
 
-  const tanks = await listTanks(companyId, { search, fuelType, branchId, isActive });
-  return success(tanks);
+  try {
+    const tanks = await listTanks(companyId, { search, fuelType, branchId, isActive });
+    return success(tanks);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

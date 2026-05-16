@@ -22,14 +22,19 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
-  const { data, meta } = await listProductionBatches(companyId, {
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-    lineId: searchParams.get("lineId") ?? undefined,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
-  return paginated(data, buildMeta(meta.total, pagination));
+  try {
+    const { data, meta } = await listProductionBatches(companyId, {
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+      lineId: searchParams.get("lineId") ?? undefined,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

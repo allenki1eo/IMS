@@ -18,15 +18,20 @@ export async function GET(request: NextRequest) {
   const lowStockParam = searchParams.get("lowStock");
   const lowStock = lowStockParam === "true" ? true : undefined;
 
-  const { data, meta } = await listParts(companyId, {
-    search,
-    categoryId,
-    lowStock,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listParts(companyId, {
+      search,
+      categoryId,
+      lowStock,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

@@ -20,16 +20,21 @@ export async function GET(request: NextRequest) {
   const isActive =
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
 
-  const { items, total } = await listItems(companyId, {
-    search,
-    categoryId,
-    itemType,
-    isActive,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { items, total } = await listItems(companyId, {
+      search,
+      categoryId,
+      itemType,
+      isActive,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(items, buildMeta(total, paginationParams));
+    return paginated(items, buildMeta(total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

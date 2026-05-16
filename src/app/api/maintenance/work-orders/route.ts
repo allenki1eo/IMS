@@ -19,17 +19,22 @@ export async function GET(request: NextRequest) {
   const fromStr = searchParams.get("from");
   const toStr = searchParams.get("to");
 
-  const { data, meta } = await listWorkOrders(companyId, {
-    vehicleId,
-    status,
-    priority,
-    completedFrom: fromStr ? new Date(fromStr) : undefined,
-    completedTo: toStr ? new Date(toStr) : undefined,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listWorkOrders(companyId, {
+      vehicleId,
+      status,
+      priority,
+      completedFrom: fromStr ? new Date(fromStr) : undefined,
+      completedTo: toStr ? new Date(toStr) : undefined,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentPrice } from "@/modules/fuel/prices.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound } from "@/lib/response";
+import { success, badRequest, notFound , serverError} from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:price:read");
@@ -14,8 +14,13 @@ export async function GET(request: NextRequest) {
   const fuelType = searchParams.get("fuelType");
   if (!fuelType) return badRequest("fuelType query parameter is required");
 
-  const price = await getCurrentPrice(companyId, fuelType);
-  if (!price) return notFound(`No current price found for fuel type: ${fuelType}`);
+  try {
+    const price = await getCurrentPrice(companyId, fuelType);
+    if (!price) return notFound(`No current price found for fuel type: ${fuelType}`);
 
-  return success(price);
+    return success(price);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }

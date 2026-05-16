@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listReceipts } from "@/modules/maintenance/receipts.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { paginated, badRequest } from "@/lib/response";
+import { paginated, badRequest , serverError} from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
@@ -15,11 +15,16 @@ export async function GET(request: NextRequest) {
   const pagination = parsePagination(searchParams);
   const sparePartId = searchParams.get("sparePartId") ?? undefined;
 
-  const { data, meta } = await listReceipts(companyId, {
-    sparePartId,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listReceipts(companyId, {
+      sparePartId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }

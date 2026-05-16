@@ -9,10 +9,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if ("error" in auth) return auth.error;
 
   const { id } = await params;
-  const employee = await getEmployeeById(id);
-  if (!employee) return notFound("Employee not found");
+  try {
+    const employee = await getEmployeeById(id);
+    if (!employee) return notFound("Employee not found");
 
-  return success(employee);
+    return success(employee);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -11,14 +11,19 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const params = parsePagination(searchParams);
-  const { users, total } = await listUsers({
-    ...params,
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-    branchId: searchParams.get("branchId") ?? undefined,
-  });
+  try {
+    const { users, total } = await listUsers({
+      ...params,
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+      branchId: searchParams.get("branchId") ?? undefined,
+    });
 
-  return paginated(users, buildMeta(total, params));
+    return paginated(users, buildMeta(total, params));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

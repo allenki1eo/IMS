@@ -11,9 +11,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
-  const account = await getAccount(companyId, id);
-  if (!account) return notFound("Account");
-  return success(account);
+  try {
+    const account = await getAccount(companyId, id);
+    if (!account) return notFound("Account");
+    return success(account);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

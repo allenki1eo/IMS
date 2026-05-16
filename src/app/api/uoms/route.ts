@@ -13,8 +13,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
 
-  const uoms = await listUOMs(companyId, { search });
-  return success({ data: uoms, meta: { total: uoms.length } });
+  try {
+    const uoms = await listUOMs(companyId, { search });
+    return success({ data: uoms, meta: { total: uoms.length } });
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {

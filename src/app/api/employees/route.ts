@@ -19,17 +19,22 @@ export async function GET(request: NextRequest) {
   const isDriver =
     isDriverParam === "true" ? true : isDriverParam === "false" ? false : undefined;
 
-  const { employees, total } = await listEmployees({
-    companyId,
-    ...params,
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-    branchId: searchParams.get("branchId") ?? undefined,
-    departmentId: searchParams.get("departmentId") ?? undefined,
-    isDriver,
-  });
+  try {
+    const { employees, total } = await listEmployees({
+      companyId,
+      ...params,
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+      branchId: searchParams.get("branchId") ?? undefined,
+      departmentId: searchParams.get("departmentId") ?? undefined,
+      isDriver,
+    });
 
-  return paginated(employees, buildMeta(total, params));
+    return paginated(employees, buildMeta(total, params));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return serverError();
+  }
 }
 
 export async function POST(request: NextRequest) {
