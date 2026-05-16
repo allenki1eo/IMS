@@ -173,7 +173,7 @@ export default function CategoriesPage() {
             <DialogTitle>{editing ? "Edit Category" : "New Category"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="cat-name">
                   Name <span className="text-destructive">*</span>

@@ -171,7 +171,7 @@ export default function FgLotDetailPage() {
                   placeholder="e.g. LOT-2026-001"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="edit-unitCost">Unit Cost</Label>
                   <Input

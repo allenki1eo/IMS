@@ -84,7 +84,7 @@ export default function NewCompanyPage() {
             <CardTitle className="text-base">Basic Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1 col-span-2 sm:col-span-1">
                 <Label htmlFor="name">
                   Company Name <span className="text-destructive">*</span>
@@ -116,7 +116,7 @@ export default function NewCompanyPage() {
               <Label htmlFor="address">Street Address</Label>
               <Input id="address" name="address" value={form.address} onChange={handleChange} disabled={saving} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="city">City</Label>
                 <Input id="city" name="city" value={form.city} onChange={handleChange} disabled={saving} />

@@ -78,10 +78,10 @@ export default function ProductionLinesPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search lines..." className="max-w-sm" />
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search lines..." className="w-full sm:max-w-xs" />
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[150px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
             <SelectItem value="ACTIVE">Active</SelectItem>
@@ -89,7 +89,7 @@ export default function ProductionLinesPage() {
           </SelectContent>
         </Select>
         <Select value={lineType} onValueChange={setLineType}>
-          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Types</SelectItem>
             {LINE_TYPES.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}

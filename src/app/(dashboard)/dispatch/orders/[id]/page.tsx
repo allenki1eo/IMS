@@ -394,7 +394,7 @@ export default function DispatchOrderDetailPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="line-quantity">Quantity <span className="text-destructive">*</span></Label>
                     <Input

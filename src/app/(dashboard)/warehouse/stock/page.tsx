@@ -155,7 +155,7 @@ export default function StockPage() {
         description="Current stock levels across all warehouses"
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap items-center">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap items-center">
         <SearchInput
           value={search}
           onChange={setSearch}

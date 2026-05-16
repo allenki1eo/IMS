@@ -30,7 +30,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           collapsed={collapsed}
         />
         <main className="flex-1 overflow-y-auto bg-background">
-          <div className="p-6 max-w-7xl mx-auto">{children}</div>
+          <div className="p-3 sm:p-6 max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
     </div>

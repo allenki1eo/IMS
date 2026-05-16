@@ -99,8 +99,8 @@ export default function PurchaseOrdersPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search orders..." className="max-w-sm" />
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search orders..." className="w-full sm:max-w-xs" />
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger>
           <SelectContent>

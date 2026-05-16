@@ -88,7 +88,7 @@ export default function NewBranchPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1 col-span-2 sm:col-span-1">
                 <Label htmlFor="name">
                   Name <span className="text-destructive">*</span>
@@ -110,7 +110,7 @@ export default function NewBranchPage() {
               <Label htmlFor="city">City</Label>
               <Input id="city" name="city" value={form.city} onChange={handleChange} disabled={submitting} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} disabled={submitting} />

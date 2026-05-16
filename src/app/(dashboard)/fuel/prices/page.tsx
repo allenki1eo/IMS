@@ -134,7 +134,7 @@ export default function FuelPricesPage() {
                     <Label>Price per Liter *</Label>
                     <Input type="number" min="0" step="0.001" value={form.pricePerLiter} onChange={(e) => setForm((p) => ({ ...p, pricePerLiter: e.target.value }))} placeholder="0.000" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label>Effective From *</Label>
                       <Input type="date" value={form.effectiveFrom} onChange={(e) => setForm((p) => ({ ...p, effectiveFrom: e.target.value }))} />

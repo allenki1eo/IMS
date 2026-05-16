@@ -81,7 +81,7 @@ export default function FinancePage() {
     <div className="space-y-6">
       <PageHeader title="Finance Operations" description="Chart of accounts, journal entries, bank accounts, payments, and financial reports" />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         {cards.map((card) => (
           <Link key={card.label} href={card.href}>
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer">

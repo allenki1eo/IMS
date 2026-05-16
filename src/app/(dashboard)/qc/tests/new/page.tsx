@@ -209,7 +209,7 @@ export default function NewQcTestPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="sampleQty">Sample Quantity (optional)</Label>
                 <Input

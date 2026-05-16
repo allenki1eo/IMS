@@ -72,7 +72,7 @@ export default function NewBankAccountPage() {
           <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="bankName">Bank Name</Label>
             <Input id="bankName" value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} />
@@ -83,7 +83,7 @@ export default function NewBankAccountPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Account Type *</Label>
             <Select value={form.accountType} onValueChange={(v) => setForm({ ...form, accountType: v })}>

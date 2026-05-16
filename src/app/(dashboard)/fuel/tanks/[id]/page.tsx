@@ -240,7 +240,7 @@ export default function TankDetailPage() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="name">Name <span className="text-destructive">*</span></Label>
                       <Input id="name" name="name" value={form.name} onChange={handleChange} disabled={saving} />
@@ -263,7 +263,7 @@ export default function TankDetailPage() {
                     </Select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="capacity">Capacity (L) <span className="text-destructive">*</span></Label>
                       <Input id="capacity" name="capacity" type="number" min="0" step="0.01" value={form.capacity} onChange={handleChange} disabled={saving} />

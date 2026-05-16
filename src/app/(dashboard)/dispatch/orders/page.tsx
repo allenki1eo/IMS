@@ -137,15 +137,15 @@ export default function DispatchOrdersPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search by reference or customer..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
