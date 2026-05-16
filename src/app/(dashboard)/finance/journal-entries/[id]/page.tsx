@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, CheckCircle, RotateCcw } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PrintButton } from "@/components/shared/PrintButton";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,6 +84,7 @@ export default function JournalEntryDetailPage() {
       <div className="flex items-center justify-between">
         <PageHeader title={entry.reference} description={entry.description} />
         <div className="flex gap-2">
+          <PrintButton className="no-print" />
           {entry.status === "DRAFT" && canPost && (
             <Button onClick={postEntry}>
               <CheckCircle className="mr-2 h-4 w-4" />

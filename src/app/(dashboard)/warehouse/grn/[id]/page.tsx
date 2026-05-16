@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, CheckCircle } from "lucide-react";
+import { PrintButton } from "@/components/shared/PrintButton";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
@@ -99,6 +100,7 @@ export default function GRNDetailPage() {
                 </Button>
               </PermissionGuard>
             )}
+            <PrintButton className="no-print" />
             <Button variant="outline" asChild>
               <Link href="/warehouse/grn">
                 <ArrowLeft className="h-4 w-4 mr-2" />
