@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FlaskConical, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -126,6 +126,16 @@ export default function ProductionBatchDetailPage() {
             {batch.status === "IN_PROGRESS" && <PermissionGuard require="production:batch:complete"><Button className="w-full" onClick={() => setShowComplete(true)}>Complete Batch</Button></PermissionGuard>}
             {["PLANNED", "IN_PROGRESS"].includes(batch.status) && <PermissionGuard require="production:batch:update"><Button className="w-full" variant="destructive" onClick={() => setConfirmAction("cancel")}>Cancel Batch</Button></PermissionGuard>}
             {!["PLANNED", "IN_PROGRESS"].includes(batch.status) && <p className="text-sm text-muted-foreground">No actions available for this status.</p>}
+            {batch.status === "COMPLETED" && (
+              <PermissionGuard require="qc:test:create">
+                <Button className="w-full" variant="outline" asChild>
+                  <Link href={`/qc/tests/create?batchId=${batch.id}&batchRef=${encodeURIComponent(batch.reference)}`}>
+                    <FlaskConical className="h-4 w-4 mr-2" />
+                    Create QC Test
+                  </Link>
+                </Button>
+              </PermissionGuard>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -140,6 +150,25 @@ export default function ProductionBatchDetailPage() {
           </CardContent>
         </Card>
       )}
+      {/* Material variance alert */}
+      {batch.status === "COMPLETED" && batch.actualQty != null && batch.plannedQty > 0 && (() => {
+        const variance = ((batch.actualQty - batch.plannedQty) / batch.plannedQty) * 100;
+        if (Math.abs(variance) < 5) return null;
+        return (
+          <div className={`flex items-start gap-3 p-4 rounded-lg border mb-4 ${variance < 0 ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold">
+                {variance < 0 ? "Below target" : "Above target"}: {Math.abs(variance).toFixed(1)}% variance
+              </p>
+              <p className="text-xs mt-0.5 opacity-80">
+                Planned {batch.plannedQty} {batch.uom} · Actual {batch.actualQty} {batch.uom}. Review materials and adjust future batch planning.
+              </p>
+            </div>
+          </div>
+        );
+      })()}
+
       <Card>
         <CardHeader><CardTitle className="text-base">Batch Materials</CardTitle></CardHeader>
         <CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="px-4 py-3 text-left font-medium text-muted-foreground">Description</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Code</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Planned</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Issued</th></tr></thead><tbody>{batch.materials.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No materials captured for this batch</td></tr> : batch.materials.map((line) => <tr key={line.id} className="border-t hover:bg-muted/30"><td className="px-4 py-3">{line.description}</td><td className="px-4 py-3">{line.itemCode ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{line.itemCode}</code> : "-"}</td><td className="px-4 py-3">{qty(line.plannedQty, line.uom)}</td><td className="px-4 py-3">{qty(line.issuedQty, line.uom)}</td></tr>)}</tbody></table></div></CardContent>

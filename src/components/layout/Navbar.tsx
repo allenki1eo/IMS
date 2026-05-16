@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, PanelLeftClose, PanelLeftOpen, Search, Bell, Inbox } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Menu, PanelLeftClose, PanelLeftOpen, Search, Sun, Moon, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SyncStatusIndicator } from "./SyncStatusIndicator";
 import { CommandPalette } from "./CommandPalette";
+import { NotificationBell } from "./NotificationBell";
 import { cn } from "@/lib/utils";
 
 const SEGMENT_LABELS: Record<string, string> = {
@@ -110,6 +112,7 @@ interface NavbarProps {
 
 export function Navbar({ onMenuToggle, onCollapseToggle, collapsed }: NavbarProps) {
   const [cmdOpen, setCmdOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
   const breadcrumbs = useBreadcrumbs();
 
   useEffect(() => {
@@ -198,10 +201,19 @@ export function Navbar({ onMenuToggle, onCollapseToggle, collapsed }: NavbarProp
           {/* Sync status */}
           <SyncStatusIndicator />
 
-          {/* Notifications */}
-          <Button variant="ghost" size="icon" className="h-8 w-8 relative">
-            <Bell className="h-4 w-4" />
+          {/* Dark mode toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
+
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* Messages */}
           <Button variant="ghost" size="icon" className="h-8 w-8">
