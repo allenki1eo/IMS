@@ -100,7 +100,7 @@ export default function AuditLogsPage() {
             </button>
           )}
           {expanded === row.id && (
-            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               {row.oldValue && (
                 <div>
                   <div className="font-semibold text-red-600 mb-1">Before</div>

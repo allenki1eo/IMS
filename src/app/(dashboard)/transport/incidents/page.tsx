@@ -148,7 +148,7 @@ export default function IncidentsPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -156,7 +156,7 @@ export default function IncidentsPage() {
           className="max-w-xs"
         />
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -169,7 +169,7 @@ export default function IncidentsPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

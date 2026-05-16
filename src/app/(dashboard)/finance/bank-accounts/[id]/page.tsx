@@ -159,7 +159,7 @@ export default function BankAccountDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
             <div className="bg-muted p-3 rounded"><div className="text-muted-foreground">Book Balance</div><div className="text-lg font-bold">${account.currentBalance.toLocaleString()}</div></div>
             <div className="bg-green-50 p-3 rounded"><div className="text-muted-foreground">Cleared Balance</div><div className="text-lg font-bold text-green-700">${(account.currentBalance - unclearedTotal).toLocaleString()}</div></div>
             <div className="bg-amber-50 p-3 rounded"><div className="text-muted-foreground">Uncleared</div><div className="text-lg font-bold text-amber-700">${unclearedTotal.toLocaleString()}</div></div>

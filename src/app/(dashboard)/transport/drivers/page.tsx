@@ -170,7 +170,7 @@ export default function DriversPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -178,7 +178,7 @@ export default function DriversPage() {
           className="max-w-xs"
         />
         <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -188,7 +188,7 @@ export default function DriversPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full sm:w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

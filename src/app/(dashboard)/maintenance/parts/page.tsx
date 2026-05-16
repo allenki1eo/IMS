@@ -166,12 +166,12 @@ export default function SparePartsPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap items-center">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap items-center">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search by code or name..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <Select value={categoryId} onValueChange={setCategoryId}>
           <SelectTrigger className="w-[200px]">

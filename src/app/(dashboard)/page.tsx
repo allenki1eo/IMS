@@ -535,7 +535,7 @@ export default function DashboardPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground max-w-xl">{profile.summary}</p>
         </div>
-        <div className="shrink-0 rounded-lg border bg-muted/40 px-5 py-4 min-w-52">
+        <div className="shrink-0 rounded-lg border bg-muted/40 px-5 py-4 sm:min-w-52">
           <div className="flex items-center gap-2 text-sm font-medium mb-1">
             <CalendarCheck className="h-4 w-4" />
             Today
@@ -726,7 +726,7 @@ export default function DashboardPage() {
                   value={logSearch}
                   onChange={(e) => setLogSearch(e.target.value)}
                   placeholder="Search activity..."
-                  className="h-8 pl-8 pr-3 rounded-md border border-input bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring w-48"
+                  className="h-8 pl-8 pr-3 rounded-md border border-input bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring w-full sm:w-48"
                 />
               </div>
               <Button variant="outline" size="sm" asChild>

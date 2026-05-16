@@ -109,7 +109,7 @@ export default function NewPaymentPage() {
       <PageHeader title="New Payment / Receipt" description="Record a payment or receipt" />
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Type *</Label>
             <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
@@ -126,7 +126,7 @@ export default function NewPaymentPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="amount">Amount *</Label>
             <Input id="amount" type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required />
@@ -160,7 +160,7 @@ export default function NewPaymentPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Payment Method *</Label>
             <Select value={form.paymentMethod} onValueChange={(v) => setForm({ ...form, paymentMethod: v })}>

@@ -137,7 +137,7 @@ export default function NewWorkflowPage() {
               </Label>
               <Input id="name" name="name" value={form.name} onChange={handleFormChange} disabled={submitting} placeholder="e.g. Purchase Order Approval" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="module">
                   Module <span className="text-destructive">*</span>
@@ -186,7 +186,7 @@ export default function NewWorkflowPage() {
                     disabled={submitting}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label>Approver Type</Label>
                     <Select value={step.approverType} onValueChange={(v) => handleStepChange(idx, "approverType", v)} disabled={submitting}>

@@ -158,7 +158,7 @@ export default function NcrDetailPage() {
       <div className="grid gap-4 lg:grid-cols-3 mb-6">
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle className="text-base">NCR Details</CardTitle></CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div><p className="text-muted-foreground">Status</p><div className="mt-1"><StatusBadge status={ncr.status} /></div></div>
             <div><p className="text-muted-foreground">Severity</p><div className="mt-1">{severityBadge(ncr.severity)}</div></div>
             <div className="col-span-2"><p className="text-muted-foreground">Title</p><p className="mt-1 font-medium">{ncr.title}</p></div>

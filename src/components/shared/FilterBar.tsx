@@ -52,13 +52,13 @@ export function FilterBar({
           value={search ?? ""}
           onChange={onSearchChange}
           placeholder={searchPlaceholder}
-          className="w-64"
+          className="w-full sm:w-56"
         />
       )}
 
       {filters.map((filter, i) => (
         <Select key={i} value={filter.value} onValueChange={filter.onChange}>
-          <SelectTrigger className={cn("h-9", filter.width ?? "w-40")}>
+          <SelectTrigger className={cn("h-9", filter.width ?? "w-full sm:w-36")}>
             <SelectValue placeholder={filter.placeholder} />
           </SelectTrigger>
           <SelectContent>
@@ -72,24 +72,24 @@ export function FilterBar({
       ))}
 
       {(onDateFromChange || onDateToChange) && (
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {onDateFromChange && (
             <input
               type="date"
               value={dateFrom ?? ""}
               onChange={(e) => onDateFromChange(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring w-full sm:w-auto"
             />
           )}
           {onDateFromChange && onDateToChange && (
-            <span className="text-muted-foreground text-xs">to</span>
+            <span className="text-muted-foreground text-xs hidden sm:inline">to</span>
           )}
           {onDateToChange && (
             <input
               type="date"
               value={dateTo ?? ""}
               onChange={(e) => onDateToChange(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring w-full sm:w-auto"
             />
           )}
         </div>

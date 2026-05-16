@@ -179,7 +179,7 @@ export default function NewReceiptPage() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="supplierName">Supplier Name</Label>
                   <Input id="supplierName" name="supplierName" value={form.supplierName} onChange={handleChange} placeholder="e.g. Total Energies" disabled={submitting} />
@@ -190,7 +190,7 @@ export default function NewReceiptPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="quantity">Quantity (L) <span className="text-destructive">*</span></Label>
                   <Input id="quantity" name="quantity" type="number" min="0" step="0.01" value={form.quantity} onChange={handleChange} placeholder="e.g. 5000" disabled={submitting} />

@@ -190,7 +190,7 @@ export default function WarehouseOverviewPage() {
         description="Overview of stock, warehouses, and operations"
       />
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
           title="Total Warehouses"
           value={stats.totalWarehouses}

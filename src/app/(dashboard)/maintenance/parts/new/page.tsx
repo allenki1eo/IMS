@@ -125,7 +125,7 @@ export default function NewSparePartPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="code">Code <span className="text-destructive">*</span></Label>
                 <Input
@@ -150,7 +150,7 @@ export default function NewSparePartPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Category</Label>
                 <Select
@@ -182,7 +182,7 @@ export default function NewSparePartPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="uom">Unit of Measure <span className="text-destructive">*</span></Label>
                 <Input
@@ -210,7 +210,7 @@ export default function NewSparePartPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="currentStock">Initial Stock</Label>
                 <Input

@@ -66,10 +66,10 @@ export default function ProductionRecipesPage() {
   return (
     <div>
       <PageHeader title="Production Recipes" description="Maintain product recipes and material requirements" actions={<PermissionGuard require="production:recipe:create"><Button asChild><Link href="/production/recipes/new"><Plus className="h-4 w-4 mr-2" />New Recipe</Link></Button></PermissionGuard>} />
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search recipes..." className="max-w-sm" />
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search recipes..." className="w-full sm:max-w-xs" />
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
             <SelectItem value="ACTIVE">Active</SelectItem>

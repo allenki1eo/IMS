@@ -166,7 +166,7 @@ export default function ItemsPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -174,7 +174,7 @@ export default function ItemsPage() {
           className="max-w-xs"
         />
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
@@ -185,7 +185,7 @@ export default function ItemsPage() {
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -195,7 +195,7 @@ export default function ItemsPage() {
           </SelectContent>
         </Select>
         <Select value={activeFilter} onValueChange={setActiveFilter}>
-          <SelectTrigger className="w-[120px]">
+          <SelectTrigger className="w-full sm:w-[120px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
