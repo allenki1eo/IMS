@@ -193,9 +193,18 @@ export default function OutstandingPage() {
                             {fmt(p.outstanding)}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <Button size="sm" variant="outline" asChild className="h-7 text-xs">
-                              <Link href={`/finance/payments/${p.id}`}>View</Link>
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button size="sm" variant="outline" asChild className="h-7 text-xs">
+                                <Link href={`/finance/payments/${p.id}`}>View</Link>
+                              </Button>
+                              {isPayable && p.outstanding > 0 && (
+                                <Button size="sm" asChild className="h-7 text-xs">
+                                  <Link href={`/finance/payments/create?referenceId=${p.id}&amount=${p.outstanding}&counterparty=${encodeURIComponent(p.counterparty ?? "")}`}>
+                                    Pay Now
+                                  </Link>
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
