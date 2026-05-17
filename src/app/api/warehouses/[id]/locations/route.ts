@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { listLocations, createLocation } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
+import { NextResponse } from "next/server";
 import { success, created, badRequest, serverError } from "@/lib/response";
 
 export async function GET(
@@ -12,7 +13,7 @@ export async function GET(
 
   const { id: warehouseId } = await params;
   const locations = await listLocations(warehouseId);
-  return success({ data: locations, meta: { total: locations.length } });
+  return NextResponse.json({ success: true, data: locations, meta: { total: locations.length, page: 1, pageSize: locations.length, totalPages: 1 } });
 }
 
 export async function POST(

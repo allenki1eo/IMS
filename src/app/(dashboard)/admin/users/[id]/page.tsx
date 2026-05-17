@@ -83,18 +83,19 @@ export default function UserDetailPage() {
 
   async function toggleStatus() {
     if (!user) return;
-    const newStatus = user.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const activate = user.status !== "ACTIVE";
+    const newStatus = activate ? "ACTIVE" : "INACTIVE";
     setSavingStatus(true);
     try {
       const res = await fetch(`/api/users/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ isActive: activate }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to update status"); return; }
       setUser((u) => u ? { ...u, status: newStatus } : u);
-      toast.success(`User ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+      toast.success(`User ${activate ? "activated" : "deactivated"}`);
     } catch {
       toast.error("Network error");
     } finally {

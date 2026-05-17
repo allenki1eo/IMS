@@ -14,7 +14,11 @@ export async function GET(
   const { id } = await params;
   const user = await getUserById(id);
   if (!user) return notFound("User not found");
-  return success(user);
+  return success({
+    ...user,
+    status: user.isActive ? "ACTIVE" : "INACTIVE",
+    roles: user.roles.map((r: any) => ({ id: r.role.id, name: r.role.name, code: r.role.code })),
+  });
 }
 
 export async function PUT(
