@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ImportModal } from "@/components/shared/ImportModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -61,6 +62,7 @@ export default function ItemsPage() {
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [activeFilter, setActiveFilter] = useState("ALL");
+  const [importOpen, setImportOpen] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => {
@@ -156,12 +158,18 @@ export default function ItemsPage() {
         description="Manage inventory items and their details"
         actions={
           <PermissionGuard require="warehouse:item:create">
-            <Button asChild>
-              <Link href="/warehouse/items/new">
-                <Plus className="h-4 w-4 mr-2" />
-                New Item
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button asChild>
+                <Link href="/warehouse/items/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Item
+                </Link>
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
@@ -216,6 +224,24 @@ export default function ItemsPage() {
         onPageChange={setPage}
         emptyTitle="No items found"
         emptyDescription="Add your first item to the catalog."
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false);
+          setPage(1);
+        }}
+        title="Import Items"
+        apiEndpoint="/api/items/import"
+        templateHeaders={["name", "sku", "description", "categoryId", "uomId", "reorderPoint", "safetyStock", "unitCost"]}
+        templateFilename="items-import-template"
+        instructions={[
+          "name and sku are required",
+          "categoryId and uomId are optional (use database IDs)",
+          "reorderPoint, safetyStock, unitCost are optional numbers",
+        ]}
       />
     </div>
   );

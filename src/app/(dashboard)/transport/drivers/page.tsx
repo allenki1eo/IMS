@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ImportModal } from "@/components/shared/ImportModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -60,6 +61,7 @@ export default function DriversPage() {
   const [total, setTotal] = useState(0);
   const [availabilityFilter, setAvailabilityFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [importOpen, setImportOpen] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, availabilityFilter, statusFilter]);
@@ -160,12 +162,18 @@ export default function DriversPage() {
         description="Manage fleet drivers and their license details"
         actions={
           <PermissionGuard require="transport:driver:create">
-            <Button asChild>
-              <Link href="/transport/drivers/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Register Driver
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button asChild>
+                <Link href="/transport/drivers/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Register Driver
+                </Link>
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
@@ -209,6 +217,24 @@ export default function DriversPage() {
         onPageChange={setPage}
         emptyTitle="No drivers found"
         emptyDescription="Register your first driver to get started."
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false);
+          setPage(1);
+        }}
+        title="Import Drivers"
+        apiEndpoint="/api/drivers/import"
+        templateHeaders={["employeeId", "licenseNumber", "licenseClass", "licenseExpiry"]}
+        templateFilename="drivers-import-template"
+        instructions={[
+          "employeeId is required (the employee's database ID)",
+          "licenseExpiry format: YYYY-MM-DD",
+          "The employee must already exist in the system",
+        ]}
       />
     </div>
   );
