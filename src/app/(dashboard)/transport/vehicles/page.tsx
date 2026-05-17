@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ImportModal } from "@/components/shared/ImportModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -74,6 +75,7 @@ export default function VehiclesPage() {
   const [total, setTotal] = useState(0);
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [importOpen, setImportOpen] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, typeFilter, statusFilter]);
@@ -161,12 +163,18 @@ export default function VehiclesPage() {
         description="Manage fleet vehicles and their details"
         actions={
           <PermissionGuard require="transport:vehicle:create">
-            <Button asChild>
-              <Link href="/transport/vehicles/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Vehicle
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button asChild>
+                <Link href="/transport/vehicles/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Vehicle
+                </Link>
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
@@ -210,6 +218,25 @@ export default function VehiclesPage() {
         onPageChange={setPage}
         emptyTitle="No vehicles found"
         emptyDescription="Add your first vehicle to the fleet."
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false);
+          setPage(1);
+        }}
+        title="Import Vehicles"
+        apiEndpoint="/api/vehicles/import"
+        templateHeaders={["plateNumber", "make", "model", "year", "vehicleType", "color", "chassisNumber", "engineNumber", "fuelType", "capacity"]}
+        templateFilename="vehicles-import-template"
+        instructions={[
+          "plateNumber, make, and model are required",
+          "vehicleType: TRUCK, VAN, CAR, MOTORCYCLE, TRAILER (default: TRUCK)",
+          "fuelType: DIESEL, PETROL, ELECTRIC, HYBRID (default: DIESEL)",
+          "year and capacity are optional numbers",
+        ]}
       />
     </div>
   );

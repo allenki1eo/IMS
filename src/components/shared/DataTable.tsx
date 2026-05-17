@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown, MoreHorizontal, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown, MoreHorizontal, Download, FileSpreadsheet, FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -9,6 +9,9 @@ import {
 import { EmptyState } from "./EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function exportCsv<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
   const headers = columns.map((c) => JSON.stringify(c.header)).join(",");
@@ -23,6 +26,40 @@ function exportCsv<T extends object>(columns: { key: string; header: string }[],
   a.download = `${filename}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportExcel<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+  const headers = columns.map((c) => c.header);
+  const rows = data.map((row) => columns.map((c) => (row as any)[c.key] ?? ""));
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+function exportPdf<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+  const doc = new jsPDF({ orientation: "landscape" });
+  const title = filename.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const date = new Date().toLocaleDateString();
+
+  doc.setFontSize(14);
+  doc.text(title, 14, 15);
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(`Generated: ${date}`, 14, 21);
+
+  const head = [columns.map((c) => c.header)];
+  const body = data.map((row) => columns.map((c) => String((row as any)[c.key] ?? "")));
+
+  autoTable(doc, {
+    head,
+    body,
+    startY: 26,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [40, 40, 40] },
+  });
+
+  doc.save(`${filename}.pdf`);
 }
 
 export interface RowAction<T> {
@@ -56,6 +93,8 @@ interface DataTableProps<T> {
   onSelectionChange?: (ids: string[]) => void;
   exportable?: boolean;
   exportFilename?: string;
+  importable?: boolean;
+  onImport?: () => void;
   mobileCardRender?: (row: T) => React.ReactNode;
 }
 
@@ -77,6 +116,8 @@ export function DataTable<T extends { id: string }>({
   onSelectionChange,
   exportable,
   exportFilename = "export",
+  importable,
+  onImport,
   mobileCardRender,
 }: DataTableProps<T>) {
   const totalPages = Math.ceil(total / pageSize);
@@ -133,6 +174,9 @@ export function DataTable<T extends { id: string }>({
   ];
 
   const hasActions = rowActions && rowActions.length > 0;
+
+  // Export columns exclude action-type columns (no key cell rendering needed)
+  const exportCols = columns.filter((c) => c.key !== "actions");
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -289,7 +333,7 @@ export function DataTable<T extends { id: string }>({
       </div>
 
       {/* Pagination + export */}
-      {(total > pageSize || exportable) && (
+      {(total > pageSize || exportable || importable) && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-3">
             {total > 0 && (
@@ -301,14 +345,38 @@ export function DataTable<T extends { id: string }>({
               </span>
             )}
             {exportable && data.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+                    <Download className="h-3 w-3" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => exportCsv(exportCols, data, exportFilename)}>
+                    <Download className="h-3.5 w-3.5 mr-2" />
+                    Export CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportExcel(exportCols, data, exportFilename)}>
+                    <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />
+                    Export Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportPdf(exportCols, data, exportFilename)}>
+                    <FileText className="h-3.5 w-3.5 mr-2" />
+                    Export PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {importable && onImport && (
               <Button
                 variant="outline"
                 size="sm"
                 className="h-7 gap-1.5 text-xs"
-                onClick={() => exportCsv(columns, data, exportFilename)}
+                onClick={onImport}
               >
-                <Download className="h-3 w-3" />
-                Export CSV
+                <Upload className="h-3 w-3" />
+                Import CSV
               </Button>
             )}
           </div>
