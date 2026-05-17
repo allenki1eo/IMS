@@ -385,7 +385,7 @@ model Warehouse {
   companyId   String
   branchId    String?
   name        String
-  code        String   @unique
+  code        String
   address     String?
   managerId   String?
   warehouseType String @default("MAIN")
@@ -404,6 +404,7 @@ model Warehouse {
   adjustments   StockAdjustment[]
   fgLots        FGLot[]
 
+  @@unique([companyId, code])
   @@index([companyId])
   @@map("warehouses")
 }

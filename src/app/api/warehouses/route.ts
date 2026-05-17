@@ -1,8 +1,8 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { listWarehouses, createWarehouse } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { NextResponse } from "next/server";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { created, badRequest, serverError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:warehouse:read");
@@ -65,8 +65,12 @@ export async function POST(request: NextRequest) {
     });
     return created(warehouse);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed";
-    if (msg.toLowerCase().includes("unique")) return badRequest("Warehouse code already exists");
+    console.error("[API Error] createWarehouse:", err);
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return badRequest("A warehouse with this code already exists for your company");
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.toLowerCase().includes("unique")) return badRequest("A warehouse with this code already exists");
     return serverError();
   }
 }
