@@ -9,10 +9,6 @@ import {
 import { EmptyState } from "./EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
 function exportCsv<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
   const headers = columns.map((c) => JSON.stringify(c.header)).join(",");
   const rows = data.map((row) =>
@@ -28,7 +24,8 @@ function exportCsv<T extends object>(columns: { key: string; header: string }[],
   URL.revokeObjectURL(url);
 }
 
-function exportExcel<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+async function exportExcel<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+  const XLSX = await import("xlsx");
   const headers = columns.map((c) => c.header);
   const rows = data.map((row) => columns.map((c) => (row as any)[c.key] ?? ""));
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
@@ -37,7 +34,9 @@ function exportExcel<T extends object>(columns: { key: string; header: string }[
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-function exportPdf<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+async function exportPdf<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+  const jsPDF = (await import("jspdf")).default;
+  const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape" });
   const title = filename.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const date = new Date().toLocaleDateString();

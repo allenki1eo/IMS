@@ -158,7 +158,10 @@ export async function createDailyMovement(params: {
   userName: string;
   ipAddress?: string;
 }) {
-  const { companyId, reportDate, entries, notes, createdById, userName, ipAddress } = params;
+  const { companyId, entries, notes, createdById, userName, ipAddress } = params;
+  // Normalize to midnight so @@unique([companyId, reportDate]) works as a per-day constraint
+  const reportDate = new Date(params.reportDate);
+  reportDate.setHours(0, 0, 0, 0);
   const reference = generateRef();
   const counts = calcCounts(entries);
 
