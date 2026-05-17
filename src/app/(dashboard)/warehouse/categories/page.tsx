@@ -89,7 +89,7 @@ export default function CategoriesPage() {
     setSubmitting(true);
     try {
       const url = editing ? `/api/item-categories/${editing.id}` : "/api/item-categories";
-      const method = editing ? "PUT" : "POST";
+      const method = editing ? "PATCH" : "POST";
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
