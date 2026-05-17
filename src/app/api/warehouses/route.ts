@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { listWarehouses, createWarehouse } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
+import { NextResponse } from "next/server";
 import { success, created, badRequest, serverError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       warehouseType,
     });
 
-    return success({ data: warehouses, meta: { total: warehouses.length } });
+    return NextResponse.json({ success: true, data: warehouses, meta: { total: warehouses.length, page: 1, pageSize: warehouses.length, totalPages: 1 } });
   } catch (err) {
     console.error("[API Error]", err);
     return serverError();

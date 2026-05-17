@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { listCategories, createCategory } from "@/modules/warehouse/items.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
+import { NextResponse } from "next/server";
 import { success, created, badRequest, serverError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const categories = await listCategories(companyId, { search });
-    return success({ data: categories, meta: { total: categories.length } });
+    return NextResponse.json({ success: true, data: categories, meta: { total: categories.length, page: 1, pageSize: categories.length, totalPages: 1 } });
   } catch (err) {
     console.error("[API Error]", err);
     return serverError();
