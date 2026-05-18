@@ -25,6 +25,6 @@ export async function GET(request: NextRequest) {
     return success(rate);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

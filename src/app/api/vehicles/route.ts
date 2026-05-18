@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listVehicles, createVehicle } from "@/modules/transport/vehicles.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, serverError, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     return paginated(data, buildMeta(meta.total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -95,6 +95,6 @@ export async function POST(request: NextRequest) {
     if (msg.toLowerCase().includes("unique") || msg.toLowerCase().includes("plate")) {
       return badRequest("Plate number already exists");
     }
-    return serverError();
+    return handleError(err);
   }
 }

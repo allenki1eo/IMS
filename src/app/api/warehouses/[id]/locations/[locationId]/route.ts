@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateLocation } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, notFound, serverError } from "@/lib/response";
+import { success, notFound, serverError, handleError } from "@/lib/response";
 
 export async function PATCH(
   request: NextRequest,
@@ -36,6 +36,6 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Location not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

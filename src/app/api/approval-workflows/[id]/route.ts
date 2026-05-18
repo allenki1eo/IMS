@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getWorkflowById, updateWorkflow } from "@/modules/approvals/approvals.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, notFound, badRequest, serverError } from "@/lib/response";
+import { success, notFound, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "approvals:workflow:manage");
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return success(workflow);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -46,6 +46,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Approval workflow not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

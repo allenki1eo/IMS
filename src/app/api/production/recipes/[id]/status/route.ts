@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateProductionRecipeStatus } from "@/modules/production/recipes.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function PATCH(
   request: NextRequest,
@@ -23,7 +23,7 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("not found")) return notFound(msg);
     if (msg.includes("Invalid")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }
 

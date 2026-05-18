@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listUOMs, createUOM } from "@/modules/warehouse/items.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:uom:read");
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: uoms, meta: { total: uoms.length, page: 1, pageSize: uoms.length, totalPages: 1 } });
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -55,6 +55,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique")) return badRequest("UOM code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

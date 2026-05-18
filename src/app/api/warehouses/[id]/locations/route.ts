@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listLocations, createLocation } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -50,6 +50,6 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Warehouse not found") return badRequest("Warehouse not found");
     if (msg.toLowerCase().includes("unique")) return badRequest("Location code already exists in this warehouse");
-    return serverError();
+    return handleError(err);
   }
 }

@@ -55,6 +55,6 @@ export async function GET(request: NextRequest) {
     return success({ payments: enriched, totalOutstanding, overdueCount, count: enriched.length });
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

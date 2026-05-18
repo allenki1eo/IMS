@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { setVehicleStatus } from "@/modules/transport/vehicles.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 const VALID_STATUSES = ["ACTIVE", "INACTIVE", "IN_REPAIR", "RETIRED"];
 
@@ -35,6 +35,6 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Vehicle not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

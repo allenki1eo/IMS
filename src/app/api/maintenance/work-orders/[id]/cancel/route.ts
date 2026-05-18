@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { cancelWorkOrder } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -29,6 +29,6 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Work order not found") return notFound(msg);
     if (msg.includes("Only PENDING")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

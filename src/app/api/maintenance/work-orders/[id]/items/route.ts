@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { addWorkOrderItem } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { created, badRequest, notFound, serverError } from "@/lib/response";
+import { created, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -36,6 +36,6 @@ export async function POST(
     if (msg === "Work order not found") return notFound(msg);
     if (msg === "Spare part not found") return badRequest(msg);
     if (msg.includes("Insufficient stock")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

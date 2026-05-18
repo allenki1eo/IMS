@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listCategories, createCategory } from "@/modules/maintenance/parts.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:spare_part:read");
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     return success(categories);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -46,6 +46,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique")) return badRequest("Category code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

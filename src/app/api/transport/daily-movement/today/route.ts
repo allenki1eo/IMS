@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getTodayMovement } from "@/modules/transport/daily-movement.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { success, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:daily-movement:read");
@@ -15,6 +15,6 @@ export async function GET(request: NextRequest) {
     return success(result);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

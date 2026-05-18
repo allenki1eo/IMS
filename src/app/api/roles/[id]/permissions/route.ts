@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getRoleById, updateRolePermissions } from "@/modules/roles/roles.service";
 import { updatePermissionsSchema } from "@/modules/roles/roles.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -33,6 +33,6 @@ export async function PUT(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Role not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

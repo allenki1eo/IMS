@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { listWarehouses, createWarehouse } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { created, badRequest, serverError } from "@/lib/response";
+import { created, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:warehouse:read");
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: warehouses, meta: { total: warehouses.length, page: 1, pageSize: warehouses.length, totalPages: 1 } });
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -71,6 +71,6 @@ export async function POST(request: NextRequest) {
     }
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.toLowerCase().includes("unique")) return badRequest("A warehouse with this code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

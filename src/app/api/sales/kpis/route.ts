@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { success, badRequest, serverError, handleError } from "@/lib/response";
 import { listKPIs, upsertKPI } from "@/modules/sales/sales.service";
 
 export async function GET(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     return success(kpis);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -30,6 +30,6 @@ export async function POST(request: NextRequest) {
     return success(kpi);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

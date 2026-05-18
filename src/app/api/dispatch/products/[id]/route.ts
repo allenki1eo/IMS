@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getProduct, updateProduct } from "@/modules/dispatch/products.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -57,6 +57,6 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Product not found") return notFound(msg);
     if (msg === "A product with this code already exists") return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }
