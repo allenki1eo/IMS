@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { resetUserPassword } from "@/modules/users/users.service";
 import { resetPasswordSchema } from "@/modules/users/users.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, serverError, handleError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,

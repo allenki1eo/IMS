@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission } from "@/lib/api-helpers";
-import { success, notFound, badRequest, serverError, handleError } from "@/lib/response";
+import { success, notFound, badRequest, handleError } from "@/lib/response";
 import { getSalesOrderById, updateSalesOrderStatus } from "@/modules/sales/sales.service";
 
 export async function GET(

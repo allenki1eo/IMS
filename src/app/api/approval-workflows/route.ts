@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listWorkflows, createWorkflow } from "@/modules/approvals/approvals.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError, handleError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 import { z } from "zod";
 
 const createWorkflowSchema = z.object({

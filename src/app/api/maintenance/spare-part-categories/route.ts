@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listCategories, createCategory } from "@/modules/maintenance/parts.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError, handleError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:spare_part:read");

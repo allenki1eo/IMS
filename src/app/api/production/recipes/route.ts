@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listProductionRecipes, createProductionRecipe } from "@/modules/production/recipes.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError, handleError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 type MaterialBody = {

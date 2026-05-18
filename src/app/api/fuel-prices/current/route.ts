@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentPrice } from "@/modules/fuel/prices.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound , serverError} from "@/lib/response";
+import { success, badRequest, notFound , handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:price:read");

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success as ok, badRequest, serverError, handleError } from "@/lib/response";
+import { success as ok, badRequest, handleError } from "@/lib/response";
 import { createVehicle } from "@/modules/transport/vehicles.service";
 
 export async function POST(request: NextRequest) {

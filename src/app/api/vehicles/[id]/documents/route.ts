@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { addVehicleDocument } from "@/modules/transport/vehicles.service";
 import { requirePermission } from "@/lib/api-helpers";
-import { created, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { created, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,

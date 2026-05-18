@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getLedger } from "@/modules/finance/ledger.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError, handleError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listAuditLogs } from "@/modules/audit/audit.service";
 import { requirePermission } from "@/lib/api-helpers";
-import { paginated, badRequest , serverError} from "@/lib/response";
+import { paginated, badRequest , handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {

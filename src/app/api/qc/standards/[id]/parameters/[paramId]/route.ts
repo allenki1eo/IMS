@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateParameter, removeParameter } from "@/modules/qc/standards.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, noContent, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function PATCH(
   request: NextRequest,

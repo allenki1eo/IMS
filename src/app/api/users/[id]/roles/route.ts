@@ -3,7 +3,7 @@ import { assignRole, removeRole } from "@/modules/users/users.service";
 import { assignRoleSchema } from "@/modules/users/users.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
-import { success, created, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, created, badRequest, notFound, handleError } from "@/lib/response";
 import { z } from "zod";
 
 export async function GET(

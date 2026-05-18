@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getCompanyById, updateCompany, createCompany } from "@/modules/company/company.service";
 import { updateCompanySchema, createCompanySchema } from "@/modules/company/company.validation";
 import { requirePermission, requireAuth, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError, handleError, created } from "@/lib/response";
+import { success, badRequest, notFound, handleError, created } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);

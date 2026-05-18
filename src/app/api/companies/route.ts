@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listCompanies } from "@/modules/company/company.service";
 import { requireAuth } from "@/lib/api-helpers";
-import { success , serverError} from "@/lib/response";
+import { success , handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);

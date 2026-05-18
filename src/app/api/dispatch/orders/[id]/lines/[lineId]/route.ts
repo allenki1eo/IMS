@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { removeLine } from "@/modules/dispatch/orders.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { noContent, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function DELETE(
   request: NextRequest,

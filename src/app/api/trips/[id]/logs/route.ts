@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { addTripLog } from "@/modules/transport/trips.service";
 import { requirePermission } from "@/lib/api-helpers";
-import { created, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { created, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,

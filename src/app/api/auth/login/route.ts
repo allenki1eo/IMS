@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { loginService } from "@/modules/auth/auth.service";
 import { loginSchema } from "@/modules/auth/auth.validation";
-import { success, badRequest, serverError, handleError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {

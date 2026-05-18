@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listEmployees, createEmployee } from "@/modules/employees/employees.service";
 import { createEmployeeSchema } from "@/modules/employees/employees.validation";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, paginated, badRequest, conflict, serverError, handleError } from "@/lib/response";
+import { success, created, paginated, badRequest, conflict, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {

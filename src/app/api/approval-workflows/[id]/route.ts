@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getWorkflowById, updateWorkflow } from "@/modules/approvals/approvals.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, notFound, badRequest, serverError, handleError } from "@/lib/response";
+import { success, notFound, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "approvals:workflow:manage");

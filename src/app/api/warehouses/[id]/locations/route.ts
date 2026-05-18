@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listLocations, createLocation } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
-import { success, created, badRequest, serverError, handleError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
