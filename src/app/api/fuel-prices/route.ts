@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listPrices, createPrice } from "@/modules/fuel/prices.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:price:read");
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return success(prices);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -54,6 +54,6 @@ export async function POST(request: NextRequest) {
     return created(price);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getDailyMovementById, updateDailyMovement } from "@/modules/transport/daily-movement.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, notFound, badRequest, serverError } from "@/lib/response";
+import { success, notFound, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "transport:daily-movement:read");
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return success(report);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -68,6 +68,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return badRequest(err.message);
     }
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

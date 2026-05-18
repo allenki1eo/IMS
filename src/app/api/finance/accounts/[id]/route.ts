@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getAccount, updateAccount, toggleAccountStatus } from "@/modules/finance/accounts.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "finance:account:read");
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return success(account);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 

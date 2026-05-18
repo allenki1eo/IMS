@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getRoleById, updateRole, setRoleStatus } from "@/modules/roles/roles.service";
 import { updateRoleSchema } from "@/modules/roles/roles.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,

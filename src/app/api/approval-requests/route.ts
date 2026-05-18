@@ -26,6 +26,6 @@ export async function GET(request: NextRequest) {
     return paginated(requests, buildMeta(total, params));
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getLot, updateLot } from "@/modules/dispatch/inventory.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -57,6 +57,6 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Lot not found") return notFound(msg);
     if (msg === "Warehouse not found") return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

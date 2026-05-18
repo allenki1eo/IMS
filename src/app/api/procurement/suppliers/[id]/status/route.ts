@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateSupplier } from "@/modules/procurement/suppliers.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function PATCH(
   request: NextRequest,
@@ -31,7 +31,7 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Supplier not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }
 

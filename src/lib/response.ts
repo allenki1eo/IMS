@@ -83,3 +83,17 @@ export function serverError(
     { status: 500 }
   );
 }
+
+export function handleError(err: unknown): NextResponse<ApiResponse> {
+  if (err instanceof Error) {
+    const msg = err.message;
+    const isInternal = /prisma|sqlite|libsql|econnrefused|enotfound|socket hang/i.test(msg);
+    if (!isInternal && msg.length < 300) {
+      return NextResponse.json({ success: false, error: msg, code: "BAD_REQUEST" }, { status: 400 });
+    }
+  }
+  return NextResponse.json(
+    { success: false, error: "An unexpected error occurred", code: "SERVER_ERROR" },
+    { status: 500 }
+  );
+}

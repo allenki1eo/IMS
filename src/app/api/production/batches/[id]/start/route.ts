@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { startProductionBatch } from "@/modules/production/batches.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -21,7 +21,7 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("not found")) return notFound(msg);
     if (msg.includes("PLANNED")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }
 

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission } from "@/lib/api-helpers";
-import { success, notFound, serverError } from "@/lib/response";
+import { success, notFound, serverError, handleError } from "@/lib/response";
 import { getCustomerById } from "@/modules/sales/sales.service";
 
 export async function GET(
@@ -16,6 +16,6 @@ export async function GET(
     return success(customer);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

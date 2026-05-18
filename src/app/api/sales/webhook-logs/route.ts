@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, serverError } from "@/lib/response";
+import { success, serverError, handleError } from "@/lib/response";
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
@@ -17,6 +17,6 @@ export async function GET(request: NextRequest) {
     return success(logs);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

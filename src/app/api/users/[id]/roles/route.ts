@@ -3,7 +3,7 @@ import { assignRole, removeRole } from "@/modules/users/users.service";
 import { assignRoleSchema } from "@/modules/users/users.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
-import { success, created, badRequest, notFound, serverError } from "@/lib/response";
+import { success, created, badRequest, notFound, serverError, handleError } from "@/lib/response";
 import { z } from "zod";
 
 export async function GET(
@@ -52,7 +52,7 @@ export async function POST(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("Unique constraint")) return badRequest("Role already assigned");
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -81,6 +81,6 @@ export async function DELETE(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("not found")) return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

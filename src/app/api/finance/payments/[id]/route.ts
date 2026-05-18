@@ -17,6 +17,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return success(payment);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

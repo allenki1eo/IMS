@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { removeWorkOrderItem } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { noContent, badRequest, notFound, serverError } from "@/lib/response";
+import { noContent, badRequest, notFound, serverError, handleError } from "@/lib/response";
 
 export async function DELETE(
   request: NextRequest,
@@ -21,6 +21,6 @@ export async function DELETE(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Work order not found" || msg === "Work order item not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

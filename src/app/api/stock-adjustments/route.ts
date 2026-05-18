@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listAdjustments, createAdjustment } from "@/modules/warehouse/adjustments.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, serverError, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     return paginated(adjustments, buildMeta(total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
     });
     return created(adjustment);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed";
-    return serverError(msg);
+    return handleError(err);
   }
 }

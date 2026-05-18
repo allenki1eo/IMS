@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listAllPermissions } from "@/modules/roles/roles.service";
 import { requirePermission } from "@/lib/api-helpers";
-import { success , serverError} from "@/lib/response";
+import { success, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "roles:role:read");
@@ -11,6 +11,6 @@ export async function GET(request: NextRequest) {
     return success(permissions);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

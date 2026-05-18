@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSettings, bulkUpdateSettings } from "@/modules/settings/settings.service";
 import { requireAuth, requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { success, badRequest, serverError, handleError } from "@/lib/response";
 import { z } from "zod";
 
 const bulkUpdateSchema = z.array(
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     return success(settings);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -57,6 +57,6 @@ export async function PUT(request: NextRequest) {
     return success(results);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    return serverError();
+    return handleError(err);
   }
 }

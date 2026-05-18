@@ -45,6 +45,6 @@ export async function GET(request: NextRequest) {
     return success({ entries, totalDebit, totalCredit, count: entries.length });
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
