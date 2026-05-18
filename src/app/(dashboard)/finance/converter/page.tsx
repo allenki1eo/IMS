@@ -1,156 +1,148 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  ArrowLeft,
   ArrowRightLeft,
   Calculator,
-  CalendarDays,
   CircleDollarSign,
   RefreshCw,
+  Wifi,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 const CURRENCIES = ["TZS", "USD", "EUR", "GBP", "KES", "UGX", "RWF", "ZAR", "CNY", "INR"];
+
+const CURRENCY_FLAGS: Record<string, string> = {
+  TZS: "🇹🇿", USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧",
+  KES: "🇰🇪", UGX: "🇺🇬", RWF: "🇷🇼", ZAR: "🇿🇦",
+  CNY: "🇨🇳", INR: "🇮🇳",
+};
+
+function fmt(n: number, decimals = 2) {
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(n);
+}
+
+function fmtRate(n: number) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(n);
+}
 
 interface ConversionResult {
   convertedAmount: number;
   rate: number;
-  rateDate: string;
+  from: string;
+  to: string;
 }
 
-function today() {
-  return new Date().toISOString().split("T")[0];
-}
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-}
-
-function formatRate(value: number) {
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(value);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(value));
+interface RateBoard {
+  base: string;
+  rates: Record<string, number>;
 }
 
 export default function CurrencyConverterPage() {
   const [amount, setAmount] = useState("1000");
   const [fromCurrency, setFromCurrency] = useState("USD");
   const [toCurrency, setToCurrency] = useState("TZS");
-  const [useToday, setUseToday] = useState(true);
-  const [date, setDate] = useState(today());
   const [result, setResult] = useState<ConversionResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [converting, setConverting] = useState(false);
+  const [board, setBoard] = useState<RateBoard | null>(null);
+  const [boardLoading, setBoardLoading] = useState(true);
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const amountDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const preview = useMemo(() => {
-    if (!result) return null;
-    const sourceAmount = Number(amount) || 0;
-    return {
-      source: `${formatMoney(sourceAmount)} ${fromCurrency}`,
-      target: `${formatMoney(result.convertedAmount)} ${toCurrency}`,
-      rate: `1 ${fromCurrency} = ${formatRate(result.rate)} ${toCurrency}`,
-      inverse: `1 ${toCurrency} = ${formatRate(1 / result.rate)} ${fromCurrency}`,
-    };
-  }, [amount, fromCurrency, result, toCurrency]);
-
-  async function convert(overrideAmount?: string) {
-    const numericAmount = Number(overrideAmount ?? amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
-
-    setLoading(true);
-    setError(null);
+  // Fetch rate board (all currencies vs TZS base)
+  const fetchBoard = useCallback(async (base = "USD") => {
+    setBoardLoading(true);
     try {
-      const url = new URL("/api/finance/exchange-rates/convert", window.location.origin);
-      url.searchParams.set("from", fromCurrency);
-      url.searchParams.set("to", toCurrency);
-      url.searchParams.set("amount", String(numericAmount));
-      if (!useToday && date) url.searchParams.set("date", date);
-
-      const response = await fetch(url.toString());
-      const payload = await response.json();
-      if (!response.ok) {
-        setError(payload.error ?? "No rate found for this pair");
-        return;
-      }
-      setResult(payload.data ?? payload);
+      const res = await fetch(`/api/finance/converter?base=${base}`);
+      const payload = await res.json();
+      if (!res.ok) { toast.error(payload.error ?? "Failed to fetch rates"); return; }
+      setBoard(payload.data);
     } catch {
-      toast.error("Network error while converting currency");
+      toast.error("Network error fetching rates");
     } finally {
-      setLoading(false);
+      setBoardLoading(false);
     }
-  }
+  }, []);
 
-  // Auto-convert when currencies or date settings change
+  useEffect(() => { fetchBoard("USD"); }, [fetchBoard]);
+
+  const convert = useCallback(async (overrideAmount?: string) => {
+    const num = Number(overrideAmount ?? amount);
+    if (!Number.isFinite(num) || num <= 0) return;
+    setConverting(true);
+    try {
+      const res = await fetch(
+        `/api/finance/converter?from=${fromCurrency}&to=${toCurrency}&amount=${num}`
+      );
+      const payload = await res.json();
+      if (!res.ok) { toast.error(payload.error ?? "Conversion failed"); return; }
+      setResult(payload.data);
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setConverting(false);
+    }
+  }, [amount, fromCurrency, toCurrency]);
+
+  // Auto-convert when currencies change
   useEffect(() => {
-    const numericAmount = Number(amount);
-    if (Number.isFinite(numericAmount) && numericAmount > 0) {
-      convert();
-    }
+    const num = Number(amount);
+    if (Number.isFinite(num) && num > 0) convert();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromCurrency, toCurrency, useToday, date]);
+  }, [fromCurrency, toCurrency]);
 
-  // Debounced auto-convert when amount changes
+  // Initial load
+  useEffect(() => {
+    convert();
+    return () => { if (debounce.current) clearTimeout(debounce.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function handleAmountChange(value: string) {
     setAmount(value);
-    if (amountDebounce.current) clearTimeout(amountDebounce.current);
-    amountDebounce.current = setTimeout(() => {
+    if (debounce.current) clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => {
       const num = Number(value);
       if (Number.isFinite(num) && num > 0) convert(value);
     }, 500);
   }
 
-  useEffect(() => {
-    convert();
-    return () => {
-      if (amountDebounce.current) clearTimeout(amountDebounce.current);
-    };
-    // Run once on first load with the default pair.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   function swapCurrencies() {
     setFromCurrency(toCurrency);
     setToCurrency(fromCurrency);
-    // effect will trigger auto-convert after state updates
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Currency Converter"
-        description="Convert working amounts using saved finance exchange rates."
+        description="Live exchange rates powered by ExchangeRate API."
         actions={
-          <Button variant="outline" asChild>
-            <Link href="/finance/exchange-rates">
-              <ArrowLeft className="h-4 w-4" />
-              Rates
-            </Link>
+          <Button variant="outline" size="sm" onClick={() => fetchBoard("USD")} disabled={boardLoading}>
+            <RefreshCw className={boardLoading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            Refresh Rates
           </Button>
         }
       />
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(360px,520px)_1fr]">
-        {/* Input card */}
+      {/* Converter + Result */}
+      <section className="grid gap-6 xl:grid-cols-[minmax(340px,480px)_1fr]">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Calculator className="h-4 w-4 text-primary" />
               Convert Amount
             </CardTitle>
-            <CardDescription>Results update automatically as you type or change currencies.</CardDescription>
+            <CardDescription>Results update automatically as you type.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
@@ -168,9 +160,15 @@ export default function CurrencyConverterPage() {
               <div className="space-y-1.5">
                 <Label>From</Label>
                 <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {CURRENCY_FLAGS[c]} {c}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -180,99 +178,127 @@ export default function CurrencyConverterPage() {
               <div className="space-y-1.5">
                 <Label>To</Label>
                 <Select value={toCurrency} onValueChange={setToCurrency}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {CURRENCY_FLAGS[c]} {c}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="rounded-md border p-3">
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={useToday}
-                  onChange={(e) => setUseToday(e.target.checked)}
-                  className="h-4 w-4 rounded border-input"
-                />
-                Use today&apos;s latest available rate
-              </label>
-              {!useToday && (
-                <div className="mt-3 space-y-1.5">
-                  <Label>As Of Date</Label>
-                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-                </div>
-              )}
-            </div>
-
-            <Button onClick={() => convert()} disabled={loading} className="w-full">
-              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
-              {loading ? "Converting..." : "Convert"}
+            <Button onClick={() => convert()} disabled={converting} className="w-full">
+              {converting
+                ? <><RefreshCw className="h-4 w-4 animate-spin" /> Converting…</>
+                : <><Calculator className="h-4 w-4" /> Convert</>
+              }
             </Button>
           </CardContent>
         </Card>
 
-        {/* Result card */}
+        {/* Result */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <CircleDollarSign className="h-4 w-4 text-primary" />
               Result
-              {loading && <RefreshCw className="ml-auto h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+              {converting && <RefreshCw className="ml-auto h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </CardTitle>
-            <CardDescription>The converter uses the latest saved rate on or before the selected date.</CardDescription>
+            <CardDescription>Live rate — updates in real time.</CardDescription>
           </CardHeader>
           <CardContent>
-            {error ? (
-              <div className="flex min-h-[260px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-center">
-                <p className="text-sm font-medium text-destructive">{error}</p>
-                <p className="text-xs text-muted-foreground">
-                  Add a rate for {fromCurrency} → {toCurrency} in the{" "}
-                  <Link href="/finance/exchange-rates" className="underline underline-offset-2">
-                    Exchange Rates
-                  </Link>{" "}
-                  page first.
-                </p>
-              </div>
-            ) : preview && result ? (
-              <div className={`space-y-6 transition-opacity duration-150 ${loading ? "opacity-50" : "opacity-100"}`}>
-                <div className="rounded-lg border bg-muted/40 p-6">
-                  <div className="text-sm text-muted-foreground">{preview.source}</div>
-                  <div className="mt-2 text-3xl font-bold tracking-normal">{preview.target}</div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Badge variant="info">{preview.rate}</Badge>
-                    <Badge variant="outline" className="gap-1">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      {formatDate(result.rateDate)}
+            {result ? (
+              <div className={`space-y-5 transition-opacity ${converting ? "opacity-50" : "opacity-100"}`}>
+                <div className="rounded-xl border bg-muted/40 px-6 py-5">
+                  <p className="text-sm text-muted-foreground">
+                    {CURRENCY_FLAGS[fromCurrency]} {fmt(Number(amount))} {fromCurrency}
+                  </p>
+                  <p className="mt-2 text-4xl font-bold tracking-tight">
+                    {CURRENCY_FLAGS[toCurrency]} {fmt(result.convertedAmount)} {toCurrency}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Badge variant="info">
+                      1 {fromCurrency} = {fmtRate(result.rate)} {toCurrency}
+                    </Badge>
+                    <Badge variant="outline">
+                      1 {toCurrency} = {fmtRate(1 / result.rate)} {fromCurrency}
+                    </Badge>
+                    <Badge variant="secondary" className="gap-1">
+                      <Wifi className="h-3 w-3" /> Live
                     </Badge>
                   </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-md border p-4">
-                    <div className="text-sm text-muted-foreground">Source Currency</div>
-                    <div className="mt-1 text-2xl font-semibold">{fromCurrency}</div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">You send</p>
+                    <p className="mt-1 text-xl font-semibold">{CURRENCY_FLAGS[fromCurrency]} {fmt(Number(amount))} {fromCurrency}</p>
                   </div>
                   <div className="rounded-md border p-4">
-                    <div className="text-sm text-muted-foreground">Target Currency</div>
-                    <div className="mt-1 text-2xl font-semibold">{toCurrency}</div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Recipient gets</p>
+                    <p className="mt-1 text-xl font-semibold">{CURRENCY_FLAGS[toCurrency]} {fmt(result.convertedAmount)} {toCurrency}</p>
                   </div>
-                </div>
-
-                <div className="rounded-md border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">Inverse: </span>
-                  {preview.inverse}
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-[260px] items-center justify-center rounded-lg border border-dashed text-center text-sm text-muted-foreground">
-                {loading ? "Converting..." : "Enter an amount and convert to see the result."}
+              <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+                {converting ? "Converting…" : "Enter an amount above to convert."}
               </div>
             )}
           </CardContent>
         </Card>
       </section>
+
+      {/* Live Rate Board */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Wifi className="h-4 w-4 text-primary" />
+                Live Rate Board
+              </CardTitle>
+              <CardDescription>All currencies vs USD — live from ExchangeRate API.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {boardLoading ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div key={i} className="h-16 animate-pulse rounded-lg border bg-muted/30" />
+              ))}
+            </div>
+          ) : board ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {CURRENCIES.filter((c) => c !== board.base).map((c) => {
+                const rate = board.rates[c];
+                if (rate == null) return null;
+                return (
+                  <button
+                    key={c}
+                    onClick={() => { setFromCurrency(board.base); setToCurrency(c); }}
+                    className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <div>
+                      <p className="text-xs text-muted-foreground">{board.base} →</p>
+                      <p className="font-semibold">{CURRENCY_FLAGS[c]} {c}</p>
+                    </div>
+                    <p className="text-right font-mono text-sm font-medium">{fmtRate(rate)}</p>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Could not load live rates. Check your EXCHANGERATE_API_KEY.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
