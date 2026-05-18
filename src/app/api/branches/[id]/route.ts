@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getBranchById, updateBranch } from "@/modules/company/branches.service";
+import { getBranchById, updateBranch, setBranchStatus } from "@/modules/company/branches.service";
 import { updateBranchSchema } from "@/modules/company/company.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
 import { success, badRequest, notFound, handleError } from "@/lib/response";
@@ -14,6 +14,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return success(branch);
   } catch (err) {
     console.error("[API Error]", err);
+    return handleError(err);
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(request, "company:branch:update");
+  if ("error" in auth) return auth.error;
+  const { id } = await params;
+  const body = await request.json();
+  const { isActive } = body;
+  if (typeof isActive !== "boolean") return badRequest("isActive (boolean) is required");
+  const { ipAddress, userAgent } = getRequestMeta(request);
+  try {
+    await setBranchStatus({ id, isActive, updatedById: auth.user.id, userName: auth.user.fullName, ipAddress, userAgent });
+    const branch = await getBranchById(id);
+    return success(branch);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (msg === "Branch not found") return notFound(msg);
     return handleError(err);
   }
 }

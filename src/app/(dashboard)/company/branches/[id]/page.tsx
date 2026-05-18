@@ -24,7 +24,7 @@ interface Branch {
   phone: string | null;
   email: string | null;
   isMain: boolean;
-  status: string;
+  isActive: boolean;
 }
 
 export default function BranchDetailPage() {
@@ -96,18 +96,18 @@ export default function BranchDetailPage() {
 
   async function toggleStatus() {
     if (!branch) return;
-    const newStatus = branch.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const newIsActive = !branch.isActive;
     setTogglingStatus(true);
     try {
       const res = await fetch(`/api/branches/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ isActive: newIsActive }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to update status"); return; }
-      setBranch((b) => b ? { ...b, status: newStatus } : b);
-      toast.success(`Branch ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+      setBranch((b) => b ? { ...b, isActive: newIsActive } : b);
+      toast.success(`Branch ${newIsActive ? "activated" : "deactivated"}`);
     } catch {
       toast.error("Network error");
     } finally {
@@ -187,19 +187,19 @@ export default function BranchDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2">
-                <StatusBadge status={branch.status} />
+                <StatusBadge status={branch.isActive ? "ACTIVE" : "INACTIVE"} />
                 {branch.isMain && <Badge variant="default">Main Branch</Badge>}
               </div>
               <PermissionGuard require="company:branch:update">
                 <Button
-                  variant={branch.status === "ACTIVE" ? "destructive" : "default"}
+                  variant={branch.isActive ? "destructive" : "default"}
                   size="sm"
                   className="w-full"
                   onClick={toggleStatus}
                   disabled={togglingStatus}
                 >
                   {togglingStatus && <LoadingSpinner className="mr-2" />}
-                  {branch.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                  {branch.isActive ? "Deactivate" : "Activate"}
                 </Button>
               </PermissionGuard>
             </CardContent>
