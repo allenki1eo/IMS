@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { completeTest } from "@/modules/qc/tests.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,

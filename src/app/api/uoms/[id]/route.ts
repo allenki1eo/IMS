@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateUOM } from "@/modules/warehouse/items.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, notFound, serverError, handleError } from "@/lib/response";
+import { success, notFound, handleError } from "@/lib/response";
 
 export async function PATCH(
   request: NextRequest,

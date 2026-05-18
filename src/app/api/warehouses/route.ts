@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { listWarehouses, createWarehouse } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { created, badRequest, serverError, handleError } from "@/lib/response";
+import { created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:warehouse:read");

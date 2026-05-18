@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateSetting } from "@/modules/settings/settings.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError, handleError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 import { z } from "zod";
 
 const schema = z.object({ value: z.string() });

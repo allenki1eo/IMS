@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listCategories, createCategory } from "@/modules/warehouse/items.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
-import { success, created, badRequest, serverError, handleError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:category:read");

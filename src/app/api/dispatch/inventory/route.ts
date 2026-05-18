@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listLots, receiveLot } from "@/modules/dispatch/inventory.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError, handleError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {

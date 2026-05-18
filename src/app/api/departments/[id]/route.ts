@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getDepartmentById, updateDepartment } from "@/modules/company/departments.service";
 import { updateDepartmentSchema } from "@/modules/company/company.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "company:department:read");

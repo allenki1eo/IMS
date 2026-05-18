@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { completeTrip } from "@/modules/transport/trips.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,

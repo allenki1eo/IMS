@@ -5,7 +5,7 @@ import {
   deleteSchedule,
 } from "@/modules/maintenance/schedules.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, noContent, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,

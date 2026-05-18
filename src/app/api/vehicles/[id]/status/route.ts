@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { setVehicleStatus } from "@/modules/transport/vehicles.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 const VALID_STATUSES = ["ACTIVE", "INACTIVE", "IN_REPAIR", "RETIRED"];
 

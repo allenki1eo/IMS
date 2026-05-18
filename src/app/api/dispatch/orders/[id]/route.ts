@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getOrder, updateOrder } from "@/modules/dispatch/orders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,

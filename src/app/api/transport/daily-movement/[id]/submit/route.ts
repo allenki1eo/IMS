@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { submitDailyMovement } from "@/modules/transport/daily-movement.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, serverError, handleError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "transport:daily-movement:update");

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listRoles, createRole } from "@/modules/roles/roles.service";
 import { createRoleSchema } from "@/modules/roles/roles.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, created, badRequest, conflict, serverError, handleError } from "@/lib/response";
+import { success, created, badRequest, conflict, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "roles:role:read");

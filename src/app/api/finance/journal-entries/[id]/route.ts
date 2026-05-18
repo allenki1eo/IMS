@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getJournalEntry } from "@/modules/finance/journal-entries.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound , serverError} from "@/lib/response";
+import { success, badRequest, notFound , handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "finance:journal:read");

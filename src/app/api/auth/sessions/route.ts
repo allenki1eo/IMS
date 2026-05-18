@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth, getRequestMeta } from "@/lib/api-helpers";
 import { revokeSessionById } from "@/lib/session";
 import { db } from "@/lib/db";
-import { success, badRequest , serverError} from "@/lib/response";
+import { success, badRequest , handleError } from "@/lib/response";
 import { createAuditLog } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {

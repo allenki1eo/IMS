@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getEmployeeById, updateEmployee } from "@/modules/employees/employees.service";
 import { updateEmployeeSchema } from "@/modules/employees/employees.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError, handleError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "employees:employee:read");
