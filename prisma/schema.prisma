@@ -387,7 +387,6 @@ model Warehouse {
   name        String
   code        String
   address     String?
-  managerId   String?
   warehouseType String @default("MAIN")
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
