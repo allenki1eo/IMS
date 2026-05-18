@@ -56,7 +56,6 @@ export async function createWarehouse(params: {
   name: string;
   code: string;
   address?: string | null;
-  managerId?: string | null;
   warehouseType?: string | null;
   createdById: string;
   userName: string;

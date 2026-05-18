@@ -1,91 +1,91 @@
 import { NextRequest } from "next/server";
-import { Prisma } from "@prisma/client";
-import { requireAuth } from "@/lib/api-helpers";
-import { success } from "@/lib/response";
+import { requirePermission, getCompanyId } from "@/lib/api-helpers";
+import { success, badRequest } from "@/lib/response";
 import { db } from "@/lib/db";
 
-async function countOrZero(query: () => Promise<number>) {
-  try {
-    return await query();
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2021"
-    ) {
-      return 0;
-    }
-    throw error;
-  }
-}
-
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth(request);
+  const auth = await requirePermission(request, "users:user:read");
   if ("error" in auth) return auth.error;
 
-  const [
-    userCount,
-    employeeCount,
-    branchCount,
-    departmentCount,
-    pendingApprovals,
-    itemCount,
-    stockPositions,
-    activeVehicles,
-    activeTrips,
-    openWorkOrders,
-    purchaseRequests,
-    purchaseOrders,
-    productionBatches,
-    pendingQualityTests,
-    openNonConformances,
-    dispatchOrders,
-    fuelTanks,
-    accountCount,
-    bankAccountCount,
-    pendingPayments,
-  ] = await Promise.all([
-    countOrZero(() => db.user.count({ where: { isActive: true } })),
-    countOrZero(() => db.employee.count({ where: { status: "ACTIVE" } })),
-    countOrZero(() => db.branch.count({ where: { isActive: true } })),
-    countOrZero(() => db.department.count({ where: { isActive: true } })),
-    countOrZero(() => db.approvalRequest.count({ where: { status: "PENDING" } })),
-    countOrZero(() => db.item.count({ where: { isActive: true } })),
-    countOrZero(() => db.stockBalance.count({ where: { quantity: { gt: 0 } } })),
-    countOrZero(() => db.vehicle.count({ where: { isActive: true } })),
-    countOrZero(() => db.tripOrder.count({ where: { status: { in: ["PLANNED", "DISPATCHED"] } } })),
-    countOrZero(() => db.workOrder.count({ where: { status: { in: ["OPEN", "IN_PROGRESS"] } } })),
-    countOrZero(() => db.purchaseRequest.count({ where: { status: { in: ["SUBMITTED", "APPROVED"] } } })),
-    countOrZero(() => db.purchaseOrder.count({ where: { status: { in: ["SENT", "PARTIALLY_RECEIVED"] } } })),
-    countOrZero(() => db.productionBatch.count({ where: { status: { in: ["PLANNED", "IN_PROGRESS"] } } })),
-    countOrZero(() => db.qualityTest.count({ where: { status: { in: ["PENDING", "IN_PROGRESS"] } } })),
-    countOrZero(() => db.nonConformance.count({ where: { status: { in: ["OPEN", "IN_PROGRESS"] } } })),
-    countOrZero(() => db.dispatchOrder.count({ where: { status: { in: ["CONFIRMED", "DISPATCHED"] } } })),
-    countOrZero(() => db.fuelTank.count({ where: { isActive: true } })),
-    countOrZero(() => db.account.count({ where: { isActive: true } })),
-    countOrZero(() => db.bankAccount.count({ where: { isActive: true } })),
-    countOrZero(() => db.payment.count({ where: { status: "PENDING" } })),
-  ]);
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
 
-  return success({
-    userCount,
-    employeeCount,
-    branchCount,
-    departmentCount,
-    pendingApprovals,
-    itemCount,
-    stockPositions,
-    activeVehicles,
-    activeTrips,
-    openWorkOrders,
-    purchaseRequests,
-    purchaseOrders,
-    productionBatches,
-    pendingQualityTests,
-    openNonConformances,
-    dispatchOrders,
-    fuelTanks,
-    accountCount,
-    bankAccountCount,
-    pendingPayments,
-  });
+  try {
+    const [
+      userCount,
+      employeeCount,
+      branchCount,
+      departmentCount,
+      itemCount,
+      stockPositions,
+      activeVehicles,
+      activeTrips,
+      openWorkOrders,
+      fuelTanks,
+      purchaseRequests,
+      purchaseOrders,
+      productionBatches,
+      pendingQualityTests,
+      openNonConformances,
+      dispatchOrders,
+      accountCount,
+      bankAccountCount,
+      pendingApprovals,
+      pendingPaymentsCount,
+    ] = await Promise.all([
+      db.user.count({ where: { isActive: true } as any }),
+      db.employee.count({ where: { companyId } as any }),
+      db.branch.count({ where: { companyId, isActive: true } as any }),
+      db.department.count({ where: { companyId, isActive: true } as any }),
+      db.item.count({ where: { companyId, isActive: true } as any }),
+      db.stockBalance.count({ where: { quantity: { gt: 0 } } as any }),
+      db.vehicle.count({ where: { companyId, status: { not: "DECOMMISSIONED" } } as any }),
+      db.tripOrder.count({ where: { companyId, status: { in: ["PLANNED", "DISPATCHED"] } } as any }),
+      db.workOrder.count({ where: { companyId, status: { in: ["OPEN", "IN_PROGRESS"] } } as any }),
+      db.fuelTank.count({ where: { companyId, isActive: true } as any }),
+      db.purchaseRequest.count({ where: { companyId, status: { in: ["SUBMITTED", "APPROVED"] } } as any }),
+      db.purchaseOrder.count({ where: { companyId, status: { not: "CANCELLED" } } as any }),
+      db.productionBatch.count({ where: { companyId, status: { in: ["PLANNED", "IN_PROGRESS"] } } as any }),
+      db.qualityTest.count({ where: { companyId, status: { in: ["PENDING", "IN_PROGRESS"] } } as any }),
+      db.nonConformance.count({ where: { companyId, status: { not: "CLOSED" } } as any }),
+      db.dispatchOrder.count({ where: { companyId, status: { in: ["CONFIRMED", "DISPATCHED"] } } as any }),
+      db.account.count({ where: { companyId, isActive: true } as any }),
+      db.bankAccount.count({ where: { companyId, isActive: true } as any }),
+      db.approvalRequest.count({ where: { companyId, status: "PENDING" } as any }),
+      db.payment.count({ where: { companyId, status: "PENDING" } as any }),
+    ]);
+
+    return success({
+      userCount,
+      employeeCount,
+      branchCount,
+      departmentCount,
+      itemCount,
+      stockPositions,
+      activeVehicles,
+      activeTrips,
+      openWorkOrders,
+      fuelTanks,
+      purchaseRequests,
+      purchaseOrders,
+      productionBatches,
+      pendingQualityTests,
+      openNonConformances,
+      dispatchOrders,
+      accountCount,
+      bankAccountCount,
+      pendingApprovals,
+      pendingPayments: pendingPaymentsCount,
+    });
+  } catch (err) {
+    console.error("[Dashboard Stats Error]", err);
+    return success({
+      userCount: 0, employeeCount: 0, branchCount: 0, departmentCount: 0,
+      itemCount: 0, stockPositions: 0, activeVehicles: 0, activeTrips: 0,
+      openWorkOrders: 0, fuelTanks: 0, purchaseRequests: 0, purchaseOrders: 0,
+      productionBatches: 0, pendingQualityTests: 0, openNonConformances: 0,
+      dispatchOrders: 0, accountCount: 0, bankAccountCount: 0,
+      pendingApprovals: 0, pendingPayments: 0,
+    });
+  }
 }

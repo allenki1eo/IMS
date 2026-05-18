@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { name, code, address, branchId, managerId, warehouseType } = body;
+  const { name, code, address, branchId, warehouseType } = body;
 
   if (!name || typeof name !== "string") return badRequest("name is required");
   if (!code || typeof code !== "string") return badRequest("code is required");
@@ -56,7 +56,6 @@ export async function POST(request: NextRequest) {
       code,
       address: address ?? null,
       branchId: branchId ?? null,
-      managerId: managerId ?? null,
       warehouseType: warehouseType ?? null,
       createdById: auth.user.id,
       userName: auth.user.fullName,
