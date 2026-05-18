@@ -87,9 +87,37 @@ export function serverError(
 export function handleError(err: unknown): NextResponse<ApiResponse> {
   if (err instanceof Error) {
     const msg = err.message;
-    const isInternal = /prisma|sqlite|libsql|econnrefused|enotfound|socket hang/i.test(msg);
-    if (!isInternal && msg.length < 300) {
+
+    // Business logic errors — surface directly
+    const isDbError = /prisma|sqlite|libsql|econnrefused|enotfound|socket hang/i.test(msg);
+    if (!isDbError && msg.length < 300) {
       return NextResponse.json({ success: false, error: msg, code: "BAD_REQUEST" }, { status: 400 });
+    }
+
+    // DB schema errors — give a meaningful hint instead of the generic message
+    const noTable = msg.match(/no such table[:\s]+(?:main\.)?(\w+)/i);
+    if (noTable) {
+      return NextResponse.json(
+        { success: false, error: `Database table "${noTable[1]}" is missing. Run the schema migration in Turso.`, code: "SERVER_ERROR" },
+        { status: 500 }
+      );
+    }
+
+    const noColumn = msg.match(/table \w+ has no column named (\w+)/i) ||
+                     msg.match(/no such column[:\s]+(\w+)/i);
+    if (noColumn) {
+      return NextResponse.json(
+        { success: false, error: `Database column "${noColumn[1]}" is missing. Run the schema migration in Turso.`, code: "SERVER_ERROR" },
+        { status: 500 }
+      );
+    }
+
+    const uniqueViolation = /unique constraint failed|unique/i.test(msg);
+    if (uniqueViolation) {
+      return NextResponse.json(
+        { success: false, error: "A record with these details already exists.", code: "CONFLICT" },
+        { status: 409 }
+      );
     }
   }
   return NextResponse.json(
