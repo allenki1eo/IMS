@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
 export async function listAssignments(
-  companyId: string,
   params: {
     vehicleId?: string;
     driverId?: string;
@@ -15,7 +14,6 @@ export async function listAssignments(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    vehicle: { companyId },
     ...(vehicleId ? { vehicleId } : {}),
     ...(driverId ? { driverId } : {}),
     ...(status ? { status } : {}),

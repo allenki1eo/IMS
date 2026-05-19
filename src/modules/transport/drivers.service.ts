@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
 export async function listDrivers(
-  companyId: string,
   params: {
     search?: string;
     status?: string;
@@ -15,7 +14,6 @@ export async function listDrivers(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(status ? { status } : {}),
     ...(isAvailable !== undefined ? { isAvailable } : {}),
     ...(search
@@ -123,7 +121,6 @@ export async function createDriver(params: {
   const employee = await db.employee.findUnique({ where: { id: data.employeeId } });
   if (!employee) throw new Error("Employee not found");
   if (!employee.isDriver) throw new Error("Employee is not marked as a driver");
-  if (employee.companyId !== data.companyId) throw new Error("Employee does not belong to this company");
 
   const existing = await db.driver.findUnique({ where: { employeeId: data.employeeId } });
   if (existing) throw new Error("Driver record already exists for this employee");

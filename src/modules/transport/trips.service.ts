@@ -8,7 +8,6 @@ function generateRef(prefix: string): string {
 }
 
 export async function listTrips(
-  companyId: string,
   params: {
     search?: string;
     status?: string;
@@ -22,7 +21,6 @@ export async function listTrips(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(status ? { status } : {}),
     ...(vehicleId ? { vehicleId } : {}),
     ...(driverId ? { driverId } : {}),
