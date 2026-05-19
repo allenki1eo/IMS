@@ -14,6 +14,7 @@ import { ImportModal } from "@/components/shared/ImportModal";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface SupplierRow {
   id: string;
@@ -29,10 +30,7 @@ interface SupplierRow {
 const PAGE_SIZE = 20;
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -40,33 +38,25 @@ export default function SuppliersPage() {
 
   useEffect(() => { setPage(1); }, [debounced, status]);
 
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  const url = `/api/procurement/suppliers?${params}`;
+
+  const { data: suppliers, total, loading, mutate } = usePagedData<SupplierRow>(url);
+
   async function handleDelete() {
     if (!deleteId) return;
     const res = await fetch(`/api/procurement/suppliers/${deleteId}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Supplier deleted");
       setDeleteId(null);
-      setPage(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete supplier");
     }
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/procurement/suppliers?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setSuppliers(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load suppliers"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
 
   const columns = [
     {
@@ -149,7 +139,7 @@ export default function SuppliersPage() {
         onClose={() => setImportOpen(false)}
         onSuccess={() => {
           setImportOpen(false);
-          setPage(1);
+          mutate();
         }}
         title="Import Suppliers"
         apiEndpoint="/api/procurement/suppliers/import"

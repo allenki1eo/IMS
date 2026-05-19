@@ -1,47 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
-import { LoadingState } from "@/components/shared/LoadingState";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePermission } from "@/hooks/usePermission";
+import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
+
+interface BankAccountRow {
+  id: string;
+  name: string;
+  bankName: string;
+  accountNumber: string;
+  accountType: string;
+  currentBalance: number;
+  isActive: boolean;
+}
+
+const PAGE_SIZE = 20;
 
 export default function BankAccountsPage() {
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 20 });
+  const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:bank:create");
+  const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  async function fetchAccounts(page = 1) {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/finance/bank-accounts?page=${page}&pageSize=20&search=${encodeURIComponent(search)}`);
-      const json = await res.json();
-      if (res.ok) {
-        setAccounts(json.data || []);
-        setMeta(json.meta || meta);
-      } else {
-        toast.error(json.message || "Failed to load bank accounts");
-      }
-    } catch {
-      toast.error("Failed to load bank accounts");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchAccounts();
-  }, [search]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  const url = `/api/finance/bank-accounts?${params}`;
+  const { data: accounts, total, loading, mutate } = usePagedData<BankAccountRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -49,7 +43,7 @@ export default function BankAccountsPage() {
     if (res.ok) {
       toast.success("Bank account deleted");
       setDeleteId(null);
-      fetchAccounts(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete bank account");
@@ -60,31 +54,31 @@ export default function BankAccountsPage() {
     {
       key: "name",
       header: "Name",
-      cell: (row: any) => (
+      cell: (row: BankAccountRow) => (
         <Link href={`/finance/bank-accounts/${row.id}`} className="font-medium hover:underline">
           {row.name}
         </Link>
       ),
     },
-    { key: "bankName", header: "Bank", cell: (row: any) => row.bankName },
-    { key: "accountNumber", header: "Account Number", cell: (row: any) => row.accountNumber },
-    { key: "accountType", header: "Type", cell: (row: any) => row.accountType },
+    { key: "bankName", header: "Bank", cell: (row: BankAccountRow) => row.bankName },
+    { key: "accountNumber", header: "Account Number", cell: (row: BankAccountRow) => row.accountNumber },
+    { key: "accountType", header: "Type", cell: (row: BankAccountRow) => row.accountType },
     {
       key: "currentBalance",
       header: "Balance",
-      cell: (row: any) => `$${(row.currentBalance || 0).toLocaleString()}`,
+      cell: (row: BankAccountRow) => (row.currentBalance || 0).toLocaleString("en-TZ", { style: "currency", currency: "TZS", maximumFractionDigits: 0 }),
     },
     {
       key: "isActive",
       header: "Status",
-      cell: (row: any) => (
+      cell: (row: BankAccountRow) => (
         <Badge variant={row.isActive ? "default" : "secondary"}>{row.isActive ? "Active" : "Inactive"}</Badge>
       ),
     },
     {
       key: "actions",
       header: "",
-      cell: (row: any) => (
+      cell: (row: BankAccountRow) => (
         <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -108,11 +102,16 @@ export default function BankAccountsPage() {
 
       <SearchInput value={search} onChange={setSearch} placeholder="Search bank accounts..." />
 
-      {loading ? (
-        <LoadingState text="Loading bank accounts..." />
-      ) : (
-        <DataTable columns={columns} data={accounts} emptyTitle="No bank accounts found" />
-      )}
+      <DataTable
+        columns={columns}
+        data={accounts}
+        loading={loading}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onPageChange={setPage}
+        emptyTitle="No bank accounts found"
+      />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );

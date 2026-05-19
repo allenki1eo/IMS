@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -13,6 +13,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 import { BATCH_STATUSES, formatDate, qty } from "../_components/production-ui";
 
 interface BatchRow {
@@ -32,10 +33,7 @@ interface BatchRow {
 const PAGE_SIZE = 20;
 
 export default function ProductionBatchesPage() {
-  const [batches, setBatches] = useState<BatchRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
@@ -46,7 +44,10 @@ export default function ProductionBatchesPage() {
     if (fromQuery) setStatus(fromQuery);
   }, []);
 
-  useEffect(() => { setPage(1); }, [debounced, status]);
+  const urlParams = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) urlParams.set("search", debounced);
+  if (status !== "ALL") urlParams.set("status", status);
+  const { data: batches, total, loading, mutate } = usePagedData<BatchRow>(`/api/production/batches?${urlParams}`);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -54,27 +55,12 @@ export default function ProductionBatchesPage() {
     if (res.ok) {
       toast.success("Production batch deleted");
       setDeleteId(null);
-      setPage(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete production batch");
     }
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/production/batches?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setBatches(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load production batches"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
 
   const columns = [
     { key: "reference", header: "Reference", cell: (row: BatchRow) => <Link href={`/production/batches/${row.id}`} className="font-semibold hover:underline">{row.reference}</Link> },
@@ -96,8 +82,8 @@ export default function ProductionBatchesPage() {
     <div>
       <PageHeader title="Production Batches" description="Plan and track brewing and production batches" actions={<PermissionGuard require="production:batch:create"><Button asChild><Link href="/production/batches/new"><Plus className="h-4 w-4 mr-2" />New Batch</Link></Button></PermissionGuard>} />
       <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search batches..." className="w-full sm:max-w-xs" />
-        <Select value={status} onValueChange={setStatus}>
+        <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search batches..." className="w-full sm:max-w-xs" />
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
@@ -110,4 +96,3 @@ export default function ProductionBatchesPage() {
     </div>
   );
 }
-

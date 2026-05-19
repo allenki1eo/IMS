@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface IssueRow {
   id: string;
@@ -36,10 +37,7 @@ interface TankOption { id: string; name: string; }
 interface VehicleOption { id: string; plateNumber: string; }
 
 export default function IssuesPage() {
-  const [issues, setIssues] = useState<IssueRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [tankFilter, setTankFilter] = useState("ALL");
   const [vehicleFilter, setVehicleFilter] = useState("ALL");
   const [fromDate, setFromDate] = useState("");
@@ -50,19 +48,6 @@ export default function IssuesPage() {
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const PAGE_SIZE = 20;
-
-  async function handleDelete() {
-    if (!deleteId) return;
-    const res = await fetch(`/api/fuel-issues/${deleteId}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Fuel issue deleted");
-      setDeleteId(null);
-      setPage(1);
-    } else {
-      const d = await res.json().catch(() => ({}));
-      toast.error(d.message ?? "Failed to delete fuel issue");
-    }
-  }
 
   useEffect(() => {
     Promise.all([
@@ -78,23 +63,28 @@ export default function IssuesPage() {
 
   useEffect(() => { setPage(1); }, [debounced, tankFilter, vehicleFilter, fromDate, toDate]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (tankFilter !== "ALL") params.set("tankId", tankFilter);
-    if (vehicleFilter !== "ALL") params.set("vehicleId", vehicleFilter);
-    if (fromDate) params.set("from", fromDate);
-    if (toDate) params.set("to", toDate);
-    fetch(`/api/fuel-issues?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setIssues(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load fuel issues"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, tankFilter, vehicleFilter, fromDate, toDate]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (tankFilter !== "ALL") params.set("tankId", tankFilter);
+  if (vehicleFilter !== "ALL") params.set("vehicleId", vehicleFilter);
+  if (fromDate) params.set("from", fromDate);
+  if (toDate) params.set("to", toDate);
+  const url = `/api/fuel-issues?${params}`;
+
+  const { data: issues, total, loading, mutate } = usePagedData<IssueRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/fuel-issues/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Fuel issue deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete fuel issue");
+    }
+  }
 
   const columns = [
     {

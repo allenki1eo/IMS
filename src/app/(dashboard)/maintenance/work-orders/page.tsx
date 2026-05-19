@@ -16,6 +16,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface WorkOrderRow {
   id: string;
@@ -63,10 +64,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 };
 
 export default function WorkOrdersPage() {
-  const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
   const [view, setView] = useState<"table" | "kanban">("table");
@@ -78,36 +76,28 @@ export default function WorkOrdersPage() {
 
   const hasFilters = debounced !== "" || status !== "ALL" || priority !== "ALL";
 
+  useEffect(() => { setPage(1); }, [debounced, status, priority]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(view === "kanban" ? 200 : PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  if (priority !== "ALL") params.set("priority", priority);
+  const url = `/api/maintenance/work-orders?${params}`;
+
+  const { data: workOrders, total, loading, mutate } = usePagedData<WorkOrderRow>(url);
+
   async function handleDelete() {
     if (!deleteId) return;
     const res = await fetch(`/api/maintenance/work-orders/${deleteId}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Work order deleted");
       setDeleteId(null);
-      setPage(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete work order");
     }
   }
-
-  useEffect(() => { setPage(1); }, [debounced, status, priority]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(view === "kanban" ? 200 : PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    if (priority !== "ALL") params.set("priority", priority);
-    fetch(`/api/maintenance/work-orders?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setWorkOrders(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load work orders"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status, priority, view]);
 
   const columns = [
     {

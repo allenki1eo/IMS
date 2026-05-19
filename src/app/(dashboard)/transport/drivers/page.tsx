@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Upload, Trash2 } from "lucide-react";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface DriverRow {
   id: string;
@@ -58,10 +59,7 @@ function ExpiryCell({ date }: { date: string | null }) {
 }
 
 export default function DriversPage() {
-  const [drivers, setDrivers] = useState<DriverRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [availabilityFilter, setAvailabilityFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
@@ -69,6 +67,14 @@ export default function DriversPage() {
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, availabilityFilter, statusFilter]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (availabilityFilter === "AVAILABLE") params.set("isAvailable", "true");
+  if (availabilityFilter === "UNAVAILABLE") params.set("isAvailable", "false");
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  const url = `/api/drivers?${params}`;
+  const { data: drivers, total, loading, mutate } = usePagedData<DriverRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -80,27 +86,8 @@ export default function DriversPage() {
     }
     toast.success("Driver deleted");
     setDeleteId(null);
-    setDrivers((prev) => prev.filter((d) => d.id !== deleteId));
-    setTotal((t) => t - 1);
+    mutate();
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (availabilityFilter === "AVAILABLE") params.set("isAvailable", "true");
-    if (availabilityFilter === "UNAVAILABLE") params.set("isAvailable", "false");
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-
-    fetch(`/api/drivers?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setDrivers(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load drivers"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, availabilityFilter, statusFilter]);
 
   const columns = [
     {

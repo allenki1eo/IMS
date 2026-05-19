@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -13,6 +13,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 import { qty } from "../_components/production-ui";
 
 interface RecipeRow {
@@ -30,15 +31,15 @@ interface RecipeRow {
 const PAGE_SIZE = 20;
 
 export default function ProductionRecipesPage() {
-  const [recipes, setRecipes] = useState<RecipeRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  useEffect(() => { setPage(1); }, [debounced, status]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  const { data: recipes, total, loading, mutate } = usePagedData<RecipeRow>(`/api/production/recipes?${params}`);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -46,27 +47,12 @@ export default function ProductionRecipesPage() {
     if (res.ok) {
       toast.success("Recipe deleted");
       setDeleteId(null);
-      setPage(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete recipe");
     }
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/production/recipes?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setRecipes(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load recipes"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
 
   const columns = [
     { key: "name", header: "Recipe", cell: (row: RecipeRow) => <Link href={`/production/recipes/${row.id}`} className="font-semibold hover:underline">{row.name}</Link> },
@@ -88,8 +74,8 @@ export default function ProductionRecipesPage() {
     <div>
       <PageHeader title="Production Recipes" description="Maintain product recipes and material requirements" actions={<PermissionGuard require="production:recipe:create"><Button asChild><Link href="/production/recipes/new"><Plus className="h-4 w-4 mr-2" />New Recipe</Link></Button></PermissionGuard>} />
       <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search recipes..." className="w-full sm:max-w-xs" />
-        <Select value={status} onValueChange={setStatus}>
+        <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search recipes..." className="w-full sm:max-w-xs" />
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
@@ -104,4 +90,3 @@ export default function ProductionRecipesPage() {
     </div>
   );
 }
-

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface TankRow {
   id: string;
@@ -49,10 +50,7 @@ function fillPctColor(pct: number): string {
 }
 
 export default function TanksPage() {
-  const [tanks, setTanks] = useState<TankRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [fuelType, setFuelType] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
@@ -61,35 +59,27 @@ export default function TanksPage() {
 
   const PAGE_SIZE = 20;
 
+  useEffect(() => { setPage(1); }, [debounced, fuelType]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (fuelType !== "ALL") params.set("fuelType", fuelType);
+  const url = `/api/fuel-tanks?${params}`;
+
+  const { data: tanks, total, loading, mutate } = usePagedData<TankRow>(url);
+
   async function handleDelete() {
     if (!deleteId) return;
     const res = await fetch(`/api/fuel-tanks/${deleteId}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Tank deleted");
       setDeleteId(null);
-      setPage(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete tank");
     }
   }
-
-  useEffect(() => { setPage(1); }, [debounced, fuelType]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (fuelType !== "ALL") params.set("fuelType", fuelType);
-    fetch(`/api/fuel-tanks?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setTanks(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load tanks"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, fuelType]);
 
   const columns = [
     {

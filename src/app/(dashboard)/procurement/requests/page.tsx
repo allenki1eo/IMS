@@ -13,6 +13,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 import { formatDate, formatMoney, priorityClass, PRIORITIES, REQUEST_STATUSES } from "../_components/procurement-ui";
 
 interface RequestRow {
@@ -29,10 +30,7 @@ interface RequestRow {
 const PAGE_SIZE = 20;
 
 export default function PurchaseRequestsPage() {
-  const [requests, setRequests] = useState<RequestRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -46,34 +44,26 @@ export default function PurchaseRequestsPage() {
 
   useEffect(() => { setPage(1); }, [debounced, status, priority]);
 
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  if (priority !== "ALL") params.set("priority", priority);
+  const url = `/api/procurement/requests?${params}`;
+
+  const { data: requests, total, loading, mutate } = usePagedData<RequestRow>(url);
+
   async function handleDelete() {
     if (!deleteId) return;
     const res = await fetch(`/api/procurement/requests/${deleteId}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Purchase request deleted");
       setDeleteId(null);
-      setPage(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete purchase request");
     }
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    if (priority !== "ALL") params.set("priority", priority);
-    fetch(`/api/procurement/requests?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setRequests(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load purchase requests"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status, priority]);
 
   const columns = [
     {

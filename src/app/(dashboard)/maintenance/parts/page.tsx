@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface CategoryOption {
   id: string;
@@ -49,10 +50,7 @@ function stockStatusBadge(part: SparePartRow) {
 }
 
 export default function SparePartsPage() {
-  const [parts, setParts] = useState<SparePartRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoryId, setCategoryId] = useState("ALL");
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -64,19 +62,6 @@ export default function SparePartsPage() {
 
   const PAGE_SIZE = 20;
 
-  async function handleDelete() {
-    if (!deleteId) return;
-    const res = await fetch(`/api/maintenance/spare-parts/${deleteId}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Spare part deleted");
-      setDeleteId(null);
-      setPage(1);
-    } else {
-      const d = await res.json().catch(() => ({}));
-      toast.error(d.message ?? "Failed to delete spare part");
-    }
-  }
-
   useEffect(() => {
     fetch("/api/maintenance/spare-part-categories?pageSize=200")
       .then((r) => r.json())
@@ -86,21 +71,26 @@ export default function SparePartsPage() {
 
   useEffect(() => { setPage(1); }, [debounced, categoryId, lowStockOnly]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (categoryId !== "ALL") params.set("categoryId", categoryId);
-    if (lowStockOnly) params.set("lowStock", "true");
-    fetch(`/api/maintenance/spare-parts?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setParts(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load spare parts"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, categoryId, lowStockOnly]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (categoryId !== "ALL") params.set("categoryId", categoryId);
+  if (lowStockOnly) params.set("lowStock", "true");
+  const url = `/api/maintenance/spare-parts?${params}`;
+
+  const { data: parts, total, loading, mutate } = usePagedData<SparePartRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/maintenance/spare-parts/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Spare part deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete spare part");
+    }
+  }
 
   const columns = [
     {
@@ -252,7 +242,7 @@ export default function SparePartsPage() {
         onClose={() => setImportOpen(false)}
         onSuccess={() => {
           setImportOpen(false);
-          setPage(1);
+          mutate();
         }}
         title="Import Spare Parts"
         apiEndpoint="/api/maintenance/spare-parts/import"

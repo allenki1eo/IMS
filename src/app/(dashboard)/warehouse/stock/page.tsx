@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface StockRow {
   id: string;
@@ -40,10 +41,7 @@ function stockStatus(row: StockRow): "CRITICAL" | "LOW" | "OK" {
 }
 
 export default function StockPage() {
-  const [stock, setStock] = useState<StockRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseFilter, setWarehouseFilter] = useState("ALL");
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -58,22 +56,12 @@ export default function StockPage() {
 
   useEffect(() => { setPage(1); }, [debounced, warehouseFilter, lowStockOnly]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (warehouseFilter !== "ALL") params.set("warehouseId", warehouseFilter);
-    if (lowStockOnly) params.set("lowStock", "true");
-
-    fetch(`/api/stock/balance?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setStock(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load stock"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, warehouseFilter, lowStockOnly]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (warehouseFilter !== "ALL") params.set("warehouseId", warehouseFilter);
+  if (lowStockOnly) params.set("lowStock", "true");
+  const url = `/api/stock/balance?${params}`;
+  const { data: stock, total, loading } = usePagedData<StockRow>(url);
 
   const columns = [
     {

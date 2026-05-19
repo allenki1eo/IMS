@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, LayoutList, LayoutDashboard, Trash2 } from "lucide-react";
@@ -15,6 +15,7 @@ import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface TripRow {
   id: string;
@@ -53,10 +54,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 };
 
 export default function TripsPage() {
-  const [trips, setTrips] = useState<TripRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -65,6 +63,16 @@ export default function TripsPage() {
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const hasFilters = debounced !== "" || statusFilter !== "ALL" || !!dateFrom || !!dateTo;
+
+  useEffect(() => { setPage(1); }, [debounced, statusFilter, dateFrom, dateTo]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(view === "kanban" ? 200 : PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  if (dateFrom) params.set("dateFrom", dateFrom);
+  if (dateTo) params.set("dateTo", dateTo);
+  const url = `/api/trips?${params}`;
+  const { data: trips, total, loading, mutate } = usePagedData<TripRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -76,26 +84,8 @@ export default function TripsPage() {
     }
     toast.success("Trip deleted");
     setDeleteId(null);
-    setTrips((prev) => prev.filter((t) => t.id !== deleteId));
-    setTotal((t) => t - 1);
+    mutate();
   }
-
-  useEffect(() => { setPage(1); }, [debounced, statusFilter, dateFrom, dateTo]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(view === "kanban" ? 200 : PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-    if (dateFrom) params.set("dateFrom", dateFrom);
-    if (dateTo) params.set("dateTo", dateTo);
-
-    fetch(`/api/trips?${params}`)
-      .then((r) => r.json())
-      .then((d) => { setTrips(d.data ?? []); setTotal(d.meta?.total ?? 0); })
-      .catch(() => toast.error("Failed to load trips"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, statusFilter, dateFrom, dateTo, view]);
 
   const columns = [
     {

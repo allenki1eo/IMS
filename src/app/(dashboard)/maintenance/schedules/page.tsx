@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface VehicleOption {
   id: string;
@@ -40,10 +41,7 @@ interface ScheduleRow {
 }
 
 export default function SchedulesPage() {
-  const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [vehicleId, setVehicleId] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -52,19 +50,6 @@ export default function SchedulesPage() {
   const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
-
-  async function handleDelete() {
-    if (!deleteId) return;
-    const res = await fetch(`/api/maintenance/schedules/${deleteId}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Schedule deleted");
-      setDeleteId(null);
-      setPage(1);
-    } else {
-      const d = await res.json().catch(() => ({}));
-      toast.error(d.message ?? "Failed to delete schedule");
-    }
-  }
 
   useEffect(() => {
     fetch("/api/vehicles?pageSize=200")
@@ -75,20 +60,25 @@ export default function SchedulesPage() {
 
   useEffect(() => { setPage(1); }, [debounced, vehicleId]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (vehicleId !== "ALL") params.set("vehicleId", vehicleId);
-    fetch(`/api/maintenance/schedules?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setSchedules(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load schedules"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, vehicleId]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (vehicleId !== "ALL") params.set("vehicleId", vehicleId);
+  const url = `/api/maintenance/schedules?${params}`;
+
+  const { data: schedules, total, loading, mutate } = usePagedData<ScheduleRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/maintenance/schedules/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Schedule deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete schedule");
+    }
+  }
 
   const columns = [
     {

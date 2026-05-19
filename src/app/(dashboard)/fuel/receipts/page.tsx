@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface ReceiptRow {
   id: string;
@@ -43,10 +44,7 @@ const STATUS_FILTERS = [
 ];
 
 export default function ReceiptsPage() {
-  const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [tankFilter, setTankFilter] = useState("ALL");
   const [tanks, setTanks] = useState<TankOption[]>([]);
@@ -54,19 +52,6 @@ export default function ReceiptsPage() {
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const PAGE_SIZE = 20;
-
-  async function handleDelete() {
-    if (!deleteId) return;
-    const res = await fetch(`/api/fuel-receipts/${deleteId}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Receipt deleted");
-      setDeleteId(null);
-      setPage(1);
-    } else {
-      const d = await res.json().catch(() => ({}));
-      toast.error(d.message ?? "Failed to delete receipt");
-    }
-  }
 
   useEffect(() => {
     fetch("/api/fuel-tanks?pageSize=200")
@@ -77,21 +62,26 @@ export default function ReceiptsPage() {
 
   useEffect(() => { setPage(1); }, [debounced, statusFilter, tankFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-    if (tankFilter !== "ALL") params.set("tankId", tankFilter);
-    fetch(`/api/fuel-receipts?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setReceipts(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load receipts"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, statusFilter, tankFilter]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  if (tankFilter !== "ALL") params.set("tankId", tankFilter);
+  const url = `/api/fuel-receipts?${params}`;
+
+  const { data: receipts, total, loading, mutate } = usePagedData<ReceiptRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/fuel-receipts/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Receipt deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete receipt");
+    }
+  }
 
   const columns = [
     {

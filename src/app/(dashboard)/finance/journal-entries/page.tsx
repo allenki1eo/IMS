@@ -1,57 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { CheckCircle, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
-import { LoadingState } from "@/components/shared/LoadingState";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePermission } from "@/hooks/usePermission";
+import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 function fmt(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+const PAGE_SIZE = 20;
+
 export default function JournalEntriesPage() {
-  const [entries, setEntries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [actionId, setActionId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [voucherType, setVoucherType] = useState("");
-  const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 20 });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:journal:create");
   const canPost = usePermission("finance:journal:post");
+  const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  async function fetchEntries(page = 1) {
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/finance/journal-entries?page=${page}&pageSize=20&search=${encodeURIComponent(search)}&status=${status}&voucherType=${voucherType}`
-      );
-      const json = await res.json();
-      if (res.ok) {
-        setEntries(json.data || []);
-        setMeta(json.meta || meta);
-      } else {
-        toast.error(json.message || "Failed to load journal entries");
-      }
-    } catch {
-      toast.error("Failed to load journal entries");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchEntries();
-  }, [search, status, voucherType]); // eslint-disable-line react-hooks/exhaustive-deps
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status) params.set("status", status);
+  if (voucherType) params.set("voucherType", voucherType);
+  const { data: entries, total, loading, mutate } = usePagedData<any>(`/api/finance/journal-entries?${params}`);
 
   async function handlePost(id: string) {
     if (!window.confirm("Post this journal entry? This action cannot be undone.")) return;
@@ -61,7 +44,7 @@ export default function JournalEntriesPage() {
       const json = await res.json();
       if (res.ok) {
         toast.success("Journal entry posted");
-        setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, status: "POSTED" } : e)));
+        mutate();
       } else {
         toast.error(json.error || json.message || "Failed to post");
       }
@@ -78,7 +61,7 @@ export default function JournalEntriesPage() {
     if (res.ok) {
       toast.success("Journal entry deleted");
       setDeleteId(null);
-      fetchEntries(meta.page);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete journal entry");
@@ -93,7 +76,7 @@ export default function JournalEntriesPage() {
       const json = await res.json();
       if (res.ok) {
         toast.success("Entry reversed");
-        fetchEntries(meta.page);
+        mutate();
       } else {
         toast.error(json.error || json.message || "Failed to reverse");
       }
@@ -215,10 +198,10 @@ export default function JournalEntriesPage() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search entries…" />
+        <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search entries…" />
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => { setStatus(e.target.value); setPage(1); }}
           className="rounded-md border bg-background px-3 py-2 text-sm"
         >
           <option value="">All Status</option>
@@ -228,7 +211,7 @@ export default function JournalEntriesPage() {
         </select>
         <select
           value={voucherType}
-          onChange={(e) => setVoucherType(e.target.value)}
+          onChange={(e) => { setVoucherType(e.target.value); setPage(1); }}
           className="rounded-md border bg-background px-3 py-2 text-sm"
         >
           <option value="">All Vouchers</option>
@@ -243,11 +226,16 @@ export default function JournalEntriesPage() {
         </select>
       </div>
 
-      {loading ? (
-        <LoadingState text="Loading journal entries…" />
-      ) : (
-        <DataTable columns={columns} data={entries} emptyTitle="No journal entries found" />
-      )}
+      <DataTable
+        columns={columns}
+        data={entries}
+        loading={loading}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onPageChange={setPage}
+        emptyTitle="No journal entries found"
+      />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
