@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { getNCR, updateNCR } from "@/modules/qc/ncr.service";
+import { db } from "@/lib/db";
+import { createAuditLog } from "@/lib/audit";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, handleError } from "@/lib/response";
+import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -66,6 +68,44 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Non-conformance report not found") return notFound(msg);
     if (msg.includes("Only OPEN or IN_REVIEW")) return badRequest(msg);
+    return handleError(err);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermission(request, "qc:ncr:delete");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { id } = await params;
+  const { ipAddress } = getRequestMeta(request);
+
+  try {
+    const existing = await db.nonConformance.findFirst({ where: { id, companyId } });
+    if (!existing) return notFound("Non-conformance report not found");
+
+    await db.nonConformance.delete({ where: { id } });
+
+    await createAuditLog({
+      userId: auth.user.id,
+      userName: auth.user.fullName,
+      action: "NCR_DELETE",
+      module: "qc",
+      resource: "ncr",
+      recordId: id,
+      oldValue: { reference: existing.reference, status: existing.status },
+      description: `Deleted non-conformance report: ${existing.reference}`,
+      ipAddress,
+      companyId,
+    });
+
+    return noContent();
+  } catch (err) {
     return handleError(err);
   }
 }

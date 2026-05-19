@@ -167,9 +167,16 @@ export default function DriversPage() {
       key: "actions",
       header: "Actions",
       cell: (row: DriverRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/transport/drivers/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/transport/drivers/${row.id}`}>View</Link>
+          </Button>
+          <PermissionGuard require="transport:driver:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -265,6 +272,14 @@ export default function DriversPage() {
           "licenseClass options: A, B, C, D, EC, EC+E",
           "All other columns are optional",
         ]}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Driver"
+        description="Are you sure you want to delete this driver? This action cannot be undone."
       />
     </div>
   );

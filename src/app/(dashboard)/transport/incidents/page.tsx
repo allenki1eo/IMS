@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -48,9 +49,24 @@ export default function IncidentsPage() {
   const [total, setTotal] = useState(0);
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, typeFilter, statusFilter]);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/incidents/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete incident");
+      return;
+    }
+    toast.success("Incident deleted");
+    setDeleteId(null);
+    setIncidents((prev) => prev.filter((i) => i.id !== deleteId));
+    setTotal((t) => t - 1);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -124,9 +140,16 @@ export default function IncidentsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: IncidentRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/transport/incidents/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/transport/incidents/${row.id}`}>View</Link>
+          </Button>
+          <PermissionGuard require="transport:incident:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -192,6 +215,14 @@ export default function IncidentsPage() {
         onPageChange={setPage}
         emptyTitle="No incidents found"
         emptyDescription="No incidents have been reported."
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Incident"
+        description="Are you sure you want to delete this incident? This action cannot be undone."
       />
     </div>
   );

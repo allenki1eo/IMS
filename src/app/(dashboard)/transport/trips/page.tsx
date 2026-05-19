@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, LayoutList, LayoutDashboard } from "lucide-react";
+import { Plus, LayoutList, LayoutDashboard, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
@@ -11,6 +11,7 @@ import { FilterBar } from "@/components/shared/FilterBar";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { KanbanBoard, type KanbanCard } from "@/components/shared/KanbanBoard";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
@@ -60,9 +61,24 @@ export default function TripsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [view, setView] = useState<"table" | "kanban">("table");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const hasFilters = debounced !== "" || statusFilter !== "ALL" || !!dateFrom || !!dateTo;
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/trips/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete trip");
+      return;
+    }
+    toast.success("Trip deleted");
+    setDeleteId(null);
+    setTrips((prev) => prev.filter((t) => t.id !== deleteId));
+    setTotal((t) => t - 1);
+  }
 
   useEffect(() => { setPage(1); }, [debounced, statusFilter, dateFrom, dateTo]);
 
@@ -117,7 +133,14 @@ export default function TripsPage() {
     {
       key: "actions", header: "",
       cell: (row: TripRow) => (
-        <Button variant="outline" size="sm" asChild><Link href={`/transport/trips/${row.id}`}>View</Link></Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild><Link href={`/transport/trips/${row.id}`}>View</Link></Button>
+          <PermissionGuard require="transport:trip:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -211,6 +234,14 @@ export default function TripsPage() {
           emptyLabel="No trips"
         />
       )}
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Trip"
+        description="Are you sure you want to delete this trip? This action cannot be undone."
+      />
     </div>
   );
 }

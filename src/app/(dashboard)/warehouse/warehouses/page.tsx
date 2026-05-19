@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 
@@ -28,9 +29,24 @@ export default function WarehousesPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced]);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/warehouses/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete warehouse");
+      return;
+    }
+    toast.success("Warehouse deleted");
+    setDeleteId(null);
+    setWarehouses((prev) => prev.filter((w) => w.id !== deleteId));
+    setTotal((t) => t - 1);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -82,9 +98,16 @@ export default function WarehousesPage() {
       key: "actions",
       header: "Actions",
       cell: (row: WarehouseRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/warehouse/warehouses/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/warehouse/warehouses/${row.id}`}>View</Link>
+          </Button>
+          <PermissionGuard require="warehouse:warehouse:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -125,6 +148,14 @@ export default function WarehousesPage() {
         onPageChange={setPage}
         emptyTitle="No warehouses found"
         emptyDescription="Create your first warehouse to get started."
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Warehouse"
+        description="Are you sure you want to delete this warehouse? This action cannot be undone."
       />
     </div>
   );
