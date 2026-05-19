@@ -22,6 +22,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CompanySwitcher } from "@/components/shared/CompanySwitcher";
 
 interface NavItem {
   label: string;
@@ -500,6 +501,9 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Company indicator */}
+        {!collapsed && <CompanySwitcher />}
 
         {/* Nav */}
         <ScrollArea className="flex-1">
