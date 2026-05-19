@@ -42,7 +42,7 @@ interface VehicleDocument {
 
 interface AssignmentRow {
   id: string;
-  driver?: { employee?: { firstName: string; lastName: string } | null } | null;
+  driver?: { firstName?: string | null; lastName?: string | null; employee?: { fullName: string } | null } | null;
   assignedAt: string;
   returnedAt: string | null;
   status: string;
@@ -543,13 +543,14 @@ export default function VehicleDetailPage() {
             ) : (
               <div className="space-y-2">
                 {(vehicle.assignments ?? []).map((a) => {
-                  const emp = a.driver?.employee;
+                  const driverName = a.driver?.employee?.fullName ??
+                    ([a.driver?.firstName, a.driver?.lastName].filter(Boolean).join(" ") || "Unknown Driver");
                   return (
                     <Card key={a.id}>
                       <CardContent className="pt-4 flex justify-between items-center">
                         <div>
                           <p className="font-medium text-sm">
-                            {emp ? `${emp.firstName} ${emp.lastName}` : "Unknown Driver"}
+                            {driverName}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(a.assignedAt), "dd MMM yyyy HH:mm")}

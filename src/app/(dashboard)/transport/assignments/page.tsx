@@ -39,9 +39,10 @@ interface AssignmentRow {
     model: string;
   } | null;
   driver?: {
+    firstName?: string | null;
+    lastName?: string | null;
     employee?: {
-      firstName: string;
-      lastName: string;
+      fullName: string;
     } | null;
   } | null;
 }
@@ -55,9 +56,10 @@ interface VehicleOption {
 
 interface DriverOption {
   id: string;
+  firstName?: string | null;
+  lastName?: string | null;
   employee?: {
-    firstName: string;
-    lastName: string;
+    fullName: string;
   } | null;
 }
 
@@ -178,10 +180,11 @@ export default function AssignmentsPage() {
       key: "driver",
       header: "Driver",
       cell: (row: AssignmentRow) => {
-        const emp = row.driver?.employee;
+        const name = row.driver?.employee?.fullName ??
+          ([row.driver?.firstName, row.driver?.lastName].filter(Boolean).join(" ") || "—");
         return (
           <span className="text-sm">
-            {emp ? `${emp.firstName} ${emp.lastName}` : "—"}
+            {name}
           </span>
         );
       },
@@ -298,10 +301,11 @@ export default function AssignmentsPage() {
                 <SelectContent>
                   <SelectItem value="__none">Select driver</SelectItem>
                   {availableDrivers.map((d) => {
-                    const emp = d.employee;
+                    const name = d.employee?.fullName ??
+                      ([d.firstName, d.lastName].filter(Boolean).join(" ") || d.id);
                     return (
                       <SelectItem key={d.id} value={d.id}>
-                        {emp ? `${emp.firstName} ${emp.lastName}` : d.id}
+                        {name}
                       </SelectItem>
                     );
                   })}

@@ -29,9 +29,10 @@ interface VehicleOption {
 
 interface DriverOption {
   id: string;
+  firstName?: string | null;
+  lastName?: string | null;
   employee?: {
-    firstName: string;
-    lastName: string;
+    fullName: string;
   } | null;
 }
 
@@ -176,10 +177,11 @@ export default function NewTripPage() {
                 <SelectContent>
                   <SelectItem value="__none">None / Unassigned</SelectItem>
                   {drivers.map((d) => {
-                    const emp = d.employee;
+                    const name = d.employee?.fullName ??
+                      ([d.firstName, d.lastName].filter(Boolean).join(" ") || d.id);
                     return (
                       <SelectItem key={d.id} value={d.id}>
-                        {emp ? `${emp.firstName} ${emp.lastName}` : d.id}
+                        {name}
                       </SelectItem>
                     );
                   })}

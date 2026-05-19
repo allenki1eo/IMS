@@ -22,7 +22,7 @@ interface TripRow {
   id: string;
   reference: string;
   vehicle?: { plateNumber: string } | null;
-  driver?: { employee?: { firstName: string; lastName: string } | null } | null;
+  driver?: { firstName?: string | null; lastName?: string | null; employee?: { fullName: string } | null } | null;
   origin: string;
   destination: string;
   status: string;
@@ -157,10 +157,11 @@ export default function TransportOverviewPage() {
       key: "driver",
       header: "Driver",
       cell: (row: TripRow) => {
-        const emp = row.driver?.employee;
+        const name = row.driver?.employee?.fullName ??
+          ([row.driver?.firstName, row.driver?.lastName].filter(Boolean).join(" ") || "—");
         return (
           <span className="text-sm text-muted-foreground">
-            {emp ? `${emp.firstName} ${emp.lastName}` : "—"}
+            {name}
           </span>
         );
       },
