@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Trash2 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 
 interface DriverRow {
   id: string;
@@ -64,9 +65,24 @@ export default function DriversPage() {
   const [availabilityFilter, setAvailabilityFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, availabilityFilter, statusFilter]);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/drivers/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete driver");
+      return;
+    }
+    toast.success("Driver deleted");
+    setDeleteId(null);
+    setDrivers((prev) => prev.filter((d) => d.id !== deleteId));
+    setTotal((t) => t - 1);
+  }
 
   useEffect(() => {
     setLoading(true);
