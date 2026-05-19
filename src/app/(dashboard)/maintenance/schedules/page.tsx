@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface VehicleOption {
   id: string;
@@ -27,6 +28,7 @@ interface VehicleOption {
 
 interface ScheduleRow {
   id: string;
+  companyId: string;
   vehicle?: { plateNumber: string } | null;
   maintenanceType: string;
   intervalKm?: number | null;
@@ -44,6 +46,8 @@ export default function SchedulesPage() {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [vehicleId, setVehicleId] = useState("ALL");
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
 
@@ -77,6 +81,15 @@ export default function SchedulesPage() {
       header: "Vehicle",
       cell: (row: ScheduleRow) => (
         <span className="font-medium">{row.vehicle?.plateNumber ?? "—"}</span>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: ScheduleRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {

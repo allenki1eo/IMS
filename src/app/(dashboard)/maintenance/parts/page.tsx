@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface CategoryOption {
   id: string;
@@ -26,6 +27,7 @@ interface CategoryOption {
 
 interface SparePartRow {
   id: string;
+  companyId: string;
   code: string;
   name: string;
   category?: { name: string } | null;
@@ -55,6 +57,8 @@ export default function SparePartsPage() {
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
 
@@ -100,6 +104,15 @@ export default function SparePartsPage() {
         <Link href={`/maintenance/parts/${row.id}`} className="font-medium hover:underline">
           {row.name}
         </Link>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: SparePartRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {

@@ -8,9 +8,6 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:workorder:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
   const vehicleId = searchParams.get("vehicleId") ?? undefined;
@@ -20,7 +17,7 @@ export async function GET(request: NextRequest) {
   const toStr = searchParams.get("to");
 
   try {
-    const { data, meta } = await listWorkOrders(companyId, {
+    const { data, meta } = await listWorkOrders({
       vehicleId,
       status,
       priority,

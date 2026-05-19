@@ -21,10 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface VehicleRow {
   id: string;
   plateNumber: string;
+  companyId: string;
   make: string;
   model: string;
   vehicleType: string;
@@ -77,6 +79,8 @@ export default function VehiclesPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   useEffect(() => { setPage(1); }, [debounced, typeFilter, statusFilter]);
 
@@ -103,6 +107,15 @@ export default function VehiclesPage() {
       header: "Plate",
       cell: (row: VehicleRow) => (
         <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-semibold">{row.plateNumber}</code>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: VehicleRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {
