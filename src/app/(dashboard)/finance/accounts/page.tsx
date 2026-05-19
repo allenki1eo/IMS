@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { LoadingState } from "@/components/shared/LoadingState";
@@ -17,6 +18,7 @@ export default function AccountsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 20 });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:account:create");
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,6 +56,19 @@ export default function AccountsPage() {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, []);
 
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/finance/accounts/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Account deleted");
+      setDeleteId(null);
+      fetchAccounts(1, search);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete account");
+    }
+  }
+
   const columns = [
     {
       key: "code",
@@ -76,6 +91,15 @@ export default function AccountsPage() {
       header: "Status",
       cell: (row: any) => (
         <Badge variant={row.isActive ? "default" : "secondary"}>{row.isActive ? "Active" : "Inactive"}</Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      cell: (row: any) => (
+        <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
       ),
     },
   ];
@@ -105,6 +129,7 @@ export default function AccountsPage() {
           emptyTitle="No accounts found"
         />
       )}
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

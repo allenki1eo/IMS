@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -26,9 +27,23 @@ export default function QcStandardsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const PAGE_SIZE = 20;
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/qc/standards/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Quality standard deleted");
+      setDeleteId(null);
+      setPage(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete quality standard");
+    }
+  }
 
   useEffect(() => { setPage(1); }, [debounced]);
 
@@ -88,9 +103,14 @@ export default function QcStandardsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: StandardRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/qc/standards/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/qc/standards/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -132,6 +152,7 @@ export default function QcStandardsPage() {
         emptyTitle="No quality standards found"
         emptyDescription="Create your first quality standard to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

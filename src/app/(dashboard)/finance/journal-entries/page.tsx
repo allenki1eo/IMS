@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { CheckCircle, Plus, RotateCcw } from "lucide-react";
+import { CheckCircle, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { LoadingState } from "@/components/shared/LoadingState";
@@ -24,6 +25,7 @@ export default function JournalEntriesPage() {
   const [status, setStatus] = useState("");
   const [voucherType, setVoucherType] = useState("");
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 20 });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:journal:create");
   const canPost = usePermission("finance:journal:post");
 
@@ -67,6 +69,19 @@ export default function JournalEntriesPage() {
       toast.error("Network error");
     } finally {
       setActionId(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/finance/journal-entries/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Journal entry deleted");
+      setDeleteId(null);
+      fetchEntries(meta.page);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete journal entry");
     }
   }
 
@@ -139,37 +154,48 @@ export default function JournalEntriesPage() {
       key: "actions",
       header: "",
       cell: (row: any) => {
-        if (!canPost) return null;
+        const deleteButton = (
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)} className="h-7 gap-1 text-xs text-red-700 border-red-300 hover:bg-red-50">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        );
+        if (!canPost) return deleteButton;
         const busy = actionId === row.id;
         if (row.status === "DRAFT") {
           return (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={() => handlePost(row.id)}
-              className="h-7 gap-1 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-            >
-              <CheckCircle className="h-3.5 w-3.5" />
-              {busy ? "Posting…" : "Post"}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => handlePost(row.id)}
+                className="h-7 gap-1 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                {busy ? "Posting…" : "Post"}
+              </Button>
+              {deleteButton}
+            </div>
           );
         }
         if (row.status === "POSTED") {
           return (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={() => handleReverse(row.id)}
-              className="h-7 gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              {busy ? "Reversing…" : "Reverse"}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => handleReverse(row.id)}
+                className="h-7 gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                {busy ? "Reversing…" : "Reverse"}
+              </Button>
+              {deleteButton}
+            </div>
           );
         }
-        return null;
+        return deleteButton;
       },
     },
   ];
@@ -222,6 +248,7 @@ export default function JournalEntriesPage() {
       ) : (
         <DataTable columns={columns} data={entries} emptyTitle="No journal entries found" />
       )}
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -36,6 +37,7 @@ export default function ProductionBatchesPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => {
@@ -45,6 +47,20 @@ export default function ProductionBatchesPage() {
   }, []);
 
   useEffect(() => { setPage(1); }, [debounced, status]);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/production/batches/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Production batch deleted");
+      setDeleteId(null);
+      setPage(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete production batch");
+    }
+  }
+
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -68,7 +84,12 @@ export default function ProductionBatchesPage() {
     { key: "status", header: "Status", cell: (row: BatchRow) => <StatusBadge status={row.status} /> },
     { key: "planned", header: "Planned Qty", cell: (row: BatchRow) => <span>{qty(row.plannedQty, row.uom)}</span> },
     { key: "start", header: "Planned Start", cell: (row: BatchRow) => <span className="text-muted-foreground">{formatDate(row.plannedStart)}</span> },
-    { key: "actions", header: "Actions", cell: (row: BatchRow) => <Button variant="outline" size="sm" asChild><Link href={`/production/batches/${row.id}`}>View</Link></Button> },
+    { key: "actions", header: "Actions", cell: (row: BatchRow) => (
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" asChild><Link href={`/production/batches/${row.id}`}>View</Link></Button>
+        <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}><Trash2 className="h-4 w-4" /></Button>
+      </div>
+    ) },
   ];
 
   return (
@@ -85,6 +106,7 @@ export default function ProductionBatchesPage() {
         </Select>
       </div>
       <DataTable columns={columns} data={batches} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No production batches found" emptyDescription="Plan your first production batch to begin." />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

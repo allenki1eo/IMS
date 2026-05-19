@@ -43,11 +43,11 @@ const DEFAULT: CompanyForm = {
   phone: "",
   email: "",
   website: "",
-  currency: "USD",
+  currency: "TZS",
   dateFormat: "DD/MM/YYYY",
 };
 
-const CURRENCIES = ["USD", "ZAR", "EUR", "GBP", "AUD", "CAD", "JPY", "CNY", "INR"];
+const CURRENCIES = ["TZS", "USD", "EUR", "KES", "GBP", "ZAR", "AUD", "CAD", "JPY", "CNY", "INR"];
 const DATE_FORMATS = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
 
 export default function CompanyPage() {

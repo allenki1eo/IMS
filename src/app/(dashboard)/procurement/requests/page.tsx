@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -34,6 +35,7 @@ export default function PurchaseRequestsPage() {
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => {
@@ -43,6 +45,19 @@ export default function PurchaseRequestsPage() {
   }, []);
 
   useEffect(() => { setPage(1); }, [debounced, status, priority]);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/procurement/requests/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Purchase request deleted");
+      setDeleteId(null);
+      setPage(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete purchase request");
+    }
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -86,9 +101,14 @@ export default function PurchaseRequestsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: RequestRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/procurement/requests/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/procurement/requests/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -136,6 +156,7 @@ export default function PurchaseRequestsPage() {
         emptyTitle="No purchase requests found"
         emptyDescription="Create a purchase request to start the procurement flow."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

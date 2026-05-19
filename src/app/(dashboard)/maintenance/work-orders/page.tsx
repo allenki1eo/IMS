@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+
 import { format } from "date-fns";
-import { Plus, LayoutList, LayoutDashboard } from "lucide-react";
+import { Plus, LayoutList, LayoutDashboard, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { FilterBar } from "@/components/shared/FilterBar";
@@ -68,12 +70,26 @@ export default function WorkOrdersPage() {
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
   const [view, setView] = useState<"table" | "kanban">("table");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const { user } = useCurrentUser();
   const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const hasFilters = debounced !== "" || status !== "ALL" || priority !== "ALL";
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/maintenance/work-orders/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Work order deleted");
+      setDeleteId(null);
+      setPage(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete work order");
+    }
+  }
 
   useEffect(() => { setPage(1); }, [debounced, status, priority]);
 
@@ -173,9 +189,14 @@ export default function WorkOrdersPage() {
       key: "actions",
       header: "",
       cell: (row: WorkOrderRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/maintenance/work-orders/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/maintenance/work-orders/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -267,6 +288,7 @@ export default function WorkOrdersPage() {
           emptyLabel="No work orders"
         />
       )}
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }
