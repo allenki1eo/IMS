@@ -9,7 +9,7 @@ import {
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
-  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink,
+  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ interface NavItem {
   label: string;
   href?: string;
   external?: boolean;
+  exact?: boolean;
   icon: React.ReactNode;
   permission?: string;
   children?: NavItem[];
@@ -215,7 +216,15 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: "Audit Logs", href: "/audit-logs", icon: <ScrollText className="h-4 w-4" />, permission: "audit:log:read" },
-      { label: "Settings", href: "/settings", icon: <Settings className="h-4 w-4" />, permission: "settings:settings:read" },
+      {
+        label: "Settings",
+        icon: <Settings className="h-4 w-4" />,
+        permission: "settings:settings:read",
+        children: [
+          { label: "Configuration", href: "/settings", exact: true, icon: <Settings className="h-4 w-4" />, permission: "settings:settings:read" },
+          { label: "Manage Keys", href: "/settings/keys", icon: <Key className="h-4 w-4" />, permission: "settings:settings:update" },
+        ],
+      },
     ],
   },
 ];
@@ -290,7 +299,11 @@ function NavLink({ item, depth = 0, collapsed }: { item: NavItem; depth?: number
     );
   }
 
-  const isActive = !item.external && (item.href === "/" ? pathname === "/" : item.href ? pathname.startsWith(item.href) : false);
+  const isActive = !item.external && (
+    item.href === "/" ? pathname === "/" :
+    item.href ? (item.exact ? pathname === item.href : pathname.startsWith(item.href)) :
+    false
+  );
 
   if (item.external) {
     if (collapsed) {
