@@ -38,6 +38,10 @@ interface Driver {
   id: string;
   isAvailable: boolean;
   status: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  email: string | null;
   licenseNumber: string | null;
   licenseClass: string | null;
   licenseExpiry: string | null;
@@ -45,9 +49,8 @@ interface Driver {
   notes: string | null;
   employee?: {
     id: string;
-    firstName: string;
-    lastName: string;
-    employeeNo: string;
+    fullName: string;
+    employeeNumber: string;
     email: string | null;
     phone: string | null;
   } | null;
@@ -78,6 +81,10 @@ export default function DriverDetailPage() {
   // Inline edit
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
     licenseNumber: "",
     licenseClass: "",
     licenseExpiry: "",
@@ -93,6 +100,10 @@ export default function DriverDetailPage() {
       const d = json.data ?? json;
       setDriver(d);
       setEditForm({
+        firstName: d.firstName ?? "",
+        lastName: d.lastName ?? "",
+        phone: d.phone ?? "",
+        email: d.email ?? "",
         licenseNumber: d.licenseNumber ?? "",
         licenseClass: d.licenseClass ?? "",
         licenseExpiry: d.licenseExpiry ? d.licenseExpiry.substring(0, 10) : "",
@@ -135,6 +146,10 @@ export default function DriverDetailPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          firstName: editForm.firstName || undefined,
+          lastName: editForm.lastName || undefined,
+          phone: editForm.phone || undefined,
+          email: editForm.email || undefined,
           licenseNumber: editForm.licenseNumber || undefined,
           licenseClass: editForm.licenseClass || undefined,
           licenseExpiry: editForm.licenseExpiry || undefined,
@@ -158,12 +173,14 @@ export default function DriverDetailPage() {
   if (!driver) return <div className="text-muted-foreground">Driver not found.</div>;
 
   const emp = driver.employee;
+  const displayName = emp?.fullName ??
+    ([driver.firstName, driver.lastName].filter(Boolean).join(" ") || "Driver Details");
 
   return (
     <div>
       <PageHeader
-        title={emp ? `${emp.firstName} ${emp.lastName}` : "Driver Details"}
-        description={emp?.employeeNo ? `Employee No: ${emp.employeeNo}` : undefined}
+        title={displayName}
+        description={emp?.employeeNumber ? `Employee No: ${emp.employeeNumber}` : undefined}
         actions={
           <Button variant="outline" asChild>
             <Link href="/transport/drivers">
@@ -201,21 +218,23 @@ export default function DriverDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Employee Info */}
-        {emp && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Employee Information</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {/* Contact Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {emp ? "Employee Information" : "Driver Information"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {emp ? (
               <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                 <div>
                   <dt className="text-muted-foreground font-medium">Employee No</dt>
-                  <dd className="mt-0.5"><code className="text-xs bg-muted px-1.5 py-0.5 rounded">{emp.employeeNo}</code></dd>
+                  <dd className="mt-0.5"><code className="text-xs bg-muted px-1.5 py-0.5 rounded">{emp.employeeNumber}</code></dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground font-medium">Full Name</dt>
-                  <dd className="mt-0.5 font-medium">{emp.firstName} {emp.lastName}</dd>
+                  <dd className="mt-0.5 font-medium">{emp.fullName}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground font-medium">Email</dt>
@@ -226,9 +245,30 @@ export default function DriverDetailPage() {
                   <dd className="mt-0.5">{emp.phone ?? "—"}</dd>
                 </div>
               </dl>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              !editing ? (
+                <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                  <div>
+                    <dt className="text-muted-foreground font-medium">First Name</dt>
+                    <dd className="mt-0.5 font-medium">{driver.firstName ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground font-medium">Last Name</dt>
+                    <dd className="mt-0.5 font-medium">{driver.lastName ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground font-medium">Phone</dt>
+                    <dd className="mt-0.5">{driver.phone ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground font-medium">Email</dt>
+                    <dd className="mt-0.5">{driver.email ?? "—"}</dd>
+                  </div>
+                </dl>
+              ) : null
+            )}
+          </CardContent>
+        </Card>
 
         {/* Current Assignment */}
         {driver.currentAssignment && (
@@ -302,6 +342,27 @@ export default function DriverDetailPage() {
               </dl>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {!emp && (
+                  <>
+                    <div className="space-y-1">
+                      <Label htmlFor="editFirstName">First Name</Label>
+                      <Input id="editFirstName" value={editForm.firstName} onChange={(e) => setEditForm((p) => ({ ...p, firstName: e.target.value }))} disabled={saving} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="editLastName">Last Name</Label>
+                      <Input id="editLastName" value={editForm.lastName} onChange={(e) => setEditForm((p) => ({ ...p, lastName: e.target.value }))} disabled={saving} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="editPhone">Phone</Label>
+                      <Input id="editPhone" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} disabled={saving} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="editEmail">Email</Label>
+                      <Input id="editEmail" type="email" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} disabled={saving} />
+                    </div>
+                    <div className="sm:col-span-2"><Separator /></div>
+                  </>
+                )}
                 <div className="space-y-1">
                   <Label htmlFor="licNum">License Number</Label>
                   <Input id="licNum" value={editForm.licenseNumber} onChange={(e) => setEditForm((p) => ({ ...p, licenseNumber: e.target.value }))} disabled={saving} />

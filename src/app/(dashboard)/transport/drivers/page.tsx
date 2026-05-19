@@ -26,14 +26,16 @@ interface DriverRow {
   id: string;
   isAvailable: boolean;
   status: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
   licenseNumber: string | null;
   licenseClass: string | null;
   licenseExpiry: string | null;
   medicalExpiry: string | null;
   employee?: {
-    firstName: string;
-    lastName: string;
-    employeeNo: string;
+    fullName: string;
+    employeeNumber: string;
   } | null;
 }
 
@@ -87,23 +89,24 @@ export default function DriversPage() {
   const columns = [
     {
       key: "name",
-      header: "Employee Name",
+      header: "Driver Name",
       cell: (row: DriverRow) => {
-        const emp = row.employee;
-        return (
-          <span className="font-medium">
-            {emp ? `${emp.firstName} ${emp.lastName}` : "—"}
-          </span>
-        );
+        const name = row.employee?.fullName ??
+          ([row.firstName, row.lastName].filter(Boolean).join(" ") || "—");
+        return <span className="font-medium">{name}</span>;
       },
     },
     {
       key: "employeeNo",
       header: "Employee No",
       cell: (row: DriverRow) => (
-        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-          {row.employee?.employeeNo ?? "—"}
-        </code>
+        row.employee ? (
+          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+            {row.employee.employeeNumber}
+          </code>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        )
       ),
     },
     {
