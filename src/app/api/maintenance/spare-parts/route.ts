@@ -8,9 +8,6 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:spare_part:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
   const search = searchParams.get("search") ?? undefined;
@@ -19,7 +16,7 @@ export async function GET(request: NextRequest) {
   const lowStock = lowStockParam === "true" ? true : undefined;
 
   try {
-    const { data, meta } = await listParts(companyId, {
+    const { data, meta } = await listParts({
       search,
       categoryId,
       lowStock,

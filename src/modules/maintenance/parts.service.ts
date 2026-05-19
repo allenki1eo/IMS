@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
-export async function listCategories(companyId: string) {
+export async function listCategories() {
   return db.sparePartCategory.findMany({
-    where: { companyId },
+    where: {},
     orderBy: { name: "asc" },
     include: {
       _count: { select: { parts: true } },
@@ -90,7 +90,6 @@ export async function updateCategory(
 }
 
 export async function listParts(
-  companyId: string,
   params: {
     search?: string;
     categoryId?: string;
@@ -103,7 +102,6 @@ export async function listParts(
   const skip = (page - 1) * pageSize;
 
   const where: Record<string, unknown> = {
-    companyId,
     ...(categoryId ? { categoryId } : {}),
     ...(search
       ? {
@@ -170,7 +168,6 @@ export async function getPart(companyId: string, id: string) {
   });
 
   if (!part) return null;
-  if (part.companyId !== companyId) return null;
   return part;
 }
 

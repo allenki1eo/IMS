@@ -8,7 +8,6 @@ function generateRef(): string {
 }
 
 export async function listWorkOrders(
-  companyId: string,
   params: {
     vehicleId?: string;
     status?: string;
@@ -23,7 +22,6 @@ export async function listWorkOrders(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(vehicleId ? { vehicleId } : {}),
     ...(status ? { status } : {}),
     ...(priority ? { priority } : {}),
@@ -93,7 +91,6 @@ export async function getWorkOrder(companyId: string, id: string) {
   });
 
   if (!workOrder) return null;
-  if (workOrder.companyId !== companyId) return null;
   return workOrder;
 }
 

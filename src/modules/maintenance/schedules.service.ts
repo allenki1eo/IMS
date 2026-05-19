@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
 export async function listSchedules(
-  companyId: string,
   params: {
     vehicleId?: string;
     maintenanceType?: string;
@@ -14,7 +13,6 @@ export async function listSchedules(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(vehicleId ? { vehicleId } : {}),
     ...(maintenanceType ? { maintenanceType } : {}),
   };
@@ -76,7 +74,6 @@ export async function getSchedule(companyId: string, id: string) {
   });
 
   if (!schedule) return null;
-  if (schedule.companyId !== companyId) return null;
   return schedule;
 }
 

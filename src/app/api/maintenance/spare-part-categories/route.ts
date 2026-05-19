@@ -7,11 +7,8 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:spare_part:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   try {
-    const categories = await listCategories(companyId);
+    const categories = await listCategories();
     return success(categories);
   } catch (err) {
     console.error("[API Error]", err);
