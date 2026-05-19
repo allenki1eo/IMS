@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { format } from "date-fns";
@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingState";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface AssignmentRow {
   id: string;
@@ -66,10 +67,7 @@ interface DriverOption {
 const PAGE_SIZE = 20;
 
 export default function AssignmentsPage() {
-  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   // Create dialog
@@ -83,24 +81,12 @@ export default function AssignmentsPage() {
   const [returningId, setReturningId] = useState<string | null>(null);
   const [returning, setReturning] = useState(false);
 
-  const fetchAssignments = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-    try {
-      const res = await fetch(`/api/vehicle-assignments?${params}`);
-      const json = await res.json();
-      setAssignments(json.data ?? []);
-      setTotal(json.meta?.total ?? 0);
-    } catch {
-      toast.error("Failed to load assignments");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter]);
-
-  useEffect(() => { fetchAssignments(); }, [fetchAssignments]);
   useEffect(() => { setPage(1); }, [statusFilter]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  const url = `/api/vehicle-assignments?${params}`;
+  const { data: assignments, total, loading, mutate } = usePagedData<AssignmentRow>(url);
 
   async function openCreateDialog() {
     setAssignForm({ vehicleId: "", driverId: "", notes: "" });
@@ -136,7 +122,7 @@ export default function AssignmentsPage() {
       if (!res.ok) { toast.error(json.error ?? "Failed to create assignment"); return; }
       toast.success("Vehicle assigned successfully");
       setCreateOpen(false);
-      fetchAssignments();
+      mutate();
     } catch {
       toast.error("Network error");
     } finally {
@@ -155,7 +141,7 @@ export default function AssignmentsPage() {
       if (!res.ok) { toast.error(json.error ?? "Failed to return vehicle"); return; }
       toast.success("Vehicle returned");
       setReturningId(null);
-      fetchAssignments();
+      mutate();
     } catch {
       toast.error("Network error");
     } finally {

@@ -12,6 +12,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface WarehouseRow {
   id: string;
@@ -25,14 +26,16 @@ interface WarehouseRow {
 const PAGE_SIZE = 20;
 
 export default function WarehousesPage() {
-  const [warehouses, setWarehouses] = useState<WarehouseRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  const url = `/api/warehouses?${params}`;
+  const { data: warehouses, total, loading, mutate } = usePagedData<WarehouseRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -44,23 +47,8 @@ export default function WarehousesPage() {
     }
     toast.success("Warehouse deleted");
     setDeleteId(null);
-    setWarehouses((prev) => prev.filter((w) => w.id !== deleteId));
-    setTotal((t) => t - 1);
+    mutate();
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    fetch(`/api/warehouses?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setWarehouses(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load warehouses"))
-      .finally(() => setLoading(false));
-  }, [page, debounced]);
 
   const columns = [
     {

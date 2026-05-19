@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Upload, Trash2 } from "lucide-react";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface VehicleRow {
   id: string;
@@ -72,10 +73,7 @@ function ExpiryCell({ date }: { date: string | null }) {
 }
 
 export default function VehiclesPage() {
-  const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
@@ -85,6 +83,13 @@ export default function VehiclesPage() {
   const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   useEffect(() => { setPage(1); }, [debounced, typeFilter, statusFilter]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (typeFilter !== "ALL") params.set("vehicleType", typeFilter);
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  const url = `/api/vehicles?${params}`;
+  const { data: vehicles, total, loading, mutate } = usePagedData<VehicleRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -96,26 +101,8 @@ export default function VehiclesPage() {
     }
     toast.success("Vehicle deleted");
     setDeleteId(null);
-    setVehicles((prev) => prev.filter((v) => v.id !== deleteId));
-    setTotal((t) => t - 1);
+    mutate();
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (typeFilter !== "ALL") params.set("vehicleType", typeFilter);
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-
-    fetch(`/api/vehicles?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setVehicles(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load vehicles"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, typeFilter, statusFilter]);
 
   const columns = [
     {

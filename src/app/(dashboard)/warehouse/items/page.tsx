@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface ItemRow {
   id: string;
@@ -55,10 +56,7 @@ const TYPE_LABELS: Record<string, string> = {
 const PAGE_SIZE = 20;
 
 export default function ItemsPage() {
-  const [items, setItems] = useState<ItemRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
@@ -76,6 +74,14 @@ export default function ItemsPage() {
 
   useEffect(() => { setPage(1); }, [debounced, categoryFilter, typeFilter, activeFilter]);
 
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (categoryFilter !== "ALL") params.set("categoryId", categoryFilter);
+  if (typeFilter !== "ALL") params.set("itemType", typeFilter);
+  if (activeFilter !== "ALL") params.set("isActive", activeFilter === "ACTIVE" ? "true" : "false");
+  const url = `/api/items?${params}`;
+  const { data: items, total, loading, mutate } = usePagedData<ItemRow>(url);
+
   async function handleDelete() {
     if (!deleteId) return;
     const res = await fetch(`/api/items/${deleteId}`, { method: "DELETE" });
@@ -86,27 +92,8 @@ export default function ItemsPage() {
     }
     toast.success("Item deleted");
     setDeleteId(null);
-    setItems((prev) => prev.filter((i) => i.id !== deleteId));
-    setTotal((t) => t - 1);
+    mutate();
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (categoryFilter !== "ALL") params.set("categoryId", categoryFilter);
-    if (typeFilter !== "ALL") params.set("itemType", typeFilter);
-    if (activeFilter !== "ALL") params.set("isActive", activeFilter === "ACTIVE" ? "true" : "false");
-
-    fetch(`/api/items?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setItems(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load items"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, categoryFilter, typeFilter, activeFilter]);
 
   const columns = [
     {

@@ -1,60 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
-import { LoadingState } from "@/components/shared/LoadingState";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePermission } from "@/hooks/usePermission";
+import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
+
+const PAGE_SIZE = 20;
 
 export default function AccountsPage() {
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 20 });
+  const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:account:create");
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  const fetchAccounts = useCallback(async (page = 1, q = search) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/finance/accounts?page=${page}&pageSize=20&search=${encodeURIComponent(q)}`);
-      const json = await res.json();
-      if (res.ok) {
-        setAccounts(json.data || []);
-        setMeta(json.meta || { total: 0, page, pageSize: 20 });
-      } else {
-        toast.error(json.message || "Failed to load accounts");
-      }
-    } catch {
-      toast.error("Failed to load accounts");
-    } finally {
-      setLoading(false);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Initial load
-  useEffect(() => {
-    fetchAccounts(1, "");
-  }, [fetchAccounts]);
-
-  // Debounced search — 300 ms delay
-  function handleSearch(value: string) {
-    setSearch(value);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => fetchAccounts(1, value), 300);
-  }
-
-  useEffect(() => {
-    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-  }, []);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  const { data: accounts, total, loading, mutate } = usePagedData<any>(`/api/finance/accounts?${params}`);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -62,7 +32,7 @@ export default function AccountsPage() {
     if (res.ok) {
       toast.success("Account deleted");
       setDeleteId(null);
-      fetchAccounts(1, search);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete account");
@@ -118,17 +88,18 @@ export default function AccountsPage() {
         )}
       </div>
 
-      <SearchInput value={search} onChange={handleSearch} placeholder="Search accounts..." />
+      <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search accounts..." />
 
-      {loading ? (
-        <LoadingState text="Loading accounts..." />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={accounts}
-          emptyTitle="No accounts found"
-        />
-      )}
+      <DataTable
+        columns={columns}
+        data={accounts}
+        loading={loading}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onPageChange={setPage}
+        emptyTitle="No accounts found"
+      />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );

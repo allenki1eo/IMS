@@ -13,6 +13,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 import { formatDate, formatMoney, ORDER_STATUSES } from "../_components/procurement-ui";
 
 interface OrderRow {
@@ -31,21 +32,18 @@ interface OrderRow {
 const PAGE_SIZE = 20;
 
 export default function PurchaseOrdersPage() {
-  const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const fromQuery = params.get("status");
-    if (fromQuery) setStatus(fromQuery);
-  }, []);
-
   useEffect(() => { setPage(1); }, [debounced, status]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  const url = `/api/procurement/orders?${params}`;
+  const { data: orders, total, loading, mutate } = usePagedData<OrderRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -53,27 +51,12 @@ export default function PurchaseOrdersPage() {
     if (res.ok) {
       toast.success("Purchase order deleted");
       setDeleteId(null);
-      setPage(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete purchase order");
     }
   }
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/procurement/orders?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setOrders(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load purchase orders"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
 
   const columns = [
     {

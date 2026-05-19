@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface LotRow {
   id: string;
@@ -40,16 +41,18 @@ const STATUS_FILTERS = [
   { label: "Recalled", value: "RECALLED" },
 ];
 
+const PAGE_SIZE = 20;
+
 export default function FgInventoryPage() {
-  const [lots, setLots] = useState<LotRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  const PAGE_SIZE = 20;
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  const { data: lots, total, loading, mutate } = usePagedData<LotRow>(`/api/dispatch/inventory?${params}`);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -57,29 +60,12 @@ export default function FgInventoryPage() {
     if (res.ok) {
       toast.success("Lot deleted");
       setDeleteId(null);
-      setPage(1);
+      mutate();
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete lot");
     }
   }
-
-  useEffect(() => { setPage(1); }, [debounced, status]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/dispatch/inventory?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setLots(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load inventory"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
 
   const columns = [
     {
@@ -170,11 +156,11 @@ export default function FgInventoryPage() {
       <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={(v) => { setSearch(v); setPage(1); }}
           placeholder="Search by product name or code..."
           className="w-full sm:max-w-xs"
         />
-        <Select value={status} onValueChange={setStatus}>
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
