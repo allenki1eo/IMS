@@ -105,6 +105,28 @@ const migrations: Migration[] = [
     )`,
   },
 
+  // ── Vehicle additions ──────────────────────────────────────────────────────
+  {
+    description: "Add usageType column to vehicles",
+    sql: `ALTER TABLE vehicles ADD COLUMN usageType TEXT NOT NULL DEFAULT 'COMMERCIAL'`,
+  },
+  {
+    description: "Add fuelTankCapacity column to vehicles",
+    sql: `ALTER TABLE vehicles ADD COLUMN fuelTankCapacity REAL`,
+  },
+  {
+    description: "Add averageConsumption column to vehicles",
+    sql: `ALTER TABLE vehicles ADD COLUMN averageConsumption REAL`,
+  },
+  {
+    description: "Add lastRefuelAt column to vehicles",
+    sql: `ALTER TABLE vehicles ADD COLUMN lastRefuelAt DATETIME`,
+  },
+  {
+    description: "Add nextRefuelAt column to vehicles",
+    sql: `ALTER TABLE vehicles ADD COLUMN nextRefuelAt DATETIME`,
+  },
+
   // ── Finance additions ──────────────────────────────────────────────────────
   {
     description: "Add currency columns to journal_entries if missing",
