@@ -58,6 +58,8 @@ interface Vehicle {
 
 interface Driver {
   id: string;
+  firstName?: string | null;
+  lastName?: string | null;
   employee?: { id: string; fullName: string; employeeNumber: string } | null;
 }
 
@@ -138,7 +140,7 @@ export default function DailyMovementDetailPage() {
           r.entries.map((e) => ({
             vehicleId: e.vehicleId,
             vehicleStatus: e.vehicleStatus,
-            driverId: e.driver?.employee?.fullName ?? "",
+            driverId: e.driver?.employee?.fullName ?? ([e.driver?.firstName, e.driver?.lastName].filter(Boolean).join(" ")) ?? "",
             destination: e.destination ?? "",
             departureTime: e.departureTime ? e.departureTime.slice(0, 16) : "",
             expectedReturn: e.expectedReturn ? e.expectedReturn.slice(0, 16) : "",
@@ -247,7 +249,9 @@ export default function DailyMovementDetailPage() {
   if (!report) return <div className="p-8 text-center text-muted-foreground">Report not found.</div>;
 
   const isDraft = report.status === "DRAFT";
-  const counts = isDraft ? calcCounts(entries) : { onTrip: report.onTrip, present: report.present, maintenance: report.maintenance, offsite: report.offsite, other: report.other };
+  const counts = isDraft
+    ? calcCounts(entries)
+    : { onTrip: report.onTrip, present: report.present, maintenance: report.maintenance, offsite: report.offsite, other: report.other };
 
   return (
     <div>
@@ -285,8 +289,25 @@ export default function DailyMovementDetailPage() {
         }
       />
 
+      {/* Print-only header */}
+      <div className="print-only mb-6">
+        <h1 className="text-xl font-bold text-center">DAILY TRUCK MOVEMENT REPORT</h1>
+        <div className="flex justify-between text-sm mt-2">
+          <span>Reference: {report.reference}</span>
+          <span>Date: {format(new Date(report.reportDate), "dd MMMM yyyy")}</span>
+        </div>
+        <div className="flex gap-6 mt-2 text-sm">
+          <span>On Trip: {counts.onTrip}</span>
+          <span>Present: {counts.present}</span>
+          <span>Maintenance: {counts.maintenance}</span>
+          <span>Offsite: {counts.offsite}</span>
+          <span>Other: {counts.other}</span>
+          <span>Total: {report.totalVehicles}</span>
+        </div>
+      </div>
+
       {/* Summary bar */}
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="no-print flex flex-wrap gap-3 mb-6">
         <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
           <span className="text-xs text-blue-500 font-medium uppercase tracking-wide">On Trip</span>
           <span className="text-2xl font-bold text-blue-600">{counts.onTrip}</span>

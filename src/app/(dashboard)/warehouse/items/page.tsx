@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { ImportModal } from "@/components/shared/ImportModal";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -63,6 +64,7 @@ export default function ItemsPage() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => {
@@ -73,6 +75,20 @@ export default function ItemsPage() {
   }, []);
 
   useEffect(() => { setPage(1); }, [debounced, categoryFilter, typeFilter, activeFilter]);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/items/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete item");
+      return;
+    }
+    toast.success("Item deleted");
+    setDeleteId(null);
+    setItems((prev) => prev.filter((i) => i.id !== deleteId));
+    setTotal((t) => t - 1);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -144,9 +160,16 @@ export default function ItemsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: ItemRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/warehouse/items/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/warehouse/items/${row.id}`}>View</Link>
+          </Button>
+          <PermissionGuard require="warehouse:item:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -242,6 +265,14 @@ export default function ItemsPage() {
           "categoryId and uomId are optional (use database IDs)",
           "reorderPoint, safetyStock, unitCost are optional numbers",
         ]}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Item"
+        description="Are you sure you want to delete this item? This action cannot be undone."
       />
     </div>
   );

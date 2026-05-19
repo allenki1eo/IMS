@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -53,11 +54,25 @@ export default function TanksPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [fuelType, setFuelType] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
   const { user } = useCurrentUser();
   const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/fuel-tanks/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Tank deleted");
+      setDeleteId(null);
+      setPage(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete tank");
+    }
+  }
 
   useEffect(() => { setPage(1); }, [debounced, fuelType]);
 
@@ -148,9 +163,14 @@ export default function TanksPage() {
       key: "actions",
       header: "Actions",
       cell: (row: TankRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/fuel/tanks/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/fuel/tanks/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -202,6 +222,7 @@ export default function TanksPage() {
         emptyTitle="No tanks found"
         emptyDescription="Add your first fuel tank to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

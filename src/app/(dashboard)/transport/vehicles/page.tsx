@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Trash2 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
@@ -11,6 +11,7 @@ import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { ImportModal } from "@/components/shared/ImportModal";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -78,11 +79,26 @@ export default function VehiclesPage() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
   const { user } = useCurrentUser();
   const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   useEffect(() => { setPage(1); }, [debounced, typeFilter, statusFilter]);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/vehicles/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete vehicle");
+      return;
+    }
+    toast.success("Vehicle deleted");
+    setDeleteId(null);
+    setVehicles((prev) => prev.filter((v) => v.id !== deleteId));
+    setTotal((t) => t - 1);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -162,9 +178,16 @@ export default function VehiclesPage() {
       key: "actions",
       header: "Actions",
       cell: (row: VehicleRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/transport/vehicles/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/transport/vehicles/${row.id}`}>View</Link>
+          </Button>
+          <PermissionGuard require="transport:vehicle:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -250,6 +273,14 @@ export default function VehiclesPage() {
           "fuelType: DIESEL, PETROL, ELECTRIC, HYBRID (default: DIESEL)",
           "year and capacity are optional numbers",
         ]}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Vehicle"
+        description="Are you sure you want to delete this vehicle? This action cannot be undone."
       />
     </div>
   );

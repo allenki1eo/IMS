@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { getWarehouseById, updateWarehouse } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { success, badRequest, notFound, handleError } from "@/lib/response";
+import { db } from "@/lib/db";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET(
   request: NextRequest,
@@ -54,6 +56,43 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Warehouse not found") return notFound(msg);
     if (msg.toLowerCase().includes("unique")) return badRequest("Warehouse code already exists");
+    return handleError(err);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermission(request, "warehouse:warehouse:delete");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { id } = await params;
+  const warehouse = await getWarehouseById(id);
+  if (!warehouse) return notFound("Warehouse not found");
+  if (warehouse.companyId !== companyId) return notFound("Warehouse not found");
+
+  const { ipAddress, userAgent } = getRequestMeta(request);
+
+  try {
+    await db.warehouse.delete({ where: { id } });
+    await createAuditLog({
+      userId: auth.user.id,
+      userName: auth.user.fullName,
+      action: "WAREHOUSE_DELETE",
+      module: "warehouse",
+      resource: "warehouse",
+      recordId: id,
+      description: `Deleted warehouse record`,
+      ipAddress,
+      userAgent,
+      companyId,
+    });
+    return success({ deleted: true });
+  } catch (err) {
     return handleError(err);
   }
 }
