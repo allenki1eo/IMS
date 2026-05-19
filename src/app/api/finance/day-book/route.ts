@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest , serverError} from "@/lib/response";
+import { success, badRequest , handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "finance:journal:read");
@@ -45,6 +45,6 @@ export async function GET(request: NextRequest) {
     return success({ entries, totalDebit, totalCredit, count: entries.length });
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

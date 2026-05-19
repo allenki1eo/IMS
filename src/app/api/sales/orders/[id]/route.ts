@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission } from "@/lib/api-helpers";
-import { success, notFound, badRequest, serverError } from "@/lib/response";
+import { success, notFound, badRequest, handleError } from "@/lib/response";
 import { getSalesOrderById, updateSalesOrderStatus } from "@/modules/sales/sales.service";
 
 export async function GET(
@@ -16,7 +16,7 @@ export async function GET(
     return success(order);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -34,6 +34,6 @@ export async function PATCH(
     return success(order);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

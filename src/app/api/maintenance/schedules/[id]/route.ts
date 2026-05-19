@@ -5,7 +5,7 @@ import {
   deleteSchedule,
 } from "@/modules/maintenance/schedules.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, noContent, badRequest, notFound, serverError } from "@/lib/response";
+import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -75,7 +75,7 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Maintenance schedule not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -99,6 +99,6 @@ export async function DELETE(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Maintenance schedule not found") return notFound(msg);
     if (msg.includes("Cannot delete")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

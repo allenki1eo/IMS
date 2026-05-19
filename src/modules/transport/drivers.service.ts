@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
 export async function listDrivers(
-  companyId: string,
   params: {
     search?: string;
     status?: string;
@@ -15,13 +14,15 @@ export async function listDrivers(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(status ? { status } : {}),
     ...(isAvailable !== undefined ? { isAvailable } : {}),
     ...(search
       ? {
           OR: [
             { licenseNumber: { contains: search } },
+            { firstName: { contains: search } },
+            { lastName: { contains: search } },
+            { phone: { contains: search } },
             { employee: { fullName: { contains: search } } },
             { employee: { employeeNumber: { contains: search } } },
             { employee: { phone: { contains: search } } },
@@ -108,7 +109,13 @@ export async function getDriverById(id: string) {
 
 export async function createDriver(params: {
   companyId: string;
-  employeeId: string;
+  // Standalone driver fields
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  // Employee-linked driver
+  employeeId?: string | null;
   licenseNumber?: string | null;
   licenseClass?: string | null;
   licenseExpiry?: Date | null;
@@ -120,18 +127,31 @@ export async function createDriver(params: {
 }) {
   const { createdById, userName, ipAddress, ...data } = params;
 
-  const employee = await db.employee.findUnique({ where: { id: data.employeeId } });
-  if (!employee) throw new Error("Employee not found");
-  if (!employee.isDriver) throw new Error("Employee is not marked as a driver");
-  if (employee.companyId !== data.companyId) throw new Error("Employee does not belong to this company");
+  if (!data.employeeId && !data.firstName) {
+    throw new Error("Either employeeId or firstName is required");
+  }
 
-  const existing = await db.driver.findUnique({ where: { employeeId: data.employeeId } });
-  if (existing) throw new Error("Driver record already exists for this employee");
+  let employeeName: string | null = null;
+
+  if (data.employeeId) {
+    const employee = await db.employee.findUnique({ where: { id: data.employeeId } });
+    if (!employee) throw new Error("Employee not found");
+    if (!employee.isDriver) throw new Error("Employee is not marked as a driver");
+
+    const existing = await db.driver.findUnique({ where: { employeeId: data.employeeId } });
+    if (existing) throw new Error("Driver record already exists for this employee");
+
+    employeeName = employee.fullName;
+  }
 
   const driver = await db.driver.create({
     data: {
       companyId: data.companyId,
-      employeeId: data.employeeId,
+      employeeId: data.employeeId ?? null,
+      firstName: data.firstName ?? null,
+      lastName: data.lastName ?? null,
+      phone: data.phone ?? null,
+      email: data.email ?? null,
       licenseNumber: data.licenseNumber ?? null,
       licenseClass: data.licenseClass ?? null,
       licenseExpiry: data.licenseExpiry ?? null,
@@ -146,6 +166,8 @@ export async function createDriver(params: {
     },
   });
 
+  const displayName = employeeName ?? [data.firstName, data.lastName].filter(Boolean).join(" ") ?? "";
+
   await createAuditLog({
     userId: createdById,
     userName,
@@ -154,11 +176,13 @@ export async function createDriver(params: {
     resource: "driver",
     recordId: driver.id,
     newValue: {
-      employeeId: data.employeeId,
+      employeeId: data.employeeId ?? undefined,
+      firstName: data.firstName ?? undefined,
+      lastName: data.lastName ?? undefined,
       licenseNumber: data.licenseNumber ?? undefined,
       licenseClass: data.licenseClass ?? undefined,
     },
-    description: `Created driver record for employee: ${employee.fullName}`,
+    description: `Created driver record: ${displayName}`,
     ipAddress,
     companyId: data.companyId,
   });
@@ -169,6 +193,10 @@ export async function createDriver(params: {
 export async function updateDriver(params: {
   id: string;
   data: {
+    firstName?: string | null;
+    lastName?: string | null;
+    phone?: string | null;
+    email?: string | null;
     licenseNumber?: string | null;
     licenseClass?: string | null;
     licenseExpiry?: Date | null;
@@ -190,6 +218,9 @@ export async function updateDriver(params: {
 
   const updated = await db.driver.update({ where: { id }, data });
 
+  const displayName = existing.employee?.fullName ??
+    ([existing.firstName, existing.lastName].filter(Boolean).join(" ") || "Unknown");
+
   await createAuditLog({
     userId: updatedById,
     userName,
@@ -199,7 +230,7 @@ export async function updateDriver(params: {
     recordId: id,
     oldValue: { licenseNumber: existing.licenseNumber, licenseClass: existing.licenseClass },
     newValue: data as Record<string, unknown>,
-    description: `Updated driver record for: ${existing.employee.fullName}`,
+    description: `Updated driver record for: ${displayName}`,
     ipAddress,
     companyId: existing.companyId,
   });
@@ -224,6 +255,9 @@ export async function setDriverAvailability(params: {
 
   const updated = await db.driver.update({ where: { id }, data: { isAvailable } });
 
+  const displayName = existing.employee?.fullName ??
+    ([existing.firstName, existing.lastName].filter(Boolean).join(" ") || "Unknown");
+
   await createAuditLog({
     userId: updatedById,
     userName,
@@ -233,7 +267,7 @@ export async function setDriverAvailability(params: {
     recordId: id,
     oldValue: { isAvailable: existing.isAvailable },
     newValue: { isAvailable },
-    description: `Set driver ${existing.employee.fullName} availability to ${isAvailable ? "available" : "unavailable"}`,
+    description: `Set driver ${displayName} availability to ${isAvailable ? "available" : "unavailable"}`,
     ipAddress,
     companyId: existing.companyId,
   });

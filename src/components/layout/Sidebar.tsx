@@ -9,7 +9,7 @@ import {
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
-  TrendingUp, ShoppingBag, UserCheck, Target,
+  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -22,10 +22,13 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CompanySwitcher } from "@/components/shared/CompanySwitcher";
 
 interface NavItem {
   label: string;
   href?: string;
+  external?: boolean;
+  exact?: boolean;
   icon: React.ReactNode;
   permission?: string;
   children?: NavItem[];
@@ -41,7 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Main Menu",
     items: [
       { label: "Dashboard", href: "/", icon: <LayoutDashboard className="h-4 w-4" /> },
-      { label: "Employees", href: "/employees", icon: <UserCircle className="h-4 w-4" />, permission: "employees:employee:read" },
+      { label: "HR", href: "https://atwork.eastafricanspirit.co.tz", external: true, icon: <UserCircle className="h-4 w-4" />, permission: "employees:employee:read" },
       { label: "Approvals", href: "/approvals", icon: <CheckCircle className="h-4 w-4" />, permission: "approvals:request:read" },
     ],
   },
@@ -75,6 +78,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Assignments", href: "/transport/assignments", icon: <GitBranch className="h-4 w-4" />, permission: "transport:assignment:read" },
           { label: "Trips", href: "/transport/trips", icon: <MapPin className="h-4 w-4" />, permission: "transport:trip:read" },
           { label: "Incidents", href: "/transport/incidents", icon: <AlertTriangle className="h-4 w-4" />, permission: "transport:incident:read" },
+          { label: "Daily Movement", href: "/transport/daily-movement", icon: <FileText className="h-4 w-4" />, permission: "transport:daily-movement:read" },
         ],
       },
       {
@@ -152,17 +156,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Sales",
     items: [
-      {
-        label: "Sales",
-        icon: <TrendingUp className="h-4 w-4" />,
-        permission: "sales:order:read",
-        children: [
-          { label: "Overview", href: "/sales", icon: <BarChart3 className="h-4 w-4" />, permission: "sales:order:read" },
-          { label: "Orders", href: "/sales/orders", icon: <ShoppingBag className="h-4 w-4" />, permission: "sales:order:read" },
-          { label: "Customers", href: "/sales/customers", icon: <UserCheck className="h-4 w-4" />, permission: "sales:customer:read" },
-          { label: "KPIs & Targets", href: "/sales/kpis", icon: <Target className="h-4 w-4" />, permission: "sales:kpi:read" },
-        ],
-      },
+      { label: "Sales", href: "https://sales.eastafricanspirit.co.tz", external: true, icon: <TrendingUp className="h-4 w-4" /> },
     ],
   },
   {
@@ -178,8 +172,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Journal Entries", href: "/finance/journal-entries", icon: <FileCheck className="h-4 w-4" />, permission: "finance:journal:read" },
           { label: "Bank Accounts", href: "/finance/bank-accounts", icon: <Landmark className="h-4 w-4" />, permission: "finance:bank:read" },
           { label: "Payments", href: "/finance/payments", icon: <Receipt className="h-4 w-4" />, permission: "finance:payment:read" },
-          { label: "Exchange Rates", href: "/finance/exchange-rates", icon: <TrendingDown className="h-4 w-4" />, permission: "finance:report:read" },
-          { label: "Converter", href: "/finance/converter", icon: <ArrowRightLeft className="h-4 w-4" />, permission: "finance:report:read" },
+          { label: "Currency Converter", href: "/finance/converter", icon: <ArrowRightLeft className="h-4 w-4" />, permission: "finance:report:read" },
           { label: "Day Book", href: "/finance/day-book", icon: <BookOpen className="h-4 w-4" />, permission: "finance:journal:read" },
           { label: "Outstanding", href: "/finance/outstanding", icon: <CreditCard className="h-4 w-4" />, permission: "finance:payment:read" },
           { label: "Reports", href: "/finance/reports", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
@@ -223,7 +216,15 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: "Audit Logs", href: "/audit-logs", icon: <ScrollText className="h-4 w-4" />, permission: "audit:log:read" },
-      { label: "Settings", href: "/settings", icon: <Settings className="h-4 w-4" />, permission: "settings:settings:read" },
+      {
+        label: "Settings",
+        icon: <Settings className="h-4 w-4" />,
+        permission: "settings:settings:read",
+        children: [
+          { label: "Configuration", href: "/settings", exact: true, icon: <Settings className="h-4 w-4" />, permission: "settings:settings:read" },
+          { label: "Manage Keys", href: "/settings/keys", icon: <Key className="h-4 w-4" />, permission: "settings:settings:update" },
+        ],
+      },
     ],
   },
 ];
@@ -298,7 +299,43 @@ function NavLink({ item, depth = 0, collapsed }: { item: NavItem; depth?: number
     );
   }
 
-  const isActive = item.href === "/" ? pathname === "/" : item.href ? pathname.startsWith(item.href) : false;
+  const isActive = !item.external && (
+    item.href === "/" ? pathname === "/" :
+    item.href ? (item.exact ? pathname === item.href : pathname.startsWith(item.href)) :
+    false
+  );
+
+  if (item.external) {
+    if (collapsed) {
+      return (
+        <a
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={item.label}
+          className="flex items-center justify-center p-2 rounded-md transition-colors text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        >
+          {item.icon}
+        </a>
+      );
+    }
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
+          depth > 0 && "pl-2",
+          "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+        )}
+      >
+        {item.icon}
+        {item.label}
+        <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+      </a>
+    );
+  }
 
   if (collapsed) {
     return (
@@ -477,6 +514,9 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Company indicator */}
+        {!collapsed && <CompanySwitcher />}
 
         {/* Nav */}
         <ScrollArea className="flex-1">

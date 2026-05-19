@@ -1,10 +1,28 @@
 import { NextRequest } from "next/server";
-import { updateSetting } from "@/modules/settings/settings.service";
-import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { getSetting, updateSetting, deleteSetting } from "@/modules/settings/settings.service";
+import { requireAuth, requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 import { z } from "zod";
 
 const schema = z.object({ value: z.string() });
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ key: string }> }
+) {
+  const auth = await requireAuth(request);
+  if ("error" in auth) return auth.error;
+
+  const { key } = await params;
+
+  try {
+    const value = await getSetting(key);
+    if (value === null) return notFound("Setting not found");
+    return success({ key, value });
+  } catch (err) {
+    return handleError(err);
+  }
+}
 
 export async function PUT(
   request: NextRequest,
@@ -35,7 +53,34 @@ export async function PUT(
     });
     return success(setting);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed";
-    return serverError();
+    return handleError(err);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ key: string }> }
+) {
+  const auth = await requirePermission(request, "settings:settings:update");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { key } = await params;
+  const { ipAddress, userAgent } = getRequestMeta(request);
+
+  try {
+    await deleteSetting({
+      key,
+      companyId,
+      updatedById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    return success({ deleted: true });
+  } catch (err) {
+    return handleError(err);
   }
 }

@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { getStockBalance } from "@/modules/warehouse/stock.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { NextResponse } from "next/server";
+import { success, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:stock:read");
@@ -22,8 +23,8 @@ export async function GET(request: NextRequest) {
       itemId,
       lowStock,
     });
-    return success({ data: balances, meta: { total: balances.length } });
-  } catch {
-    return serverError();
+    return NextResponse.json({ success: true, data: balances, meta: { total: balances.length, page: 1, pageSize: balances.length, totalPages: 1 } });
+  } catch (err) {
+    return handleError(err);
   }
 }

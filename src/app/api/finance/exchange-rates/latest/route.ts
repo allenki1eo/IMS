@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getActiveRate } from "@/modules/finance/exchange-rates.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound , serverError} from "@/lib/response";
+import { success, badRequest, notFound , handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "finance:report:read");
@@ -25,6 +25,6 @@ export async function GET(request: NextRequest) {
     return success(rate);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

@@ -28,7 +28,6 @@ interface FormState {
   code: string;
   branchId: string;
   address: string;
-  managerEmployeeId: string;
   warehouseType: string;
 }
 
@@ -37,7 +36,6 @@ const DEFAULT: FormState = {
   code: "",
   branchId: "",
   address: "",
-  managerEmployeeId: "",
   warehouseType: "MAIN",
 };
 
@@ -78,7 +76,6 @@ export default function NewWarehousePage() {
           code: form.code,
           branchId: form.branchId || undefined,
           address: form.address || undefined,
-          managerEmployeeId: form.managerEmployeeId || undefined,
           warehouseType: form.warehouseType || undefined,
         }),
       });
@@ -174,18 +171,6 @@ export default function NewWarehousePage() {
                 value={form.address}
                 onChange={handleChange}
                 placeholder="Physical address"
-                disabled={submitting}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="managerEmployeeId">Manager Employee ID</Label>
-              <Input
-                id="managerEmployeeId"
-                name="managerEmployeeId"
-                value={form.managerEmployeeId}
-                onChange={handleChange}
-                placeholder="Optional — employee ID of the manager"
                 disabled={submitting}
               />
             </div>

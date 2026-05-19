@@ -1,14 +1,11 @@
 import { NextRequest } from "next/server";
 import { listTanks, createTank } from "@/modules/fuel/tanks.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:tank:read");
   if ("error" in auth) return auth.error;
-
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
@@ -19,11 +16,11 @@ export async function GET(request: NextRequest) {
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
 
   try {
-    const tanks = await listTanks(companyId, { search, fuelType, branchId, isActive });
+    const tanks = await listTanks({ search, fuelType, branchId, isActive });
     return success(tanks);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -64,6 +61,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique")) return badRequest("Tank code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

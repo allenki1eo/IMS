@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
 export async function listTanks(
-  companyId: string,
   params: {
     search?: string;
     branchId?: string;
@@ -13,7 +12,6 @@ export async function listTanks(
   const { search, branchId, fuelType, isActive } = params;
 
   const where = {
-    companyId,
     ...(branchId ? { branchId } : {}),
     ...(fuelType ? { fuelType } : {}),
     ...(isActive !== undefined ? { isActive } : {}),

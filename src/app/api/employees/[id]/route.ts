@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getEmployeeById, updateEmployee } from "@/modules/employees/employees.service";
 import { updateEmployeeSchema } from "@/modules/employees/employees.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "employees:employee:read");
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return success(employee);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -44,6 +44,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Employee not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { setDriverAvailability } from "@/modules/transport/drivers.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function PATCH(
   request: NextRequest,
@@ -32,6 +32,6 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Driver not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

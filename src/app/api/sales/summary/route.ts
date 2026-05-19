@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, serverError } from "@/lib/response";
+import { success, serverError, handleError } from "@/lib/response";
 import { getSalesSummary } from "@/modules/sales/sales.service";
 
 export async function GET(request: NextRequest) {
@@ -13,6 +13,6 @@ export async function GET(request: NextRequest) {
     return success(summary);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getApprovalRequestById } from "@/modules/approvals/approvals.service";
 import { requirePermission } from "@/lib/api-helpers";
-import { success, notFound , serverError} from "@/lib/response";
+import { success, notFound , handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "approvals:request:read");
@@ -15,6 +15,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return success(approvalRequest);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

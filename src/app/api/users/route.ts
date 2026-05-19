@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listUsers, createUser } from "@/modules/users/users.service";
 import { createUserSchema } from "@/modules/users/users.validation";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, paginated, badRequest, conflict, serverError } from "@/lib/response";
+import { success, created, paginated, badRequest, conflict, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     return paginated(users, buildMeta(total, params));
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -50,6 +50,6 @@ export async function POST(request: NextRequest) {
     if (msg.includes("Unique constraint") || msg.includes("unique")) {
       return conflict("Username or email already exists");
     }
-    return serverError();
+    return handleError(err);
   }
 }

@@ -38,6 +38,7 @@ model Company {
   customers   Customer[]
   salesOrders SalesOrder[]
   salesKpis   SalesKPI[]
+  dailyMovements DailyTruckMovement[]
 
   @@map("companies")
 }
@@ -384,9 +385,8 @@ model Warehouse {
   companyId   String
   branchId    String?
   name        String
-  code        String   @unique
+  code        String
   address     String?
-  managerId   String?
   warehouseType String @default("MAIN")
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -403,6 +403,7 @@ model Warehouse {
   adjustments   StockAdjustment[]
   fgLots        FGLot[]
 
+  @@unique([companyId, code])
   @@index([companyId])
   @@map("warehouses")
 }
@@ -701,6 +702,7 @@ model Vehicle {
   maintenanceSchedules MaintenanceSchedule[]
   workOrders         WorkOrder[]
   dispatchOrders     DispatchOrder[]
+  dailyMovementEntries DailyTruckMovementEntry[]
 
   @@index([companyId])
   @@index([status])
@@ -726,7 +728,11 @@ model VehicleDocument {
 model Driver {
   id            String    @id @default(cuid())
   companyId     String
-  employeeId    String    @unique
+  employeeId    String?   @unique
+  firstName     String?
+  lastName      String?
+  phone         String?
+  email         String?
   licenseNumber String?
   licenseClass  String?
   licenseExpiry DateTime?
@@ -738,11 +744,12 @@ model Driver {
   updatedAt     DateTime  @updatedAt
   createdById   String
 
-  employee       Employee            @relation(fields: [employeeId], references: [id])
+  employee       Employee?           @relation(fields: [employeeId], references: [id])
   assignments    VehicleAssignment[]
   trips          TripOrder[]
   fuelIssues     FuelIssue[]
   dispatchOrders DispatchOrder[]
+  dailyMovementEntries DailyTruckMovementEntry[]
 
   @@index([companyId])
   @@map("drivers")
@@ -1834,4 +1841,57 @@ model SalesWebhookLog {
   @@index([companyId])
   @@index([eventType])
   @@map("sales_webhook_logs")
+}
+
+// ─────────────────────────────────────────────
+// DAILY TRUCK MOVEMENT
+// ─────────────────────────────────────────────
+
+model DailyTruckMovement {
+  id            String    @id @default(cuid())
+  companyId     String
+  reportDate    DateTime
+  reference     String    @unique
+  status        String    @default("DRAFT")
+  totalVehicles Int       @default(0)
+  onTrip        Int       @default(0)
+  present       Int       @default(0)
+  maintenance   Int       @default(0)
+  offsite       Int       @default(0)
+  other         Int       @default(0)
+  notes         String?
+  createdById   String
+  submittedById String?
+  submittedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  entries DailyTruckMovementEntry[]
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, reportDate])
+  @@index([companyId])
+  @@map("daily_truck_movements")
+}
+
+model DailyTruckMovementEntry {
+  id             String    @id @default(cuid())
+  reportId       String
+  vehicleId      String
+  driverId       String?
+  vehicleStatus  String    @default("PRESENT")
+  tripId         String?
+  destination    String?
+  departureTime  DateTime?
+  expectedReturn DateTime?
+  odometerOut    Float?
+  fuelLevel      String?
+  remarks        String?
+
+  report  DailyTruckMovement @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  vehicle Vehicle            @relation(fields: [vehicleId], references: [id])
+  driver  Driver?            @relation(fields: [driverId], references: [id])
+
+  @@unique([reportId, vehicleId])
+  @@map("daily_truck_movement_entries")
 }

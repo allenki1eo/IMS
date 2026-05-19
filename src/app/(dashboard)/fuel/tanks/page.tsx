@@ -18,10 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface TankRow {
   id: string;
   name: string;
+  companyId: string;
   code: string;
   fuelType: string;
   capacity: number;
@@ -52,6 +54,8 @@ export default function TanksPage() {
   const [total, setTotal] = useState(0);
   const [fuelType, setFuelType] = useState("ALL");
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
 
@@ -85,6 +89,15 @@ export default function TanksPage() {
             <AlertTriangle className="h-4 w-4 text-amber-500" />
           )}
         </div>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: TankRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {

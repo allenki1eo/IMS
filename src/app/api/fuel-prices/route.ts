@@ -1,24 +1,21 @@
 import { NextRequest } from "next/server";
 import { listPrices, createPrice } from "@/modules/fuel/prices.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:price:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { searchParams } = new URL(request.url);
   const fuelType = searchParams.get("fuelType") ?? undefined;
 
   try {
-    const prices = await listPrices(companyId, { fuelType });
+    const prices = await listPrices({ fuelType });
     return success(prices);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -54,6 +51,6 @@ export async function POST(request: NextRequest) {
     return created(price);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

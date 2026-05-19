@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Filter } from "lucide-react";
+import { Plus, Filter, Upload } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ImportModal } from "@/components/shared/ImportModal";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface CategoryOption {
   id: string;
@@ -25,6 +27,7 @@ interface CategoryOption {
 
 interface SparePartRow {
   id: string;
+  companyId: string;
   code: string;
   name: string;
   category?: { name: string } | null;
@@ -52,7 +55,10 @@ export default function SparePartsPage() {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoryId, setCategoryId] = useState("ALL");
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
 
@@ -98,6 +104,15 @@ export default function SparePartsPage() {
         <Link href={`/maintenance/parts/${row.id}`} className="font-medium hover:underline">
           {row.name}
         </Link>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: SparePartRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {
@@ -156,12 +171,18 @@ export default function SparePartsPage() {
         description="Manage spare parts inventory and stock levels"
         actions={
           <PermissionGuard require="maintenance:part:create">
-            <Button asChild>
-              <Link href="/maintenance/parts/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Part
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button asChild>
+                <Link href="/maintenance/parts/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Part
+                </Link>
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
@@ -204,6 +225,26 @@ export default function SparePartsPage() {
         onPageChange={setPage}
         emptyTitle="No spare parts found"
         emptyDescription="Add your first spare part to get started."
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false);
+          setPage(1);
+        }}
+        title="Import Spare Parts"
+        apiEndpoint="/api/maintenance/spare-parts/import"
+        templateHeaders={["partNumber", "name", "description", "categoryId", "uomId", "reorderPoint", "unitCost"]}
+        templateFilename="spare-parts-import-template"
+        instructions={[
+          "name is required",
+          "partNumber is optional but recommended",
+          "categoryId is optional (use database ID)",
+          "reorderPoint and unitCost are optional numbers",
+          "uomId defaults to PCS if not provided",
+        ]}
       />
     </div>
   );

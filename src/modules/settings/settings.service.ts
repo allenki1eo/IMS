@@ -22,6 +22,65 @@ export async function getSetting(key: string): Promise<string | null> {
   return s?.value ?? null;
 }
 
+export async function createSetting(params: {
+  key: string;
+  value: string;
+  category: string;
+  description?: string;
+  isPublic?: boolean;
+  companyId: string;
+  updatedById: string;
+  userName: string;
+  ipAddress?: string;
+  userAgent?: string;
+}) {
+  const {
+    key,
+    value,
+    category,
+    description,
+    isPublic,
+    companyId,
+    updatedById,
+    userName,
+    ipAddress,
+    userAgent,
+  } = params;
+
+  const existing = await db.setting.findUnique({ where: { key } });
+  if (existing) {
+    throw new Error(`Setting with key "${key}" already exists`);
+  }
+
+  const created = await db.setting.create({
+    data: {
+      key,
+      value,
+      category,
+      description: description ?? null,
+      isPublic: isPublic ?? false,
+      companyId,
+      updatedById,
+    },
+  });
+
+  await createAuditLog({
+    userId: updatedById,
+    userName,
+    action: "SETTING_CREATE",
+    module: "settings",
+    resource: "setting",
+    recordId: key,
+    newValue: { key, value, category, description, isPublic },
+    description: `Created setting: ${key}`,
+    ipAddress,
+    userAgent,
+    companyId,
+  });
+
+  return created;
+}
+
 export async function updateSetting(params: {
   key: string;
   value: string;
@@ -77,4 +136,36 @@ export async function bulkUpdateSettings(params: {
   );
 
   return results;
+}
+
+export async function deleteSetting(params: {
+  key: string;
+  companyId: string;
+  updatedById: string;
+  userName: string;
+  ipAddress?: string;
+  userAgent?: string;
+}) {
+  const { key, companyId, updatedById, userName, ipAddress, userAgent } = params;
+
+  const existing = await db.setting.findUnique({ where: { key } });
+  if (!existing) {
+    throw new Error(`Setting with key "${key}" not found`);
+  }
+
+  await db.setting.delete({ where: { key } });
+
+  await createAuditLog({
+    userId: updatedById,
+    userName,
+    action: "SETTING_DELETE",
+    module: "settings",
+    resource: "setting",
+    recordId: key,
+    oldValue: { key, value: existing.value, category: existing.category },
+    description: `Deleted setting: ${key}`,
+    ipAddress,
+    userAgent,
+    companyId,
+  });
 }

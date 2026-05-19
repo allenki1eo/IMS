@@ -13,10 +13,12 @@ import { KanbanBoard, type KanbanCard } from "@/components/shared/KanbanBoard";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface WorkOrderRow {
   id: string;
   reference: string;
+  companyId: string;
   vehicle?: { plateNumber: string } | null;
   maintenanceType: string;
   priority: string;
@@ -68,6 +70,9 @@ export default function WorkOrdersPage() {
   const [view, setView] = useState<"table" | "kanban">("table");
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
+
   const hasFilters = debounced !== "" || status !== "ALL" || priority !== "ALL";
 
   useEffect(() => { setPage(1); }, [debounced, status, priority]);
@@ -103,6 +108,15 @@ export default function WorkOrdersPage() {
       header: "Vehicle",
       cell: (row: WorkOrderRow) => (
         <span className="text-muted-foreground">{row.vehicle?.plateNumber ?? "—"}</span>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: WorkOrderRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {

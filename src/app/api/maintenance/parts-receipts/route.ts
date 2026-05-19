@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listReceipts } from "@/modules/maintenance/receipts.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { paginated, badRequest , serverError} from "@/lib/response";
+import { paginated, badRequest , handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
@@ -25,6 +25,6 @@ export async function GET(request: NextRequest) {
     return paginated(data, buildMeta(meta.total, pagination));
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }

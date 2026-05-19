@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { resetUserPassword } from "@/modules/users/users.service";
 import { resetPasswordSchema } from "@/modules/users/users.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -29,6 +29,6 @@ export async function POST(
     });
     return success({ message: "Password reset. User must change on next login." });
   } catch (err) {
-    return serverError();
+    return handleError(err);
   }
 }

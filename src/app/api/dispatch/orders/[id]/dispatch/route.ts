@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { dispatchOrder } from "@/modules/dispatch/orders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -28,6 +28,6 @@ export async function POST(
       msg.startsWith("Lot not found")
     )
       return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

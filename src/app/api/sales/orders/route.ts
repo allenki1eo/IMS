@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, serverError, handleError } from "@/lib/response";
 import { listSalesOrders, upsertSalesOrder } from "@/modules/sales/sales.service";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     return success({ data: orders, meta: buildMeta(total, pagination) });
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -41,6 +41,6 @@ export async function POST(request: NextRequest) {
     return created(order);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

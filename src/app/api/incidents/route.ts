@@ -1,15 +1,12 @@
 import { NextRequest } from "next/server";
 import { listIncidents, createIncident } from "@/modules/transport/incidents.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:incident:read");
   if ("error" in auth) return auth.error;
-
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
   const paginationParams = parsePagination(searchParams);
@@ -19,7 +16,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") ?? undefined;
 
   try {
-    const { data, meta } = await listIncidents(companyId, {
+    const { data, meta } = await listIncidents({
       search,
       vehicleId,
       incidentType,
@@ -27,11 +24,10 @@ export async function GET(request: NextRequest) {
       page: paginationParams.page,
       pageSize: paginationParams.pageSize,
     });
-
     return paginated(data, buildMeta(meta.total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -69,6 +65,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Vehicle not found" || msg === "Trip not found") return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

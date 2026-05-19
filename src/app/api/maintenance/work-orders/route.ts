@@ -1,15 +1,12 @@
 import { NextRequest } from "next/server";
 import { listWorkOrders, createWorkOrder } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:workorder:read");
   if ("error" in auth) return auth.error;
-
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
@@ -20,7 +17,7 @@ export async function GET(request: NextRequest) {
   const toStr = searchParams.get("to");
 
   try {
-    const { data, meta } = await listWorkOrders(companyId, {
+    const { data, meta } = await listWorkOrders({
       vehicleId,
       status,
       priority,
@@ -33,7 +30,7 @@ export async function GET(request: NextRequest) {
     return paginated(data, buildMeta(meta.total, pagination));
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -84,6 +81,6 @@ export async function POST(request: NextRequest) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Vehicle not found" || msg === "Maintenance schedule not found")
       return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

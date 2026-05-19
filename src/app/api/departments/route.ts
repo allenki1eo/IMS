@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listDepartments, createDepartment } from "@/modules/company/departments.service";
 import { createDepartmentSchema } from "@/modules/company/company.validation";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, conflict, serverError } from "@/lib/response";
+import { success, created, badRequest, conflict, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "company:department:read");
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     return success(departments);
   } catch (err) {
     console.error("[API Error]", err);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -54,6 +54,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("Unique constraint")) return conflict("Department code already exists");
-    return serverError();
+    return handleError(err);
   }
 }
