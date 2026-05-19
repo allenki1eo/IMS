@@ -183,6 +183,10 @@ const PERMISSIONS = [
   { module: "sales", resource: "kpi", action: "read", description: "View sales KPIs" },
   { module: "sales", resource: "kpi", action: "manage", description: "Manage sales KPI targets" },
   { module: "sales", resource: "webhook", action: "manage", description: "Manage sales webhook settings" },
+  // TRA Stamps
+  { module: "tra-stamps", resource: "stamp", action: "read", description: "View TRA stamps" },
+  { module: "tra-stamps", resource: "stamp", action: "create", description: "Receive TRA stamp batches" },
+  { module: "tra-stamps", resource: "stamp", action: "activate", description: "Activate TRA stamps" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -259,6 +263,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
     "reports:report:read",
+    "tra-stamps:stamp:read", "tra-stamps:stamp:create", "tra-stamps:stamp:activate",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -315,6 +320,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read",
     "reports:report:read",
+    "tra-stamps:stamp:read", "tra-stamps:stamp:create", "tra-stamps:stamp:activate",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -389,6 +395,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
     "reports:report:read",
+    "tra-stamps:stamp:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -418,6 +425,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:payment:read",
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
+    "tra-stamps:stamp:read",
   ],
 };
 

@@ -9,7 +9,7 @@ import {
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
-  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key,
+  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -127,6 +127,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Recipes", href: "/production/recipes", icon: <FlaskConical className="h-4 w-4" />, permission: "production:recipe:read" },
           { label: "Lines", href: "/production/lines", icon: <Factory className="h-4 w-4" />, permission: "production:line:read" },
           { label: "Daystore", href: "/production/daystore", icon: <Package className="h-4 w-4" />, permission: "production:batch:read" },
+          { label: "Daily Report", href: "/production/daily-report", icon: <FileText className="h-4 w-4" />, permission: "production:report:read" },
         ],
       },
       {
@@ -149,6 +150,16 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Products", href: "/dispatch/products", icon: <Package className="h-4 w-4" />, permission: "dispatch:product:read" },
           { label: "Inventory", href: "/dispatch/inventory", icon: <Boxes className="h-4 w-4" />, permission: "dispatch:lot:read" },
           { label: "Dispatch Orders", href: "/dispatch/orders", icon: <SendHorizonal className="h-4 w-4" />, permission: "dispatch:order:read" },
+        ],
+      },
+      {
+        label: "TRA Stamps",
+        icon: <Tag className="h-4 w-4" />,
+        permission: "tra:stamp:read",
+        children: [
+          { label: "Overview", href: "/tra-stamps", icon: <BarChart3 className="h-4 w-4" />, permission: "tra:stamp:read" },
+          { label: "Stamp Batches", href: "/tra-stamps/batches", icon: <Package className="h-4 w-4" />, permission: "tra:stamp:read" },
+          { label: "Activations", href: "/tra-stamps/activations", icon: <CheckCircle className="h-4 w-4" />, permission: "tra:stamp:read" },
         ],
       },
     ],
