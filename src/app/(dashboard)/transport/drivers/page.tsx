@@ -231,12 +231,24 @@ export default function DriversPage() {
         }}
         title="Import Drivers"
         apiEndpoint="/api/drivers/import"
-        templateHeaders={["employeeId", "licenseNumber", "licenseClass", "licenseExpiry"]}
+        templateHeaders={[
+          "firstName",
+          "lastName",
+          "phone",
+          "email",
+          "licenseNumber",
+          "licenseClass",
+          "licenseExpiry",
+          "medicalExpiry",
+          "notes",
+          "employeeId",
+        ]}
         templateFilename="drivers-import-template"
         instructions={[
-          "employeeId is required (the employee's database ID)",
-          "licenseExpiry format: YYYY-MM-DD",
-          "The employee must already exist in the system",
+          "firstName is required (unless employeeId is provided)",
+          "employeeId links the driver to an existing employee record (optional)",
+          "licenseExpiry and medicalExpiry format: YYYY-MM-DD",
+          "licenseClass options: A, B, C, D, EC, EC+E",
         ]}
       />
     </div>
