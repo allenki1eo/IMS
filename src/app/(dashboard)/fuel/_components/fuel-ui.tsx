@@ -20,11 +20,11 @@ export function formatLiters(value: number | null | undefined) {
   return `${formatNumber(value)} L`;
 }
 
-export function formatMoney(value: number | null | undefined) {
+export function formatMoney(value: number | null | undefined, currency = "TZS") {
   if (value == null) return "-";
   return value.toLocaleString(undefined, {
     style: "currency",
-    currency: "USD",
+    currency,
     maximumFractionDigits: 2,
   });
 }

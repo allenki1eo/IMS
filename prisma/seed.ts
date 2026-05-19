@@ -593,6 +593,7 @@ async function main() {
     { fromCurrency: "USD", toCurrency: "TZS", rate: 2600, source: "MANUAL" },
     { fromCurrency: "EUR", toCurrency: "TZS", rate: 2800, source: "MANUAL" },
     { fromCurrency: "GBP", toCurrency: "TZS", rate: 3300, source: "MANUAL" },
+    { fromCurrency: "KES", toCurrency: "TZS", rate: 20,   source: "MANUAL" },
   ];
   for (const r of rates) {
     await db.exchangeRate.upsert({

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const CURRENCIES = ["USD", "ZAR", "EUR", "GBP", "AUD", "CAD", "JPY", "CNY", "INR"];
+const CURRENCIES = ["TZS", "USD", "EUR", "KES", "GBP", "ZAR", "AUD", "CAD", "JPY", "CNY", "INR"];
 
 interface CompanyForm {
   name: string;
@@ -37,7 +37,7 @@ const DEFAULT: CompanyForm = {
   phone: "",
   email: "",
   website: "",
-  currency: "USD",
+  currency: "TZS",
 };
 
 export default function NewCompanyPage() {

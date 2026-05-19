@@ -52,10 +52,22 @@ export default function NewPurchaseOrderPage() {
     requestId: "",
     expectedDelivery: "",
     taxAmount: "",
-    currency: "USD",
+    currency: "TZS",
     notes: "",
   });
   const [lines, setLines] = useState<OrderLineForm[]>([{ ...EMPTY_LINE }]);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
+
+  useEffect(() => {
+    if (form.currency === "TZS") { setExchangeRate(null); return; }
+    setRateLoading(true);
+    fetch(`/api/finance/exchange-rates/latest?from=${form.currency}&to=TZS`)
+      .then((r) => r.json())
+      .then((d) => setExchangeRate(d.data?.rate ?? null))
+      .catch(() => setExchangeRate(null))
+      .finally(() => setRateLoading(false));
+  }, [form.currency]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -179,14 +191,42 @@ export default function NewPurchaseOrderPage() {
                 <Input id="expectedDelivery" type="date" value={form.expectedDelivery} onChange={(e) => setForm((p) => ({ ...p, expectedDelivery: e.target.value }))} disabled={submitting} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="currency">Currency</Label>
-                <Input id="currency" value={form.currency} onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value.toUpperCase() }))} maxLength={3} disabled={submitting} />
+                <Label>Currency</Label>
+                <Select value={form.currency} onValueChange={(v) => setForm((p) => ({ ...p, currency: v }))} disabled={submitting}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TZS">TZS — Tanzanian Shilling</SelectItem>
+                    <SelectItem value="USD">USD — US Dollar</SelectItem>
+                    <SelectItem value="EUR">EUR — Euro</SelectItem>
+                    <SelectItem value="KES">KES — Kenyan Shilling</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="taxAmount">Tax Amount</Label>
                 <Input id="taxAmount" type="number" min="0" step="0.01" value={form.taxAmount} onChange={(e) => setForm((p) => ({ ...p, taxAmount: e.target.value }))} disabled={submitting} />
               </div>
             </div>
+
+            {form.currency !== "TZS" && (
+              <div className="flex items-center gap-3 rounded-md bg-blue-50 border border-blue-200 px-4 py-2 text-sm text-blue-800">
+                <span className="font-medium">Exchange Rate:</span>
+                {rateLoading ? (
+                  <span className="text-muted-foreground">Loading…</span>
+                ) : exchangeRate != null ? (
+                  <>
+                    <span>1 {form.currency} = {exchangeRate.toLocaleString()} TZS</span>
+                    {total > 0 && (
+                      <span className="ml-auto font-semibold">
+                        ≈ {(total * exchangeRate).toLocaleString(undefined, { style: "currency", currency: "TZS", maximumFractionDigits: 0 })} TZS
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-amber-700">No exchange rate found — add one in Finance › Exchange Rates</span>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <Label htmlFor="notes">Notes</Label>
