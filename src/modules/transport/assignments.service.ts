@@ -101,7 +101,7 @@ export async function createAssignment(params: {
     resource: "vehicle_assignment",
     recordId: assignment.id,
     newValue: { vehicleId, driverId, plateNumber: vehicle.plateNumber },
-    description: `Assigned vehicle ${vehicle.plateNumber} to driver ${driver.employee.fullName}`,
+    description: `Assigned vehicle ${vehicle.plateNumber} to driver ${driver.employee?.fullName ?? ([driver.firstName, driver.lastName].filter(Boolean).join(" ") || driver.id)}`,
     ipAddress,
     companyId: vehicle.companyId,
   });
@@ -154,7 +154,7 @@ export async function returnAssignment(params: {
     recordId: id,
     oldValue: { status: "ACTIVE" },
     newValue: { status: "RETURNED", returnedAt: new Date().toISOString() },
-    description: `Vehicle ${assignment.vehicle.plateNumber} returned by driver ${assignment.driver.employee.fullName}`,
+    description: `Vehicle ${assignment.vehicle.plateNumber} returned by driver ${assignment.driver.employee?.fullName ?? ([assignment.driver.firstName, assignment.driver.lastName].filter(Boolean).join(" ") || assignment.driver.id)}`,
     ipAddress,
     companyId: assignment.vehicle.companyId,
   });
