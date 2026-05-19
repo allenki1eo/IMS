@@ -119,6 +119,13 @@ export function handleError(err: unknown): NextResponse<ApiResponse> {
         { status: 409 }
       );
     }
+
+    // Surface the actual DB error message (truncated) so operators can diagnose it
+    const safeMsg = msg.replace(/authToken[=:]\S+/gi, "[REDACTED]").slice(0, 300);
+    return NextResponse.json(
+      { success: false, error: safeMsg, code: "SERVER_ERROR" },
+      { status: 500 }
+    );
   }
   return NextResponse.json(
     { success: false, error: "An unexpected error occurred", code: "SERVER_ERROR" },
