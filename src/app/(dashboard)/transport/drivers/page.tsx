@@ -241,14 +241,13 @@ export default function DriversPage() {
           "licenseExpiry",
           "medicalExpiry",
           "notes",
-          "employeeId",
         ]}
         templateFilename="drivers-import-template"
         instructions={[
-          "firstName is required (unless employeeId is provided)",
-          "employeeId links the driver to an existing employee record (optional)",
+          "firstName is required for every row",
           "licenseExpiry and medicalExpiry format: YYYY-MM-DD",
           "licenseClass options: A, B, C, D, EC, EC+E",
+          "All other columns are optional",
         ]}
       />
     </div>
