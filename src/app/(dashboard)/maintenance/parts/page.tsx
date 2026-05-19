@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Filter, Upload } from "lucide-react";
+import { Plus, Filter, Upload, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -56,11 +57,25 @@ export default function SparePartsPage() {
   const [categoryId, setCategoryId] = useState("ALL");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
   const { user } = useCurrentUser();
   const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/maintenance/spare-parts/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Spare part deleted");
+      setDeleteId(null);
+      setPage(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete spare part");
+    }
+  }
 
   useEffect(() => {
     fetch("/api/maintenance/spare-part-categories?pageSize=200")
@@ -157,9 +172,14 @@ export default function SparePartsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: SparePartRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/maintenance/parts/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/maintenance/parts/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -246,6 +266,7 @@ export default function SparePartsPage() {
           "uomId defaults to PCS if not provided",
         ]}
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

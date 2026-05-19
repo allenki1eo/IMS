@@ -50,9 +50,23 @@ export default function ReceiptsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [tankFilter, setTankFilter] = useState("ALL");
   const [tanks, setTanks] = useState<TankOption[]>([]);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const PAGE_SIZE = 20;
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/fuel-receipts/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Receipt deleted");
+      setDeleteId(null);
+      setPage(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete receipt");
+    }
+  }
 
   useEffect(() => {
     fetch("/api/fuel-tanks?pageSize=200")
@@ -142,9 +156,14 @@ export default function ReceiptsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: ReceiptRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/fuel/receipts/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/fuel/receipts/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -207,6 +226,7 @@ export default function ReceiptsPage() {
         emptyTitle="No receipts found"
         emptyDescription="Record your first fuel delivery to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

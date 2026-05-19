@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { LoadingState } from "@/components/shared/LoadingState";
@@ -17,6 +18,7 @@ export default function BankAccountsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 20 });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:bank:create");
 
   async function fetchAccounts(page = 1) {
@@ -40,6 +42,19 @@ export default function BankAccountsPage() {
   useEffect(() => {
     fetchAccounts();
   }, [search]);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/finance/bank-accounts/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Bank account deleted");
+      setDeleteId(null);
+      fetchAccounts(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete bank account");
+    }
+  }
 
   const columns = [
     {
@@ -66,6 +81,15 @@ export default function BankAccountsPage() {
         <Badge variant={row.isActive ? "default" : "secondary"}>{row.isActive ? "Active" : "Inactive"}</Badge>
       ),
     },
+    {
+      key: "actions",
+      header: "",
+      cell: (row: any) => (
+        <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -89,6 +113,7 @@ export default function BankAccountsPage() {
       ) : (
         <DataTable columns={columns} data={accounts} emptyTitle="No bank accounts found" />
       )}
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

@@ -46,9 +46,23 @@ export default function IssuesPage() {
   const [toDate, setToDate] = useState("");
   const [tanks, setTanks] = useState<TankOption[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const PAGE_SIZE = 20;
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/fuel-issues/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Fuel issue deleted");
+      setDeleteId(null);
+      setPage(1);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete fuel issue");
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -158,9 +172,14 @@ export default function IssuesPage() {
       key: "actions",
       header: "Actions",
       cell: (row: IssueRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/fuel/issues/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/fuel/issues/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -238,6 +257,7 @@ export default function IssuesPage() {
         emptyTitle="No fuel issues found"
         emptyDescription="Issue fuel to a vehicle to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }
