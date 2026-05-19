@@ -39,16 +39,33 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { employeeId, licenseNumber, licenseClass, licenseExpiry, medicalExpiry, notes } = body;
+  const {
+    employeeId,
+    firstName,
+    lastName,
+    phone,
+    email,
+    licenseNumber,
+    licenseClass,
+    licenseExpiry,
+    medicalExpiry,
+    notes,
+  } = body;
 
-  if (!employeeId || typeof employeeId !== "string") return badRequest("employeeId is required");
+  if (!employeeId && !firstName) {
+    return badRequest("Either employeeId or firstName is required");
+  }
 
   const { ipAddress } = getRequestMeta(request);
 
   try {
     const driver = await createDriver({
       companyId,
-      employeeId,
+      employeeId: employeeId ?? null,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
+      phone: phone ?? null,
+      email: email ?? null,
       licenseNumber: licenseNumber ?? null,
       licenseClass: licenseClass ?? null,
       licenseExpiry: licenseExpiry ? new Date(licenseExpiry) : null,
@@ -64,7 +81,8 @@ export async function POST(request: NextRequest) {
     if (
       msg === "Employee not found" ||
       msg === "Employee is not marked as a driver" ||
-      msg === "Driver record already exists for this employee"
+      msg === "Driver record already exists for this employee" ||
+      msg === "Either employeeId or firstName is required"
     ) {
       return badRequest(msg);
     }

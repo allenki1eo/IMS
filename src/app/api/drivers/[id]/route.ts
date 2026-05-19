@@ -30,7 +30,18 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { licenseNumber, licenseClass, licenseExpiry, medicalExpiry, status, notes } = body;
+  const {
+    firstName,
+    lastName,
+    phone,
+    email,
+    licenseNumber,
+    licenseClass,
+    licenseExpiry,
+    medicalExpiry,
+    status,
+    notes,
+  } = body;
 
   const { ipAddress } = getRequestMeta(request);
 
@@ -38,6 +49,10 @@ export async function PATCH(
     const updated = await updateDriver({
       id,
       data: {
+        ...(firstName !== undefined ? { firstName } : {}),
+        ...(lastName !== undefined ? { lastName } : {}),
+        ...(phone !== undefined ? { phone } : {}),
+        ...(email !== undefined ? { email } : {}),
         ...(licenseNumber !== undefined ? { licenseNumber } : {}),
         ...(licenseClass !== undefined ? { licenseClass } : {}),
         ...(licenseExpiry !== undefined
