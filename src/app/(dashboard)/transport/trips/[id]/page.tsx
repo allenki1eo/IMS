@@ -64,7 +64,9 @@ interface Trip {
   vehicle?: { id: string; plateNumber: string; make: string; model: string } | null;
   driver?: {
     id: string;
-    employee?: { firstName: string; lastName: string } | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    employee?: { fullName: string } | null;
   } | null;
   cargoLines?: CargoLine[];
   logs?: LogEntry[];
@@ -212,9 +214,8 @@ export default function TripDetailPage() {
   if (loading) return <LoadingState />;
   if (!trip) return <div className="text-muted-foreground">Trip not found.</div>;
 
-  const driverName = trip.driver?.employee
-    ? `${trip.driver.employee.firstName} ${trip.driver.employee.lastName}`
-    : "—";
+  const driverName = trip.driver?.employee?.fullName ??
+    ([trip.driver?.firstName, trip.driver?.lastName].filter(Boolean).join(" ") || "—");
 
   return (
     <div>
