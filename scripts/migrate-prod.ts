@@ -98,6 +98,14 @@ async function createTableIfMissing(name: string, ddl: string, label?: string) {
 async function run() {
   console.log(`Connecting to: ${TURSO_URL}\n`);
 
+  // Vehicles: usageType column
+  await addColumnIfMissing(
+    "vehicles",
+    "usageType",
+    "TEXT NOT NULL DEFAULT 'COMMERCIAL'",
+    "Add usageType column to vehicles"
+  );
+
   // Warehouse: warehouseType column
   await addColumnIfMissing(
     "warehouses",
