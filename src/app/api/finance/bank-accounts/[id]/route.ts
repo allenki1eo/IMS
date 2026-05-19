@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getBankAccount, updateBankAccount, toggleBankAccountStatus } from "@/modules/finance/bank-accounts.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound } from "@/lib/response";
+import { success, badRequest, notFound , handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(request, "finance:bank:read");
@@ -11,9 +11,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
-  const account = await getBankAccount(companyId, id);
-  if (!account) return notFound("Bank account");
-  return success(account);
+  try {
+    const account = await getBankAccount(companyId, id);
+    if (!account) return notFound("Bank account");
+    return success(account);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

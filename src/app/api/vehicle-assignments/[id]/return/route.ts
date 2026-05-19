@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { returnAssignment } from "@/modules/transport/assignments.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -29,6 +29,6 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Assignment not found") return notFound(msg);
     if (msg === "Assignment already returned") return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

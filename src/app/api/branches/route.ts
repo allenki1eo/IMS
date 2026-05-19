@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listBranches, createBranch } from "@/modules/company/branches.service";
 import { createBranchSchema } from "@/modules/company/company.validation";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, conflict, serverError } from "@/lib/response";
+import { success, created, badRequest, conflict, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "company:branch:read");
@@ -10,12 +10,17 @@ export async function GET(request: NextRequest) {
   const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
   const { searchParams } = new URL(request.url);
-  const branches = await listBranches({
-    companyId,
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-  });
-  return success(branches);
+  try {
+    const branches = await listBranches({
+      companyId,
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+    });
+    return success(branches);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -33,6 +38,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("Unique constraint")) return conflict("Branch code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

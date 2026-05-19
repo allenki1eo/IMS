@@ -165,12 +165,12 @@ export default function ReceiptsPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search by reference or supplier..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <Select value={tankFilter} onValueChange={setTankFilter}>
           <SelectTrigger className="w-[180px]">
@@ -184,7 +184,7 @@ export default function ReceiptsPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

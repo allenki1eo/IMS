@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { listCategories, createCategory } from "@/modules/warehouse/items.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { NextResponse } from "next/server";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:category:read");
@@ -13,8 +14,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
 
-  const categories = await listCategories(companyId, { search });
-  return success({ data: categories, meta: { total: categories.length } });
+  try {
+    const categories = await listCategories(companyId, { search });
+    return NextResponse.json({ success: true, data: categories, meta: { total: categories.length, page: 1, pageSize: categories.length, totalPages: 1 } });
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -48,6 +54,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique")) return badRequest("Category code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

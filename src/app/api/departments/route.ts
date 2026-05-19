@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { listDepartments, createDepartment } from "@/modules/company/departments.service";
 import { createDepartmentSchema } from "@/modules/company/company.validation";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, conflict, serverError } from "@/lib/response";
+import { success, created, badRequest, conflict, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "company:department:read");
@@ -12,15 +12,20 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
-  const departments = await listDepartments({
-    companyId,
-    branchId: searchParams.get("branchId") ?? undefined,
-    parentId: searchParams.has("parentId") ? (searchParams.get("parentId") ?? null) : undefined,
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-  });
+  try {
+    const departments = await listDepartments({
+      companyId,
+      branchId: searchParams.get("branchId") ?? undefined,
+      parentId: searchParams.has("parentId") ? (searchParams.get("parentId") ?? null) : undefined,
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+    });
 
-  return success(departments);
+    return success(departments);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -49,6 +54,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("Unique constraint")) return conflict("Department code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

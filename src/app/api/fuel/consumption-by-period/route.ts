@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getConsumptionByPeriod } from "@/modules/fuel/reports.service";
 import { requirePermission } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:report:read");
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       tankId,
     });
     return success(data);
-  } catch {
-    return serverError();
+  } catch (err) {
+    return handleError(err);
   }
 }

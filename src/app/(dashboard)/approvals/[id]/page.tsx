@@ -131,7 +131,7 @@ export default function ApprovalDetailPage() {
               <CardTitle className="text-base">Request Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Status</span>
                   <div className="mt-1"><StatusBadge status={request.status} /></div>

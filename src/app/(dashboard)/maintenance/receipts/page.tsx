@@ -152,12 +152,12 @@ export default function PartsReceiptsPage() {
         description="View all incoming spare parts stock transactions"
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap items-end">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap items-end">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search by part or reference..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">From</Label>

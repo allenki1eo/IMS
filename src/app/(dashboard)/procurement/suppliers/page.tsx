@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ImportModal } from "@/components/shared/ImportModal";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
@@ -32,6 +33,7 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
+  const [importOpen, setImportOpen] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, status]);
@@ -85,17 +87,23 @@ export default function SuppliersPage() {
         description="Manage procurement supplier records"
         actions={
           <PermissionGuard require="procurement:supplier:create">
-            <Button asChild>
-              <Link href="/procurement/suppliers/new"><Plus className="h-4 w-4 mr-2" />New Supplier</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button asChild>
+                <Link href="/procurement/suppliers/new"><Plus className="h-4 w-4 mr-2" />New Supplier</Link>
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search suppliers..." className="max-w-sm" />
+      <div className="flex flex-wrap gap-2 mb-4">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search suppliers..." className="w-full sm:max-w-xs" />
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[150px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
             <SelectItem value="ACTIVE">Active</SelectItem>
@@ -114,6 +122,24 @@ export default function SuppliersPage() {
         onPageChange={setPage}
         emptyTitle="No suppliers found"
         emptyDescription="Create your first supplier to start issuing purchase orders."
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false);
+          setPage(1);
+        }}
+        title="Import Suppliers"
+        apiEndpoint="/api/procurement/suppliers/import"
+        templateHeaders={["name", "contactPerson", "email", "phone", "address", "taxNumber"]}
+        templateFilename="suppliers-import-template"
+        instructions={[
+          "name is required",
+          "A supplier code will be auto-generated from the name if not provided",
+          "email, phone, address, taxNumber are all optional",
+        ]}
       />
     </div>
   );

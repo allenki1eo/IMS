@@ -78,7 +78,7 @@ export default function UOMPage() {
     setSubmitting(true);
     try {
       const url = editing ? `/api/uoms/${editing.id}` : "/api/uoms";
-      const method = editing ? "PUT" : "POST";
+      const method = editing ? "PATCH" : "POST";
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -173,7 +173,7 @@ export default function UOMPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="uom-code">
                   Code <span className="text-destructive">*</span>

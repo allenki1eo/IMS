@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { listLocations, createLocation } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { NextResponse } from "next/server";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
 
   const { id: warehouseId } = await params;
   const locations = await listLocations(warehouseId);
-  return success({ data: locations, meta: { total: locations.length } });
+  return NextResponse.json({ success: true, data: locations, meta: { total: locations.length, page: 1, pageSize: locations.length, totalPages: 1 } });
 }
 
 export async function POST(
@@ -49,6 +50,6 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Warehouse not found") return badRequest("Warehouse not found");
     if (msg.toLowerCase().includes("unique")) return badRequest("Location code already exists in this warehouse");
-    return serverError();
+    return handleError(err);
   }
 }

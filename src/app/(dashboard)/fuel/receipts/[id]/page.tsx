@@ -113,7 +113,7 @@ export default function ReceiptDetailPage() {
             <StatusBadge status={receipt.status} />
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Reference</p>
                 <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{receipt.reference}</code>
@@ -145,7 +145,7 @@ export default function ReceiptDetailPage() {
 
             <Separator />
 
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Quantity</p>
                 <p className="text-lg font-bold">{receipt.quantity.toLocaleString()} L</p>

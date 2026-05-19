@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PrintButton } from "@/components/shared/PrintButton";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -123,9 +124,12 @@ export default function PurchaseOrderDetailPage() {
         title={order.reference}
         description={order.supplier.name}
         actions={
-          <Button variant="outline" asChild>
-            <Link href="/procurement/orders"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link>
-          </Button>
+          <div className="flex gap-2">
+            <PrintButton className="no-print" />
+            <Button variant="outline" asChild>
+              <Link href="/procurement/orders"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link>
+            </Button>
+          </div>
         }
       />
 

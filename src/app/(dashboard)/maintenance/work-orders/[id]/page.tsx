@@ -230,7 +230,7 @@ export default function WorkOrderDetailPage() {
           <CardHeader>
             <CardTitle className="text-base">Work Order Info</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Status</p>
               <div className="mt-1"><StatusBadge status={workOrder.status} /></div>
@@ -433,7 +433,7 @@ export default function WorkOrderDetailPage() {
             <div className="px-4 py-4 border-b bg-muted/20">
               <form onSubmit={handleAddItem} className="space-y-3">
                 <p className="text-sm font-medium">Add Item</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Type</Label>
                     <Select
@@ -484,7 +484,7 @@ export default function WorkOrderDetailPage() {
                     </Select>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Quantity</Label>
                     <Input

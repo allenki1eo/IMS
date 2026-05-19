@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Truck, MapPin, Clock, Package } from "lucide-react";
+import { ArrowLeft, Truck, MapPin, Clock, Package, Fuel } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
@@ -253,6 +253,17 @@ export default function TripDetailPage() {
               </Button>
             </PermissionGuard>
           </>
+        )}
+
+        {trip.status === "COMPLETED" && trip.vehicle?.id && (
+          <PermissionGuard require="fuel:issue:create">
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/fuel/issues/create?vehicleId=${trip.vehicle.id}&tripRef=${encodeURIComponent(trip.reference)}`}>
+                <Fuel className="h-4 w-4 mr-2" />
+                Record Fuel
+              </Link>
+            </Button>
+          </PermissionGuard>
         )}
 
         {trip.status === "DISPATCHED" && (

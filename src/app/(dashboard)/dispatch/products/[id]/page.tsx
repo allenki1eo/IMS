@@ -151,7 +151,7 @@ export default function FgProductDetailPage() {
         <CardContent>
           {editing ? (
             <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="edit-code">Code <span className="text-destructive">*</span></Label>
                   <Input

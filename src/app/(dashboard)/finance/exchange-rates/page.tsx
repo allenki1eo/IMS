@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface ExchangeRate {
   id: string;
@@ -283,10 +284,21 @@ export default function ExchangeRatesPage() {
                 Converter
               </Link>
             </Button>
-            <Button variant="outline" onClick={() => handleSync("USD")} disabled={syncing}>
-              <Wifi className={syncing ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-              {syncing ? "Syncing…" : "Sync Live Rates"}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={syncing}>
+                  <Wifi className={syncing ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+                  {syncing ? "Syncing…" : "Sync Live Rates"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {["USD", "EUR", "GBP", "TZS", "KES"].map((base) => (
+                  <DropdownMenuItem key={base} onClick={() => handleSync(base)}>
+                    Sync from {base}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" onClick={() => fetchRates(true)} disabled={refreshing}>
               <RefreshCw className={refreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
             </Button>

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listDrivers, createDriver } from "@/modules/transport/drivers.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
@@ -16,15 +16,19 @@ export async function GET(request: NextRequest) {
   const isAvailable =
     isAvailableParam === "true" ? true : isAvailableParam === "false" ? false : undefined;
 
-  const { data, meta } = await listDrivers({
-    search,
-    status,
-    isAvailable,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
-
-  return paginated(data, buildMeta(meta.total, paginationParams));
+  try {
+    const { data, meta } = await listDrivers({
+      search,
+      status,
+      isAvailable,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
+    return paginated(data, buildMeta(meta.total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -64,6 +68,6 @@ export async function POST(request: NextRequest) {
     ) {
       return badRequest(msg);
     }
-    return serverError();
+    return handleError(err);
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getWarehouseById, updateWarehouse } from "@/modules/warehouse/warehouse.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -54,6 +54,6 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Warehouse not found") return notFound(msg);
     if (msg.toLowerCase().includes("unique")) return badRequest("Warehouse code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

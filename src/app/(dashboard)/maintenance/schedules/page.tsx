@@ -147,12 +147,12 @@ export default function SchedulesPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search schedules..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <Select value={vehicleId} onValueChange={setVehicleId}>
           <SelectTrigger className="w-[200px]">

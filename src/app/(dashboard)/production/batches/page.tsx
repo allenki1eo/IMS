@@ -74,8 +74,8 @@ export default function ProductionBatchesPage() {
   return (
     <div>
       <PageHeader title="Production Batches" description="Plan and track brewing and production batches" actions={<PermissionGuard require="production:batch:create"><Button asChild><Link href="/production/batches/new"><Plus className="h-4 w-4 mr-2" />New Batch</Link></Button></PermissionGuard>} />
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search batches..." className="max-w-sm" />
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search batches..." className="w-full sm:max-w-xs" />
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
           <SelectContent>

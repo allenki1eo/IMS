@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { changePasswordService } from "@/modules/auth/auth.service";
 import { changePasswordSchema } from "@/modules/auth/auth.validation";
 import { requireAuth, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { success, badRequest, serverError, handleError } from "@/lib/response";
 
 export async function PUT(request: NextRequest) {
   const auth = await requireAuth(request);

@@ -35,6 +35,10 @@ model Company {
   departments Department[]
   employees   Employee[]
   settings    Setting[]
+  customers   Customer[]
+  salesOrders SalesOrder[]
+  salesKpis   SalesKPI[]
+  dailyMovements DailyTruckMovement[]
 
   @@map("companies")
 }
@@ -381,9 +385,8 @@ model Warehouse {
   companyId   String
   branchId    String?
   name        String
-  code        String   @unique
+  code        String
   address     String?
-  managerId   String?
   warehouseType String @default("MAIN")
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -400,6 +403,7 @@ model Warehouse {
   adjustments   StockAdjustment[]
   fgLots        FGLot[]
 
+  @@unique([companyId, code])
   @@index([companyId])
   @@map("warehouses")
 }
@@ -698,6 +702,7 @@ model Vehicle {
   maintenanceSchedules MaintenanceSchedule[]
   workOrders         WorkOrder[]
   dispatchOrders     DispatchOrder[]
+  dailyMovementEntries DailyTruckMovementEntry[]
 
   @@index([companyId])
   @@index([status])
@@ -740,6 +745,7 @@ model Driver {
   trips          TripOrder[]
   fuelIssues     FuelIssue[]
   dispatchOrders DispatchOrder[]
+  dailyMovementEntries DailyTruckMovementEntry[]
 
   @@index([companyId])
   @@map("drivers")
@@ -1718,4 +1724,170 @@ model ExchangeRate {
   @@index([companyId])
   @@index([fromCurrency, toCurrency])
   @@map("exchange_rates")
+}
+
+// ─────────────────────────────────────────────
+// SALES INTEGRATION (Phase 10)
+// ─────────────────────────────────────────────
+
+model Customer {
+  id            String   @id @default(cuid())
+  companyId     String
+  externalId    String?
+  code          String
+  name          String
+  email         String?
+  phone         String?
+  address       String?
+  contactPerson String?
+  creditLimit   Float?
+  currency      String   @default("TZS")
+  status        String   @default("ACTIVE")
+  notes         String?
+  syncedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company Company      @relation(fields: [companyId], references: [id])
+  orders  SalesOrder[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("customers")
+}
+
+model SalesOrder {
+  id           String   @id @default(cuid())
+  companyId    String
+  externalId   String?
+  reference    String
+  customerId   String
+  status       String   @default("PENDING")
+  priority     String   @default("NORMAL")
+  orderDate    DateTime @default(now())
+  requiredDate DateTime?
+  subtotal     Float    @default(0)
+  taxAmount    Float    @default(0)
+  totalAmount  Float    @default(0)
+  currency     String   @default("TZS")
+  notes        String?
+  dispatchRef  String?
+  syncedAt     DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company  Company          @relation(fields: [companyId], references: [id])
+  customer Customer         @relation(fields: [customerId], references: [id])
+  lines    SalesOrderLine[]
+
+  @@unique([companyId, reference])
+  @@index([companyId])
+  @@index([customerId])
+  @@index([status])
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id          String @id @default(cuid())
+  orderId     String
+  externalId  String?
+  productCode String
+  description String
+  quantity    Float
+  unitPrice   Float
+  discount    Float  @default(0)
+  totalPrice  Float
+  status      String @default("PENDING")
+
+  order SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("sales_order_lines")
+}
+
+model SalesKPI {
+  id           String   @id @default(cuid())
+  companyId    String
+  period       String
+  metric       String
+  target       Float    @default(0)
+  achieved     Float    @default(0)
+  currency     String   @default("TZS")
+  syncedAt     DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, period, metric])
+  @@index([companyId])
+  @@map("sales_kpis")
+}
+
+model SalesWebhookLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  eventType   String
+  externalId  String?
+  payload     String
+  status      String   @default("OK")
+  error       String?
+  processedAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([eventType])
+  @@map("sales_webhook_logs")
+}
+
+// ─────────────────────────────────────────────
+// DAILY TRUCK MOVEMENT
+// ─────────────────────────────────────────────
+
+model DailyTruckMovement {
+  id            String    @id @default(cuid())
+  companyId     String
+  reportDate    DateTime
+  reference     String    @unique
+  status        String    @default("DRAFT")
+  totalVehicles Int       @default(0)
+  onTrip        Int       @default(0)
+  present       Int       @default(0)
+  maintenance   Int       @default(0)
+  offsite       Int       @default(0)
+  other         Int       @default(0)
+  notes         String?
+  createdById   String
+  submittedById String?
+  submittedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  entries DailyTruckMovementEntry[]
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, reportDate])
+  @@index([companyId])
+  @@map("daily_truck_movements")
+}
+
+model DailyTruckMovementEntry {
+  id             String    @id @default(cuid())
+  reportId       String
+  vehicleId      String
+  driverId       String?
+  vehicleStatus  String    @default("PRESENT")
+  tripId         String?
+  destination    String?
+  departureTime  DateTime?
+  expectedReturn DateTime?
+  odometerOut    Float?
+  fuelLevel      String?
+  remarks        String?
+
+  report  DailyTruckMovement @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  vehicle Vehicle            @relation(fields: [vehicleId], references: [id])
+  driver  Driver?            @relation(fields: [driverId], references: [id])
+
+  @@unique([reportId, vehicleId])
+  @@map("daily_truck_movement_entries")
 }

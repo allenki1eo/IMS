@@ -193,7 +193,7 @@ export default function EmployeeDetailPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="firstName">First Name <span className="text-destructive">*</span></Label>
                     <Input id="firstName" name="firstName" value={form.firstName} onChange={handleChange} disabled={saving} />
@@ -217,7 +217,7 @@ export default function EmployeeDetailPage() {
                   <Input id="position" name="position" value={form.position} onChange={handleChange} disabled={saving} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label>Branch</Label>
                     <Select value={form.branchId || "__none"} onValueChange={(v) => handleSelect("branchId", v)} disabled={saving}>

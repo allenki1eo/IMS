@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateSetting } from "@/modules/settings/settings.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 import { z } from "zod";
 
 const schema = z.object({ value: z.string() });
@@ -36,6 +36,6 @@ export async function PUT(
     return success(setting);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    return serverError();
+    return handleError(err);
   }
 }

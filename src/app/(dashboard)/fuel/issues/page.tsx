@@ -181,7 +181,7 @@ export default function IssuesPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -189,7 +189,7 @@ export default function IssuesPage() {
           className="max-w-xs"
         />
         <Select value={tankFilter} onValueChange={setTankFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="All Tanks" />
           </SelectTrigger>
           <SelectContent>
@@ -200,7 +200,7 @@ export default function IssuesPage() {
           </SelectContent>
         </Select>
         <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="All Vehicles" />
           </SelectTrigger>
           <SelectContent>

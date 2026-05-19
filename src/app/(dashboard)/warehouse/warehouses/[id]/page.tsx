@@ -119,7 +119,7 @@ export default function WarehouseDetailPage() {
     setSaving(true);
     try {
       const res = await fetch(`/api/warehouses/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editForm.name,
@@ -219,7 +219,7 @@ export default function WarehouseDetailPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSave} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="name">
                       Name <span className="text-destructive">*</span>
@@ -371,7 +371,7 @@ export default function WarehouseDetailPage() {
             <DialogTitle>Add Location</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAddLocation} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="loc-name">
                   Name <span className="text-destructive">*</span>

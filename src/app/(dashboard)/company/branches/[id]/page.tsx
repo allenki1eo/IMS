@@ -24,7 +24,7 @@ interface Branch {
   phone: string | null;
   email: string | null;
   isMain: boolean;
-  status: string;
+  isActive: boolean;
 }
 
 export default function BranchDetailPage() {
@@ -96,18 +96,18 @@ export default function BranchDetailPage() {
 
   async function toggleStatus() {
     if (!branch) return;
-    const newStatus = branch.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const newIsActive = !branch.isActive;
     setTogglingStatus(true);
     try {
       const res = await fetch(`/api/branches/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ isActive: newIsActive }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to update status"); return; }
-      setBranch((b) => b ? { ...b, status: newStatus } : b);
-      toast.success(`Branch ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+      setBranch((b) => b ? { ...b, isActive: newIsActive } : b);
+      toast.success(`Branch ${newIsActive ? "activated" : "deactivated"}`);
     } catch {
       toast.error("Network error");
     } finally {
@@ -141,7 +141,7 @@ export default function BranchDetailPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1 col-span-2 sm:col-span-1">
                     <Label htmlFor="name">
                       Name <span className="text-destructive">*</span>
@@ -161,7 +161,7 @@ export default function BranchDetailPage() {
                   <Label htmlFor="city">City</Label>
                   <Input id="city" name="city" value={form.city} onChange={handleChange} disabled={saving} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="phone">Phone</Label>
                     <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} disabled={saving} />
@@ -187,19 +187,19 @@ export default function BranchDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2">
-                <StatusBadge status={branch.status} />
+                <StatusBadge status={branch.isActive ? "ACTIVE" : "INACTIVE"} />
                 {branch.isMain && <Badge variant="default">Main Branch</Badge>}
               </div>
               <PermissionGuard require="company:branch:update">
                 <Button
-                  variant={branch.status === "ACTIVE" ? "destructive" : "default"}
+                  variant={branch.isActive ? "destructive" : "default"}
                   size="sm"
                   className="w-full"
                   onClick={toggleStatus}
                   disabled={togglingStatus}
                 >
                   {togglingStatus && <LoadingSpinner className="mr-2" />}
-                  {branch.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                  {branch.isActive ? "Deactivate" : "Activate"}
                 </Button>
               </PermissionGuard>
             </CardContent>

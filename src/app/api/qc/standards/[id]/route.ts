@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getStandard, updateStandard } from "@/modules/qc/standards.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -57,6 +57,6 @@ export async function PATCH(
     if (msg === "Quality standard not found") return notFound(msg);
     if (msg === "Item not found" || msg === "A standard with this code already exists")
       return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

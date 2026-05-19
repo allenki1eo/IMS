@@ -120,12 +120,12 @@ export default function FgProductsPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search by code or name..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
       </div>
 

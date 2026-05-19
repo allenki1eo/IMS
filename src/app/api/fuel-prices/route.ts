@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listPrices, createPrice } from "@/modules/fuel/prices.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:price:read");
@@ -10,8 +10,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const fuelType = searchParams.get("fuelType") ?? undefined;
 
-  const prices = await listPrices({ fuelType });
-  return success(prices);
+  try {
+    const prices = await listPrices({ fuelType });
+    return success(prices);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -46,6 +51,6 @@ export async function POST(request: NextRequest) {
     return created(price);
   } catch (err) {
     console.error(err);
-    return serverError();
+    return handleError(err);
   }
 }

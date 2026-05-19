@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getCompanyById, updateCompany, createCompany } from "@/modules/company/company.service";
 import { updateCompanySchema, createCompanySchema } from "@/modules/company/company.validation";
 import { requirePermission, requireAuth, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError, created } from "@/lib/response";
+import { success, badRequest, notFound, handleError, created } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -11,10 +11,15 @@ export async function GET(request: NextRequest) {
   const companyId = await getCompanyId(request);
   if (!companyId) return notFound("Company not configured");
 
-  const company = await getCompanyById(companyId);
-  if (!company) return notFound("Company not found");
+  try {
+    const company = await getCompanyById(companyId);
+    if (!company) return notFound("Company not found");
 
-  return success(company);
+    return success(company);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -37,8 +42,7 @@ export async function POST(request: NextRequest) {
     });
     return created(company);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed";
-    return serverError(msg);
+    return handleError(err);
   }
 }
 
@@ -65,7 +69,7 @@ export async function PUT(request: NextRequest) {
       userAgent,
     });
     return success(updated);
-  } catch {
-    return serverError();
+  } catch (err) {
+    return handleError(err);
   }
 }

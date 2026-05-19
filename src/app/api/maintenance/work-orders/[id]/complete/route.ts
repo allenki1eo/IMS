@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { completeWorkOrder } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -37,6 +37,6 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Work order not found") return notFound(msg);
     if (msg.includes("Only IN_PROGRESS")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

@@ -158,7 +158,7 @@ export default function WorkflowDetailPage() {
                 <Label htmlFor="name">Name <span className="text-destructive">*</span></Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={saving} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label>Module</Label>
                   <Input value={workflow.module} disabled readOnly className="bg-muted" />
@@ -203,7 +203,7 @@ export default function WorkflowDetailPage() {
                         disabled={saving}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label>Approver Type</Label>
                         <Select value={step.approverType} onValueChange={(v) => handleStepChange(idx, "approverType", v)} disabled={saving}>

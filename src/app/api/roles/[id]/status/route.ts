@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { setRoleStatus } from "@/modules/roles/roles.service";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 import { z } from "zod";
 
 const schema = z.object({ isActive: z.boolean() });

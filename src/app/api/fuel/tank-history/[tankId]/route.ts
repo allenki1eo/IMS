@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getTankLevelHistory } from "@/modules/fuel/reports.service";
 import { requirePermission } from "@/lib/api-helpers";
-import { success, notFound, serverError } from "@/lib/response";
+import { success, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +19,7 @@ export async function GET(
     const result = await getTankLevelHistory(tankId, { from, to });
     if (!result) return notFound("Fuel tank not found");
     return success(result);
-  } catch {
-    return serverError();
+  } catch (err) {
+    return handleError(err);
   }
 }

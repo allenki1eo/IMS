@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { listUOMs, createUOM } from "@/modules/warehouse/items.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { NextResponse } from "next/server";
+import { success, created, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:uom:read");
@@ -13,8 +14,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
 
-  const uoms = await listUOMs(companyId, { search });
-  return success({ data: uoms, meta: { total: uoms.length } });
+  try {
+    const uoms = await listUOMs(companyId, { search });
+    return NextResponse.json({ success: true, data: uoms, meta: { total: uoms.length, page: 1, pageSize: uoms.length, totalPages: 1 } });
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -49,6 +55,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique")) return badRequest("UOM code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

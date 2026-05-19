@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSettings, bulkUpdateSettings } from "@/modules/settings/settings.service";
 import { requireAuth, requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, serverError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 import { z } from "zod";
 
 const bulkUpdateSchema = z.array(
@@ -19,12 +19,17 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
-  const settings = await getSettings({
-    companyId,
-    category: searchParams.get("category") ?? undefined,
-  });
+  try {
+    const settings = await getSettings({
+      companyId,
+      category: searchParams.get("category") ?? undefined,
+    });
 
-  return success(settings);
+    return success(settings);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function PUT(request: NextRequest) {
@@ -52,6 +57,6 @@ export async function PUT(request: NextRequest) {
     return success(results);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    return serverError();
+    return handleError(err);
   }
 }

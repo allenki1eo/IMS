@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ImportModal } from "@/components/shared/ImportModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -45,6 +46,7 @@ export default function EmployeesPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [importOpen, setImportOpen] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const PAGE_SIZE = 20;
@@ -124,25 +126,31 @@ export default function EmployeesPage() {
         description="Manage company employees"
         actions={
           <PermissionGuard require="employees:employee:create">
-            <Button asChild>
-              <Link href="/employees/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Employee
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button asChild>
+                <Link href="/employees/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Employee
+                </Link>
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search by name or employee number..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full sm:w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -163,6 +171,25 @@ export default function EmployeesPage() {
         onPageChange={setPage}
         emptyTitle="No employees found"
         emptyDescription="Add your first employee to get started."
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false);
+          setPage(1);
+        }}
+        title="Import Employees"
+        apiEndpoint="/api/employees/import"
+        templateHeaders={["firstName", "lastName", "employeeNumber", "email", "phone", "jobTitle", "departmentId", "hireDate"]}
+        templateFilename="employees-import-template"
+        instructions={[
+          "firstName, lastName, and employeeNumber are required",
+          "hireDate format: YYYY-MM-DD",
+          "departmentId is optional (use the department's database ID)",
+          "email must be a valid email address if provided",
+        ]}
       />
     </div>
   );

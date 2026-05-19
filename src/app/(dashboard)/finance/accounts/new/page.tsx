@@ -66,7 +66,7 @@ export default function NewAccountPage() {
       <PageHeader title="New Account" description="Add a new account to the chart of accounts" />
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="code">Account Code *</Label>
             <Input id="code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} required />

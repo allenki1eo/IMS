@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getStockLedger } from "@/modules/warehouse/stock.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { paginated, badRequest, serverError } from "@/lib/response";
+import { paginated, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     });
 
     return paginated(entries, buildMeta(total, paginationParams));
-  } catch {
-    return serverError();
+  } catch (err) {
+    return handleError(err);
   }
 }

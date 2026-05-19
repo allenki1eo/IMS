@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PrintButton } from "@/components/shared/PrintButton";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -213,12 +214,15 @@ export default function DispatchOrderDetailPage() {
         title={order.reference}
         description={`Dispatch Order — ${order.customerName}`}
         actions={
-          <Button variant="outline" asChild>
-            <Link href="/dispatch/orders">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <PrintButton className="no-print" />
+            <Button variant="outline" asChild>
+              <Link href="/dispatch/orders">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -390,7 +394,7 @@ export default function DispatchOrderDetailPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="line-quantity">Quantity <span className="text-destructive">*</span></Label>
                     <Input

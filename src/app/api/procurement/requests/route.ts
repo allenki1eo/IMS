@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listPurchaseRequests, createPurchaseRequest } from "@/modules/procurement/requests.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 type RequestLineBody = {
@@ -26,15 +26,20 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") ?? undefined;
   const priority = searchParams.get("priority") ?? undefined;
 
-  const { data, meta } = await listPurchaseRequests(companyId, {
-    search,
-    status,
-    priority,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listPurchaseRequests(companyId, {
+      search,
+      status,
+      priority,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -80,6 +85,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("line")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }
