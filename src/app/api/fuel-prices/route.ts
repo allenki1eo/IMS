@@ -7,13 +7,10 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:price:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { searchParams } = new URL(request.url);
   const fuelType = searchParams.get("fuelType") ?? undefined;
 
-  const prices = await listPrices(companyId, { fuelType });
+  const prices = await listPrices({ fuelType });
   return success(prices);
 }
 

@@ -8,9 +8,6 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:incident:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { searchParams } = new URL(request.url);
   const paginationParams = parsePagination(searchParams);
   const search = searchParams.get("search") ?? undefined;
@@ -18,7 +15,7 @@ export async function GET(request: NextRequest) {
   const incidentType = searchParams.get("incidentType") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { data, meta } = await listIncidents(companyId, {
+  const { data, meta } = await listIncidents({
     search,
     vehicleId,
     incidentType,

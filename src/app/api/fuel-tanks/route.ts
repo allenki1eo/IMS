@@ -7,9 +7,6 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:tank:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
   const fuelType = searchParams.get("fuelType") ?? undefined;
@@ -18,7 +15,7 @@ export async function GET(request: NextRequest) {
   const isActive =
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
 
-  const tanks = await listTanks(companyId, { search, fuelType, branchId, isActive });
+  const tanks = await listTanks({ search, fuelType, branchId, isActive });
   return success(tanks);
 }
 

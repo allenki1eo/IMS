@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getVehicleById, updateVehicle } from "@/modules/transport/vehicles.service";
-import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
+import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
 import { success, badRequest, notFound, serverError } from "@/lib/response";
 
 export async function GET(
@@ -10,11 +10,8 @@ export async function GET(
   const auth = await requirePermission(request, "transport:vehicle:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { id } = await params;
-  const vehicle = await getVehicleById(id, companyId);
+  const vehicle = await getVehicleById(id);
   if (!vehicle) return notFound("Vehicle not found");
 
   return success(vehicle);

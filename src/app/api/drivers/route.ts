@@ -8,9 +8,6 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:driver:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { searchParams } = new URL(request.url);
   const paginationParams = parsePagination(searchParams);
   const search = searchParams.get("search") ?? undefined;
@@ -19,7 +16,7 @@ export async function GET(request: NextRequest) {
   const isAvailable =
     isAvailableParam === "true" ? true : isAvailableParam === "false" ? false : undefined;
 
-  const { data, meta } = await listDrivers(companyId, {
+  const { data, meta } = await listDrivers({
     search,
     status,
     isAvailable,
@@ -63,7 +60,6 @@ export async function POST(request: NextRequest) {
     if (
       msg === "Employee not found" ||
       msg === "Employee is not marked as a driver" ||
-      msg === "Employee does not belong to this company" ||
       msg === "Driver record already exists for this employee"
     ) {
       return badRequest(msg);

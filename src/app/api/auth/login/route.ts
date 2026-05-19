@@ -3,6 +3,7 @@ import { loginService } from "@/modules/auth/auth.service";
 import { loginSchema } from "@/modules/auth/auth.validation";
 import { success, badRequest, serverError } from "@/lib/response";
 import { cookies } from "next/headers";
+import { db } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,15 +24,27 @@ export async function POST(request: NextRequest) {
     });
 
     const cookieStore = await cookies();
-    cookieStore.set("erp_session", result.token, {
+    const cookieOptions = {
       httpOnly: true,
       secure:
         process.env.NODE_ENV === "production" ||
         process.env.FORCE_HTTPS === "true",
-      sameSite: "lax",
-      expires: result.expiresAt,
+      sameSite: "lax" as const,
       path: "/",
+    };
+
+    cookieStore.set("erp_session", result.token, {
+      ...cookieOptions,
+      expires: result.expiresAt,
     });
+
+    const company = await db.company.findFirst({ select: { id: true } });
+    if (company) {
+      cookieStore.set("erp_company_id", company.id, {
+        ...cookieOptions,
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
 
     return success({
       userId: result.userId,
