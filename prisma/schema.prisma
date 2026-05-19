@@ -1895,3 +1895,49 @@ model DailyTruckMovementEntry {
   @@unique([reportId, vehicleId])
   @@map("daily_truck_movement_entries")
 }
+
+// ─────────────────────────────────────────────
+// TRA STAMPS
+// ─────────────────────────────────────────────
+
+model TraStampBatch {
+  id          String   @id @default(cuid())
+  companyId   String
+  batchNumber String   @unique
+  stampType   String   @default("BEER")
+  quantity    Int
+  used        Int      @default(0)
+  serialFrom  String?
+  serialTo    String?
+  receivedAt  DateTime @default(now())
+  expiresAt   DateTime?
+  status      String   @default("ACTIVE")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  activations TraStampActivation[]
+
+  @@index([companyId])
+  @@map("tra_stamp_batches")
+}
+
+model TraStampActivation {
+  id          String   @id @default(cuid())
+  companyId   String
+  batchId     String
+  reference   String   @unique
+  productName String
+  quantity    Int
+  activatedAt DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  batch TraStampBatch @relation(fields: [batchId], references: [id])
+
+  @@index([companyId])
+  @@map("tra_stamp_activations")
+}
