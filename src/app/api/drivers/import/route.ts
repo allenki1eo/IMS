@@ -25,11 +25,10 @@ export async function POST(request: NextRequest) {
     const row = rows[i];
     const rowNum = i + 2;
 
-    const employeeId = row["employeeId"]?.trim() || null;
     const firstName = row["firstName"]?.trim() || null;
 
-    if (!employeeId && !firstName) {
-      errors.push(`Row ${rowNum}: either firstName or employeeId is required`);
+    if (!firstName) {
+      errors.push(`Row ${rowNum}: firstName is required`);
       skipped++;
       continue;
     }
@@ -40,7 +39,6 @@ export async function POST(request: NextRequest) {
     try {
       await createDriver({
         companyId,
-        employeeId,
         firstName,
         lastName: row["lastName"]?.trim() || null,
         phone: row["phone"]?.trim() || null,
