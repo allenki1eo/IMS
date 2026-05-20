@@ -3,6 +3,7 @@ import { createAuditLog } from "@/lib/audit";
 
 export async function listDrivers(
   params: {
+    companyId: string;
     search?: string;
     status?: string;
     isAvailable?: boolean;
@@ -10,10 +11,11 @@ export async function listDrivers(
     pageSize: number;
   }
 ) {
-  const { search, status, isAvailable, page, pageSize } = params;
+  const { companyId, search, status, isAvailable, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
+    companyId,
     ...(status ? { status } : {}),
     ...(isAvailable !== undefined ? { isAvailable } : {}),
     ...(search

@@ -9,6 +9,7 @@ function generateRef(prefix: string): string {
 
 export async function listVehicles(
   params: {
+    companyId: string;
     search?: string;
     branchId?: string;
     status?: string;
@@ -17,10 +18,11 @@ export async function listVehicles(
     pageSize: number;
   }
 ) {
-  const { search, branchId, status, vehicleType, page, pageSize } = params;
+  const { companyId, search, branchId, status, vehicleType, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
+    companyId,
     ...(branchId ? { branchId } : {}),
     ...(status ? { status } : {}),
     ...(vehicleType ? { vehicleType } : {}),
