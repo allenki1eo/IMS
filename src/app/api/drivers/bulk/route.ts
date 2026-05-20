@@ -11,16 +11,28 @@ export async function PATCH(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { ids, status } = body;
+  const { ids, status, isAvailable } = body;
 
   if (!Array.isArray(ids) || ids.length === 0) return badRequest("No IDs provided");
-  if (status !== "ACTIVE" && status !== "INACTIVE") return badRequest("Invalid status");
 
   try {
-    await db.driver.updateMany({
-      where: { id: { in: ids }, companyId },
-      data: { status },
-    });
+    if (status !== undefined) {
+      const VALID = ["ACTIVE", "INACTIVE"];
+      if (!VALID.includes(status)) return badRequest("Invalid status");
+
+      const data: Record<string, unknown> = { status };
+      // Setting inactive always removes availability; setting active doesn't force available
+      // (driver may still be on an active assignment)
+      if (status === "INACTIVE") data.isAvailable = false;
+
+      await db.driver.updateMany({ where: { id: { in: ids }, companyId }, data });
+    } else if (isAvailable !== undefined) {
+      if (typeof isAvailable !== "boolean") return badRequest("isAvailable must be boolean");
+      await db.driver.updateMany({ where: { id: { in: ids }, companyId }, data: { isAvailable } });
+    } else {
+      return badRequest("Provide status or isAvailable");
+    }
+
     return success({ updated: ids.length });
   } catch (err) {
     return handleError(err);

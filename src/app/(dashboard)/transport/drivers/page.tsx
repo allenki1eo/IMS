@@ -79,7 +79,7 @@ export default function DriversPage() {
   const url = `/api/drivers?${params}`;
   const { data: drivers, total, loading, mutate } = usePagedData<DriverRow>(url);
 
-  async function handleBulkAction(status: "ACTIVE" | "INACTIVE") {
+  async function handleBulkStatus(status: "ACTIVE" | "INACTIVE") {
     setBulkLoading(true);
     try {
       const res = await fetch("/api/drivers/bulk", {
@@ -90,6 +90,26 @@ export default function DriversPage() {
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
       toast.success(`${json.data?.updated ?? selectedIds.length} driver(s) set to ${status.toLowerCase()}`);
+      setSelectedIds([]);
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleBulkAvailability(isAvailable: boolean) {
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/drivers/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, isAvailable }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
+      toast.success(`${json.data?.updated ?? selectedIds.length} driver(s) marked ${isAvailable ? "available" : "unavailable"}`);
       setSelectedIds([]);
       mutate();
     } catch {
@@ -247,8 +267,10 @@ export default function DriversPage() {
         selected={selectedIds}
         onClear={() => setSelectedIds([])}
         actions={[
-          { label: "Set Active", onClick: () => handleBulkAction("ACTIVE"), loading: bulkLoading },
-          { label: "Set Inactive", variant: "destructive", onClick: () => handleBulkAction("INACTIVE"), loading: bulkLoading },
+          { label: "Set Active", onClick: () => handleBulkStatus("ACTIVE"), loading: bulkLoading },
+          { label: "Set Inactive", variant: "destructive", onClick: () => handleBulkStatus("INACTIVE"), loading: bulkLoading },
+          { label: "Mark Available", variant: "outline", onClick: () => handleBulkAvailability(true), loading: bulkLoading },
+          { label: "Mark Unavailable", variant: "outline", onClick: () => handleBulkAvailability(false), loading: bulkLoading },
         ]}
       />
 
