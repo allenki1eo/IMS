@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,8 @@ const PAGE_SIZE = 20;
 export default function AssignmentsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -127,6 +130,26 @@ export default function AssignmentsPage() {
       toast.error("Network error");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleBulkAction(action: "return" | "cancel") {
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/vehicle-assignments/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, action }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
+      toast.success(`${json.data?.updated ?? selectedIds.length} assignment(s) ${action === "return" ? "returned" : "cancelled"}`);
+      setSelectedIds([]);
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBulkLoading(false);
     }
   }
 
@@ -247,6 +270,15 @@ export default function AssignmentsPage() {
         </Select>
       </div>
 
+      <BulkActionBar
+        selected={selectedIds}
+        onClear={() => setSelectedIds([])}
+        actions={[
+          { label: "Return Selected", onClick: () => handleBulkAction("return"), loading: bulkLoading },
+          { label: "Cancel Selected", variant: "destructive", onClick: () => handleBulkAction("cancel"), loading: bulkLoading },
+        ]}
+      />
+
       <DataTable
         columns={columns}
         data={assignments}
@@ -255,6 +287,8 @@ export default function AssignmentsPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
+        selectable
+        onSelectionChange={setSelectedIds}
         emptyTitle="No assignments found"
         emptyDescription="Assign a vehicle to a driver to get started."
       />
