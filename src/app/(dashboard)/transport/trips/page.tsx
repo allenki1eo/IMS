@@ -7,6 +7,7 @@ import { Plus, LayoutList, LayoutDashboard, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
+import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { FilterBar } from "@/components/shared/FilterBar";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { KanbanBoard, type KanbanCard } from "@/components/shared/KanbanBoard";
@@ -60,6 +61,8 @@ export default function TripsPage() {
   const [dateTo, setDateTo] = useState("");
   const [view, setView] = useState<"table" | "kanban">("table");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const hasFilters = debounced !== "" || statusFilter !== "ALL" || !!dateFrom || !!dateTo;
@@ -73,6 +76,26 @@ export default function TripsPage() {
   if (dateTo) params.set("dateTo", dateTo);
   const url = `/api/trips?${params}`;
   const { data: trips, total, loading, mutate } = usePagedData<TripRow>(url);
+
+  async function handleBulkAction(action: "cancel" | "delete") {
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/trips/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, action }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
+      toast.success(`${json.data?.updated ?? selectedIds.length} trip(s) ${action === "cancel" ? "cancelled" : "deleted"}`);
+      setSelectedIds([]);
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -219,19 +242,31 @@ export default function TripsPage() {
       </div>
 
       {view === "table" ? (
-        <DataTable
-          columns={columns}
-          data={trips}
-          loading={loading}
-          page={page}
-          pageSize={PAGE_SIZE}
-          total={total}
-          onPageChange={setPage}
-          exportable
-          exportFilename="trips"
-          emptyTitle="No trips found"
-          emptyDescription="Create your first trip to get started."
-        />
+        <>
+          <BulkActionBar
+            selected={selectedIds}
+            onClear={() => setSelectedIds([])}
+            actions={[
+              { label: "Cancel Selected", onClick: () => handleBulkAction("cancel"), loading: bulkLoading },
+              { label: "Delete Selected", variant: "destructive", onClick: () => handleBulkAction("delete"), loading: bulkLoading },
+            ]}
+          />
+          <DataTable
+            columns={columns}
+            data={trips}
+            loading={loading}
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPageChange={setPage}
+            selectable
+            onSelectionChange={setSelectedIds}
+            exportable
+            exportFilename="trips"
+            emptyTitle="No trips found"
+            emptyDescription="Create your first trip to get started."
+          />
+        </>
       ) : (
         <KanbanBoard
           columns={KANBAN_COLUMNS}

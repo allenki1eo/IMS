@@ -7,6 +7,7 @@ import { Plus, Upload, Trash2 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
+import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -64,6 +65,8 @@ export default function DriversPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, availabilityFilter, statusFilter]);
@@ -75,6 +78,26 @@ export default function DriversPage() {
   if (statusFilter !== "ALL") params.set("status", statusFilter);
   const url = `/api/drivers?${params}`;
   const { data: drivers, total, loading, mutate } = usePagedData<DriverRow>(url);
+
+  async function handleBulkAction(status: "ACTIVE" | "INACTIVE") {
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/drivers/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, status }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
+      toast.success(`${json.data?.updated ?? selectedIds.length} driver(s) set to ${status.toLowerCase()}`);
+      setSelectedIds([]);
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -220,6 +243,15 @@ export default function DriversPage() {
         </Select>
       </div>
 
+      <BulkActionBar
+        selected={selectedIds}
+        onClear={() => setSelectedIds([])}
+        actions={[
+          { label: "Set Active", onClick: () => handleBulkAction("ACTIVE"), loading: bulkLoading },
+          { label: "Set Inactive", variant: "destructive", onClick: () => handleBulkAction("INACTIVE"), loading: bulkLoading },
+        ]}
+      />
+
       <DataTable
         columns={columns}
         data={drivers}
@@ -228,6 +260,8 @@ export default function DriversPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
+        selectable
+        onSelectionChange={setSelectedIds}
         emptyTitle="No drivers found"
         emptyDescription="Register your first driver to get started."
       />

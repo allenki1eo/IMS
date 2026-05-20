@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePagedData } from "@/hooks/usePagedData";
@@ -78,6 +79,8 @@ export default function VehiclesPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
   const { user } = useCurrentUser();
   const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
@@ -90,6 +93,26 @@ export default function VehiclesPage() {
   if (statusFilter !== "ALL") params.set("status", statusFilter);
   const url = `/api/vehicles?${params}`;
   const { data: vehicles, total, loading, mutate } = usePagedData<VehicleRow>(url);
+
+  async function handleBulkAction(status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED") {
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/vehicles/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, status }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
+      toast.success(`${json.data?.updated ?? selectedIds.length} vehicle(s) set to ${status.toLowerCase()}`);
+      setSelectedIds([]);
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -231,6 +254,16 @@ export default function VehiclesPage() {
         </Select>
       </div>
 
+      <BulkActionBar
+        selected={selectedIds}
+        onClear={() => setSelectedIds([])}
+        actions={[
+          { label: "Set Active", onClick: () => handleBulkAction("ACTIVE"), loading: bulkLoading },
+          { label: "Set Maintenance", variant: "outline", onClick: () => handleBulkAction("MAINTENANCE"), loading: bulkLoading },
+          { label: "Set Inactive", variant: "destructive", onClick: () => handleBulkAction("INACTIVE"), loading: bulkLoading },
+        ]}
+      />
+
       <DataTable
         columns={columns}
         data={vehicles}
@@ -239,6 +272,8 @@ export default function VehiclesPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
+        selectable
+        onSelectionChange={setSelectedIds}
         emptyTitle="No vehicles found"
         emptyDescription="Add your first vehicle to the fleet."
       />
