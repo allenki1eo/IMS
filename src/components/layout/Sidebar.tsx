@@ -79,6 +79,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Trips", href: "/transport/trips", icon: <MapPin className="h-4 w-4" />, permission: "transport:trip:read" },
           { label: "Incidents", href: "/transport/incidents", icon: <AlertTriangle className="h-4 w-4" />, permission: "transport:incident:read" },
           { label: "Daily Movement", href: "/transport/daily-movement", icon: <FileText className="h-4 w-4" />, permission: "transport:daily-movement:read" },
+          { label: "Truck Sheet", href: "/transport/truck-sheet", icon: <FileText className="h-4 w-4" />, permission: "transport:trip:read" },
         ],
       },
       {

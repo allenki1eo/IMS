@@ -55,6 +55,7 @@ export default function NewTripPage() {
 
   const [form, setForm] = useState({
     vehicleId: "",
+    trailerId: "",
     driverId: "",
     origin: "",
     destination: "",
@@ -71,13 +72,17 @@ export default function NewTripPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  const [trailers, setTrailers] = useState<VehicleOption[]>([]);
+
   useEffect(() => {
     Promise.all([
       fetch("/api/vehicles?status=ACTIVE&pageSize=200").then((r) => r.json()),
+      fetch("/api/vehicles?vehicleType=TRAILER&status=ACTIVE&pageSize=200").then((r) => r.json()),
       fetch("/api/drivers?isAvailable=true&pageSize=200").then((r) => r.json()),
     ])
-      .then(([vJson, dJson]) => {
-        setVehicles(vJson.data ?? []);
+      .then(([vJson, trJson, dJson]) => {
+        setVehicles((vJson.data ?? []).filter((v: VehicleOption & { vehicleType?: string }) => v.vehicleType !== "TRAILER"));
+        setTrailers(trJson.data ?? []);
         setDrivers(dJson.data ?? []);
       })
       .catch(() => toast.error("Failed to load options"));
@@ -105,6 +110,7 @@ export default function NewTripPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           vehicleId: form.vehicleId || undefined,
+          trailerId: form.trailerId || undefined,
           driverId: form.driverId || undefined,
           origin: form.origin.trim(),
           destination: form.destination.trim(),
@@ -157,12 +163,26 @@ export default function NewTripPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label>Vehicle</Label>
+              <Label>Truck (Vehicle)</Label>
               <Select value={form.vehicleId || "__none"} onValueChange={(v) => set("vehicleId", v === "__none" ? "" : v)} disabled={submitting}>
                 <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">None / Unassigned</SelectItem>
                   {vehicles.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.plateNumber} — {v.make} {v.model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Trailer</Label>
+              <Select value={form.trailerId || "__none"} onValueChange={(v) => set("trailerId", v === "__none" ? "" : v)} disabled={submitting}>
+                <SelectTrigger><SelectValue placeholder="Select trailer (optional)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">None</SelectItem>
+                  {trailers.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.plateNumber} — {v.make} {v.model}
                     </SelectItem>

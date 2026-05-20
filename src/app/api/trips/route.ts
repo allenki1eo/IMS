@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
   const {
     branchId,
     vehicleId,
+    trailerId,
     driverId,
     origin,
     destination,
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
       companyId,
       branchId: branchId ?? null,
       vehicleId: vehicleId ?? null,
+      trailerId: trailerId ?? null,
       driverId: driverId ?? null,
       origin,
       destination,

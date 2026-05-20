@@ -690,12 +690,14 @@ model Vehicle {
   averageConsumption Float?
   isActive         Boolean   @default(true)
   notes            String?
+  currentLocation  String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   createdById      String
 
   assignments        VehicleAssignment[]
   trips              TripOrder[]
+  trailedTrips       TripOrder[] @relation("TripOrderTrailer")
   incidents          VehicleIncident[]
   documents          VehicleDocument[]
   fuelIssues         FuelIssue[]
@@ -786,8 +788,10 @@ model TripOrder {
   scheduledArrival   DateTime?
   actualDeparture    DateTime?
   actualArrival      DateTime?
+  trailerId          String?
   cargoDescription   String?
   cargoWeight        Float?
+  currentLocation    String?
   status             String    @default("PLANNED")
   priority           String    @default("NORMAL")
   approvalRequestId  String?
@@ -797,6 +801,7 @@ model TripOrder {
   createdById        String
 
   vehicle   Vehicle?          @relation(fields: [vehicleId], references: [id])
+  trailer   Vehicle?          @relation("TripOrderTrailer", fields: [trailerId], references: [id])
   driver    Driver?           @relation(fields: [driverId], references: [id])
   logs      TripLog[]
   cargo     TripCargo[]
