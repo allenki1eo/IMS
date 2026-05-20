@@ -803,9 +803,10 @@ model TripOrder {
   vehicle   Vehicle?          @relation(fields: [vehicleId], references: [id])
   trailer   Vehicle?          @relation("TripOrderTrailer", fields: [trailerId], references: [id])
   driver    Driver?           @relation(fields: [driverId], references: [id])
-  logs      TripLog[]
-  cargo     TripCargo[]
-  incidents VehicleIncident[]
+  logs                 TripLog[]
+  cargo                TripCargo[]
+  incidents            VehicleIncident[]
+  dailyMovementEntries DailyTruckMovementEntry[]
 
   @@index([companyId])
   @@index([status])
@@ -1896,6 +1897,7 @@ model DailyTruckMovementEntry {
   report  DailyTruckMovement @relation(fields: [reportId], references: [id], onDelete: Cascade)
   vehicle Vehicle            @relation(fields: [vehicleId], references: [id])
   driver  Driver?            @relation(fields: [driverId], references: [id])
+  trip    TripOrder?         @relation(fields: [tripId], references: [id])
 
   @@unique([reportId, vehicleId])
   @@map("daily_truck_movement_entries")

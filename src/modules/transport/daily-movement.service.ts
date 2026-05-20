@@ -56,9 +56,32 @@ export async function getDailyMovementById(id: string) {
             },
           },
           driver: {
-            include: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              licenseNumber: true,
               employee: {
                 select: { id: true, fullName: true, employeeNumber: true },
+              },
+            },
+          },
+          trip: {
+            select: {
+              id: true,
+              origin: true,
+              destination: true,
+              actualDeparture: true,
+              scheduledDeparture: true,
+              currentLocation: true,
+              cargoDescription: true,
+              trailer: { select: { plateNumber: true } },
+              cargo: { select: { description: true } },
+              logs: {
+                orderBy: { eventTime: "desc" },
+                take: 1,
+                select: { location: true },
               },
             },
           },

@@ -114,4 +114,11 @@
 
   /* Force black text */
   * { color: #000 !important; -webkit-print-color-adjust: exact; }
+
+  /* Truck control sheet: tight cells override the default padding */
+  .print-only table th,
+  .print-only table td { padding: 2px 4px !important; font-size: 10px !important; }
+
+  /* Hide the screen-only content when printing (summary bars, editable table) */
+  .no-print { display: none !important; }
 }
