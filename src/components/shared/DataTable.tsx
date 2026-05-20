@@ -9,10 +9,18 @@ import {
 import { EmptyState } from "./EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-function exportCsv<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+function getCellValue<T extends object>(col: { key: string; exportValue?: (row: T) => string | number }, row: T): string {
+  if (col.exportValue) return String(col.exportValue(row));
+  const val = (row as any)[col.key];
+  if (val === null || val === undefined) return "";
+  if (typeof val === "object") return "";
+  return String(val);
+}
+
+function exportCsv<T extends object>(columns: { key: string; header: string; exportValue?: (row: T) => string | number }[], data: T[], filename: string) {
   const headers = columns.map((c) => JSON.stringify(c.header)).join(",");
   const rows = data.map((row) =>
-    columns.map((c) => JSON.stringify((row as any)[c.key] ?? "")).join(",")
+    columns.map((c) => JSON.stringify(getCellValue(c, row))).join(",")
   );
   const csv = [headers, ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -24,22 +32,22 @@ function exportCsv<T extends object>(columns: { key: string; header: string }[],
   URL.revokeObjectURL(url);
 }
 
-async function exportExcel<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+async function exportExcel<T extends object>(columns: { key: string; header: string; exportValue?: (row: T) => string | number }[], data: T[], filename: string) {
   const XLSX = await import("xlsx");
   const headers = columns.map((c) => c.header);
-  const rows = data.map((row) => columns.map((c) => (row as any)[c.key] ?? ""));
+  const rows = data.map((row) => columns.map((c) => getCellValue(c, row)));
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-async function exportPdf<T extends object>(columns: { key: string; header: string }[], data: T[], filename: string) {
+async function exportPdf<T extends object>(columns: { key: string; header: string; exportValue?: (row: T) => string | number }[], data: T[], filename: string) {
   const jsPDF = (await import("jspdf")).default;
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape" });
   const title = filename.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  const date = new Date().toLocaleDateString();
+  const date = new Date().toLocaleDateString("en-GB");
 
   doc.setFontSize(14);
   doc.text(title, 14, 15);
@@ -48,7 +56,7 @@ async function exportPdf<T extends object>(columns: { key: string; header: strin
   doc.text(`Generated: ${date}`, 14, 21);
 
   const head = [columns.map((c) => c.header)];
-  const body = data.map((row) => columns.map((c) => String((row as any)[c.key] ?? "")));
+  const body = data.map((row) => columns.map((c) => getCellValue(c, row)));
 
   autoTable(doc, {
     head,
@@ -72,6 +80,7 @@ interface Column<T> {
   key: string;
   header: string;
   cell?: (row: T) => React.ReactNode;
+  exportValue?: (row: T) => string | number;
   className?: string;
   sortable?: boolean;
 }
