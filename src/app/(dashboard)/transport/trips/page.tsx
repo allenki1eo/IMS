@@ -91,10 +91,12 @@ export default function TripsPage() {
     {
       key: "reference", header: "Reference", sortable: true,
       cell: (row: TripRow) => <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.reference}</code>,
+      exportValue: (row: TripRow) => row.reference,
     },
     {
       key: "vehicle", header: "Vehicle",
       cell: (row: TripRow) => <span className="text-sm font-medium">{row.vehicle?.plateNumber ?? "—"}</span>,
+      exportValue: (row: TripRow) => row.vehicle?.plateNumber ?? "—",
     },
     {
       key: "driver", header: "Driver",
@@ -103,12 +105,16 @@ export default function TripsPage() {
           ([row.driver?.firstName, row.driver?.lastName].filter(Boolean).join(" ") || "—");
         return <span className="text-sm text-muted-foreground">{name}</span>;
       },
+      exportValue: (row: TripRow) =>
+        row.driver?.employee?.fullName ??
+        ([row.driver?.firstName, row.driver?.lastName].filter(Boolean).join(" ") || "—"),
     },
     {
       key: "route", header: "Route",
       cell: (row: TripRow) => (
         <span className="text-sm">{row.origin} <span className="text-muted-foreground">→</span> {row.destination}</span>
       ),
+      exportValue: (row: TripRow) => `${row.origin} → ${row.destination}`,
     },
     {
       key: "scheduledDeparture", header: "Departure", sortable: true,
@@ -117,9 +123,19 @@ export default function TripsPage() {
           {row.scheduledDeparture ? format(new Date(row.scheduledDeparture), "dd MMM yyyy HH:mm") : "—"}
         </span>
       ),
+      exportValue: (row: TripRow) =>
+        row.scheduledDeparture ? format(new Date(row.scheduledDeparture), "dd MMM yyyy HH:mm") : "—",
     },
-    { key: "status", header: "Status", cell: (row: TripRow) => <StatusBadge status={row.status} /> },
-    { key: "priority", header: "Priority", cell: (row: TripRow) => <StatusBadge status={row.priority} /> },
+    {
+      key: "status", header: "Status",
+      cell: (row: TripRow) => <StatusBadge status={row.status} />,
+      exportValue: (row: TripRow) => row.status,
+    },
+    {
+      key: "priority", header: "Priority",
+      cell: (row: TripRow) => <StatusBadge status={row.priority} />,
+      exportValue: (row: TripRow) => row.priority,
+    },
     {
       key: "actions", header: "",
       cell: (row: TripRow) => (

@@ -97,6 +97,8 @@ export async function DELETE(
   const { ipAddress } = getRequestMeta(request);
 
   try {
+    await db.tripCargo.deleteMany({ where: { tripId: id } });
+    await db.tripLog.deleteMany({ where: { tripId: id } });
     await db.tripOrder.delete({ where: { id } });
     await createAuditLog({
       userId: auth.user.id,
