@@ -48,6 +48,9 @@ export async function listTrips(
         vehicle: {
           select: { id: true, plateNumber: true, make: true, model: true },
         },
+        trailer: {
+          select: { id: true, plateNumber: true },
+        },
         driver: {
           include: {
             employee: {
@@ -78,6 +81,9 @@ export async function getTripById(id: string) {
           odometer: true,
         },
       },
+      trailer: {
+        select: { id: true, plateNumber: true, make: true, model: true },
+      },
       driver: {
         include: {
           employee: {
@@ -102,6 +108,7 @@ export async function createTrip(params: {
   companyId: string;
   branchId?: string | null;
   vehicleId?: string | null;
+  trailerId?: string | null;
   driverId?: string | null;
   origin: string;
   destination: string;
@@ -133,6 +140,7 @@ export async function createTrip(params: {
       branchId: data.branchId ?? null,
       reference,
       vehicleId: data.vehicleId ?? null,
+      trailerId: data.trailerId ?? null,
       driverId: data.driverId ?? null,
       origin: data.origin,
       destination: data.destination,
