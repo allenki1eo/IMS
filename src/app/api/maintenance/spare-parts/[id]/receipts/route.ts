@@ -65,6 +65,8 @@ export async function POST(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Spare part not found") return badRequest(msg);
+    if (msg === "Work order not found") return badRequest(msg);
+    if (msg.includes("must be greater") || msg.includes("cannot be negative")) return badRequest(msg);
     return handleError(err);
   }
 }

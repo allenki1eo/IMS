@@ -1,6 +1,18 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+function assertPositiveFiniteNumber(value: number, field: string) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${field} must be greater than 0`);
+  }
+}
+
+function assertNonNegativeFiniteNumber(value: number, field: string) {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${field} cannot be negative`);
+  }
+}
+
 export async function listReceipts(
   companyId: string,
   params: {
@@ -84,16 +96,23 @@ export async function receiveStock(
   userName: string,
   ipAddress?: string
 ) {
+  assertPositiveFiniteNumber(data.quantity, "quantity");
+  if (data.unitCost != null) assertNonNegativeFiniteNumber(data.unitCost, "unitCost");
+
   const part = await db.sparePart.findUnique({ where: { id: data.sparePartId } });
   if (!part) throw new Error("Spare part not found");
   if (part.companyId !== companyId) throw new Error("Spare part not found");
+  if (data.workOrderId) {
+    const workOrder = await db.workOrder.findUnique({ where: { id: data.workOrderId } });
+    if (!workOrder || workOrder.companyId !== companyId) throw new Error("Work order not found");
+  }
 
   const totalCost =
     data.unitCost != null ? data.quantity * data.unitCost : null;
 
   const newStock = part.currentStock + data.quantity;
 
-  const transaction = await db.$transaction(async (tx) => {
+  const transaction = await db.$transaction(async (tx: any) => {
     const created = await tx.sparePartTransaction.create({
       data: {
         companyId,

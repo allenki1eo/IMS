@@ -28,7 +28,7 @@ interface SparePart {
   name: string;
   partNumber?: string | null;
   uom: string;
-  unitCost: number;
+  unitCost?: number | null;
   currentStock: number;
   minStock: number;
   description?: string | null;
@@ -44,10 +44,10 @@ interface CategoryOption {
 interface TransactionRow {
   id: string;
   createdAt: string;
-  type: string;
+  transactionType: string;
   quantity: number;
   unitCost?: number | null;
-  reference?: string | null;
+  referenceId?: string | null;
   notes?: string | null;
   workOrder?: { reference: string } | null;
 }
@@ -248,7 +248,7 @@ export default function SparePartDetailPage() {
                   <Input
                     id="recvQty"
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
                     value={receiveForm.quantity}
                     onChange={(e) => setReceiveForm((p) => ({ ...p, quantity: e.target.value }))}
@@ -337,11 +337,11 @@ export default function SparePartDetailPage() {
               <div className="text-sm space-y-1 border-t pt-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Unit Cost</span>
-                  <span>{currency} {part.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>{currency} {(part.unitCost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between font-medium">
                   <span className="text-muted-foreground">Stock Value</span>
-                  <span>{currency} {(part.currentStock * part.unitCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>{currency} {(part.currentStock * (part.unitCost ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
               {part.partNumber && (
@@ -513,14 +513,14 @@ export default function SparePartDetailPage() {
                           {format(new Date(tx.createdAt), "dd MMM yyyy")}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tx.type === "RECEIPT" ? "text-green-600" : "text-red-600"}`}>
-                            {tx.type === "RECEIPT" ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                            {tx.type}
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tx.transactionType === "RECEIPT" ? "text-green-600" : "text-red-600"}`}>
+                            {tx.transactionType === "RECEIPT" ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                            {tx.transactionType}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={tx.type === "RECEIPT" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                            {tx.type === "RECEIPT" ? "+" : "-"}{tx.quantity.toLocaleString()}
+                          <span className={tx.transactionType === "RECEIPT" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                            {tx.transactionType === "RECEIPT" ? "+" : "-"}{tx.quantity.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
@@ -529,8 +529,8 @@ export default function SparePartDetailPage() {
                             : "—"}
                         </td>
                         <td className="px-4 py-3">
-                          {tx.reference
-                            ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{tx.reference}</code>
+                          {tx.referenceId
+                            ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{tx.referenceId}</code>
                             : "—"}
                         </td>
                         <td className="px-4 py-3">
