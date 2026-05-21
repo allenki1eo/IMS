@@ -59,10 +59,17 @@ export async function PUT(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
+  // Convert empty strings to null for optional fields
+  const data = {
+    ...parsed.data,
+    email: parsed.data.email === "" ? null : parsed.data.email,
+    website: parsed.data.website === "" ? null : parsed.data.website,
+  };
+
   try {
     const updated = await updateCompany({
       id: companyId,
-      data: parsed.data,
+      data,
       updatedById: auth.user.id,
       userName: auth.user.fullName,
       ipAddress,
