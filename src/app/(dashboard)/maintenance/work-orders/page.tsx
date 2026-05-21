@@ -114,6 +114,7 @@ export default function WorkOrdersPage() {
     {
       key: "vehicle",
       header: "Vehicle",
+      exportValue: (row: WorkOrderRow) => row.vehicle?.plateNumber ?? "",
       cell: (row: WorkOrderRow) => (
         <span className="text-muted-foreground">{row.vehicle?.plateNumber ?? "—"}</span>
       ),
@@ -121,6 +122,7 @@ export default function WorkOrdersPage() {
     {
       key: "companyId",
       header: "Company",
+      exportValue: (row: WorkOrderRow) => companyMap[row.companyId] ?? "",
       cell: (row: WorkOrderRow) => (
         <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
           {companyMap[row.companyId] ?? "—"}
@@ -151,6 +153,7 @@ export default function WorkOrdersPage() {
     {
       key: "assignedTo",
       header: "Assigned To",
+      exportValue: (row: WorkOrderRow) => row.assignedTo ? `${row.assignedTo.firstName} ${row.assignedTo.lastName}` : "",
       cell: (row: WorkOrderRow) => (
         <span className="text-muted-foreground">
           {row.assignedTo ? `${row.assignedTo.firstName} ${row.assignedTo.lastName}` : "—"}
@@ -160,6 +163,7 @@ export default function WorkOrdersPage() {
     {
       key: "estimatedCost",
       header: "Est. Cost",
+      exportValue: (row: WorkOrderRow) => row.estimatedCost ?? "",
       cell: (row: WorkOrderRow) => (
         <span>
           {row.estimatedCost != null
@@ -171,6 +175,7 @@ export default function WorkOrdersPage() {
     {
       key: "createdAt",
       header: "Created",
+      exportValue: (row: WorkOrderRow) => format(new Date(row.createdAt), "dd MMM yyyy"),
       cell: (row: WorkOrderRow) => (
         <span className="text-muted-foreground whitespace-nowrap">
           {format(new Date(row.createdAt), "dd MMM yyyy")}

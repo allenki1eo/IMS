@@ -51,8 +51,22 @@ interface TransactionRow {
   referenceId?: string | null;
   referenceType?: string | null;
   notes?: string | null;
-  workOrder?: { reference: string } | null;
+  workOrder?: {
+    reference: string;
+    vehicle?: { plateNumber: string; make?: string | null; model?: string | null } | null;
+  } | null;
   isSynthetic?: boolean;
+}
+
+function transactionReference(tx: TransactionRow) {
+  if (tx.referenceType === "WORK_ORDER") return tx.workOrder?.reference ?? tx.referenceId ?? "";
+  return tx.referenceId ?? tx.referenceType ?? "";
+}
+
+function vehicleLabel(tx: TransactionRow) {
+  const vehicle = tx.workOrder?.vehicle;
+  if (!vehicle) return "";
+  return [vehicle.plateNumber, vehicle.make, vehicle.model].filter(Boolean).join(" ");
 }
 
 function stockStatusLabel(part: SparePart): { label: string; color: string } {
@@ -551,13 +565,18 @@ export default function SparePartDetailPage() {
                             : "—"}
                         </td>
                         <td className="px-4 py-3">
-                          {tx.referenceId || tx.referenceType
-                            ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{tx.referenceId ?? tx.referenceType}</code>
+                          {transactionReference(tx)
+                            ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{transactionReference(tx)}</code>
                             : "—"}
                         </td>
                         <td className="px-4 py-3">
                           {tx.workOrder
-                            ? <span className="text-xs">{tx.workOrder.reference}</span>
+                            ? (
+                              <span className="text-xs">
+                                {tx.workOrder.reference}
+                                {vehicleLabel(tx) ? ` - ${vehicleLabel(tx)}` : ""}
+                              </span>
+                            )
                             : "—"}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{tx.notes ?? "—"}</td>
