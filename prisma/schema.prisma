@@ -690,7 +690,6 @@ model Vehicle {
   averageConsumption Float?
   isActive         Boolean   @default(true)
   notes            String?
-  currentLocation  String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   createdById      String
