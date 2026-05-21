@@ -11,6 +11,7 @@ import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,6 +74,7 @@ function priorityClass(priority: string): string {
 }
 
 export default function WorkOrderDetailPage() {
+  const currency = useCurrency();
   const { id } = useParams<{ id: string }>();
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [items, setItems] = useState<WorkOrderItem[]>([]);
@@ -296,19 +298,19 @@ export default function WorkOrderDetailPage() {
               <span className="text-muted-foreground">Estimated Cost</span>
               <span>
                 {workOrder.estimatedCost != null
-                  ? `$${workOrder.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  ? `${currency} ${workOrder.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   : "—"}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Items Total</span>
-              <span>${totalItemsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>{currency} {totalItemsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {workOrder.actualCost != null && (
               <div className="flex justify-between font-semibold border-t pt-3">
                 <span>Actual Cost</span>
                 <span className="text-lg">
-                  ${workOrder.actualCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currency} {workOrder.actualCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             )}
@@ -573,10 +575,10 @@ export default function WorkOrderDetailPage() {
                       </td>
                       <td className="px-4 py-3">{item.quantity.toLocaleString()}</td>
                       <td className="px-4 py-3">
-                        ${item.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currency} {item.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        ${item.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currency} {item.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       {workOrder.status !== "COMPLETED" && workOrder.status !== "CANCELLED" && (
                         <td className="px-4 py-3">
@@ -599,7 +601,7 @@ export default function WorkOrderDetailPage() {
                   <tr className="border-t bg-muted/20 font-semibold">
                     <td colSpan={5} className="px-4 py-3 text-right">Total</td>
                     <td className="px-4 py-3">
-                      ${totalItemsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {currency} {totalItemsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     {workOrder.status !== "COMPLETED" && workOrder.status !== "CANCELLED" && (
                       <td className="px-4 py-3" />

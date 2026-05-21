@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePagedData } from "@/hooks/usePagedData";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface WorkOrderRow {
   id: string;
@@ -64,6 +65,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 };
 
 export default function WorkOrdersPage() {
+  const currency = useCurrency();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
@@ -161,7 +163,7 @@ export default function WorkOrdersPage() {
       cell: (row: WorkOrderRow) => (
         <span>
           {row.estimatedCost != null
-            ? `$${row.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ? `${currency} ${row.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             : "—"}
         </span>
       ),

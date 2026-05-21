@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermission } from "@/hooks/usePermission";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function BankAccountDetailPage() {
   const { id } = useParams();
@@ -22,6 +23,7 @@ export default function BankAccountDetailPage() {
   const [txnLoading, setTxnLoading] = useState(false);
   const [reconcileFilter, setReconcileFilter] = useState<"all" | "cleared" | "uncleared">("all");
   const canUpdate = usePermission("finance:bank:update");
+  const currency = useCurrency();
 
   async function fetchAccount() {
     try {
@@ -138,7 +140,7 @@ export default function BankAccountDetailPage() {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Type</CardTitle></CardHeader><CardContent><Badge>{account.accountType}</Badge></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Account Number</CardTitle></CardHeader><CardContent>{account.accountNumber || "-"}</CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Currency</CardTitle></CardHeader><CardContent>{account.currency}</CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">${account.currentBalance.toLocaleString()}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {account.currentBalance.toLocaleString()}</div></CardContent></Card>
       </div>
 
       <Card>
@@ -160,9 +162,9 @@ export default function BankAccountDetailPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-            <div className="bg-muted p-3 rounded"><div className="text-muted-foreground">Book Balance</div><div className="text-lg font-bold">${account.currentBalance.toLocaleString()}</div></div>
-            <div className="bg-green-50 p-3 rounded"><div className="text-muted-foreground">Cleared Balance</div><div className="text-lg font-bold text-green-700">${(account.currentBalance - unclearedTotal).toLocaleString()}</div></div>
-            <div className="bg-amber-50 p-3 rounded"><div className="text-muted-foreground">Uncleared</div><div className="text-lg font-bold text-amber-700">${unclearedTotal.toLocaleString()}</div></div>
+            <div className="bg-muted p-3 rounded"><div className="text-muted-foreground">Book Balance</div><div className="text-lg font-bold">{currency} {account.currentBalance.toLocaleString()}</div></div>
+            <div className="bg-green-50 p-3 rounded"><div className="text-muted-foreground">Cleared Balance</div><div className="text-lg font-bold text-green-700">{currency} {(account.currentBalance - unclearedTotal).toLocaleString()}</div></div>
+            <div className="bg-amber-50 p-3 rounded"><div className="text-muted-foreground">Uncleared</div><div className="text-lg font-bold text-amber-700">{currency} {unclearedTotal.toLocaleString()}</div></div>
           </div>
 
           {txnLoading ? (
@@ -190,7 +192,7 @@ export default function BankAccountDetailPage() {
                       <td className="px-4 py-2"><Badge variant={tx.type === "DEPOSIT" ? "default" : "secondary"}>{tx.type}</Badge></td>
                       <td className="px-4 py-2">{tx.reference || "-"}</td>
                       <td className="px-4 py-2">{tx.description || "-"}</td>
-                      <td className="px-4 py-2 text-right">${tx.amount.toLocaleString()}</td>
+                      <td className="px-4 py-2 text-right">{currency} {tx.amount.toLocaleString()}</td>
                       <td className="px-4 py-2 text-center">
                         {tx.cleared ? (
                           <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50"><CheckCircle className="h-3 w-3 mr-1 inline" />Cleared</Badge>

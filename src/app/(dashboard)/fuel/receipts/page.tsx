@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface ReceiptRow {
   id: string;
@@ -44,6 +45,7 @@ const STATUS_FILTERS = [
 ];
 
 export default function ReceiptsPage() {
+  const currency = useCurrency();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [tankFilter, setTankFilter] = useState("ALL");
@@ -115,7 +117,7 @@ export default function ReceiptsPage() {
       header: "Price/L",
       cell: (row: ReceiptRow) => (
         <span className="text-muted-foreground">
-          {row.pricePerLiter != null ? `$${row.pricePerLiter.toFixed(3)}` : "—"}
+          {row.pricePerLiter != null ? `${currency} ${row.pricePerLiter.toFixed(3)}` : "—"}
         </span>
       ),
     },
@@ -124,7 +126,7 @@ export default function ReceiptsPage() {
       header: "Total Cost",
       cell: (row: ReceiptRow) => (
         <span className="font-medium">
-          {row.totalCost != null ? `$${row.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+          {row.totalCost != null ? `${currency} ${row.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
         </span>
       ),
     },

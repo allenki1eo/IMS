@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePermission } from "@/hooks/usePermission";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function JournalEntryDetailPage() {
   const { id } = useParams();
@@ -20,6 +21,7 @@ export default function JournalEntryDetailPage() {
   const [loading, setLoading] = useState(true);
   const canPost = usePermission("finance:journal:post");
   const canReverse = usePermission("finance:journal:reverse");
+  const currency = useCurrency();
 
   async function fetchEntry() {
     try {
@@ -104,8 +106,8 @@ export default function JournalEntryDetailPage() {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Date</CardTitle></CardHeader><CardContent>{new Date(entry.entryDate).toLocaleDateString()}</CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Voucher</CardTitle></CardHeader><CardContent><Badge variant="outline">{entry.voucherType || "JOURNAL"}</Badge></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Status</CardTitle></CardHeader><CardContent><Badge variant={entry.status === "POSTED" ? "default" : entry.status === "REVERSED" ? "destructive" : "secondary"}>{entry.status}</Badge></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Debit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">${entry.totalDebit.toLocaleString()}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Credit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">${entry.totalCredit.toLocaleString()}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Debit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">{currency} {entry.totalDebit.toLocaleString()}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Credit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">{currency} {entry.totalCredit.toLocaleString()}</div></CardContent></Card>
       </div>
 
       <Card>
@@ -120,8 +122,8 @@ export default function JournalEntryDetailPage() {
                 <tr key={line.id} className="border-t">
                   <td className="px-4 py-2">{line.account.code} - {line.account.name}</td>
                   <td className="px-4 py-2">{line.description}</td>
-                  <td className="px-4 py-2 text-right">{line.debit > 0 ? `$${line.debit.toLocaleString()}` : "-"}</td>
-                  <td className="px-4 py-2 text-right">{line.credit > 0 ? `$${line.credit.toLocaleString()}` : "-"}</td>
+                  <td className="px-4 py-2 text-right">{line.debit > 0 ? `${currency} ${line.debit.toLocaleString()}` : "-"}</td>
+                  <td className="px-4 py-2 text-right">{line.credit > 0 ? `${currency} ${line.credit.toLocaleString()}` : "-"}</td>
                 </tr>
               ))}
             </tbody>

@@ -21,6 +21,7 @@ import {
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePagedData } from "@/hooks/usePagedData";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface CategoryOption {
   id: string;
@@ -50,6 +51,7 @@ function stockStatusBadge(part: SparePartRow) {
 }
 
 export default function SparePartsPage() {
+  const currency = useCurrency();
   const [page, setPage] = useState(1);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoryId, setCategoryId] = useState("ALL");
@@ -150,7 +152,7 @@ export default function SparePartsPage() {
       key: "unitCost",
       header: "Unit Cost",
       cell: (row: SparePartRow) => (
-        <span>${row.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        <span>{currency} {row.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       ),
     },
     {

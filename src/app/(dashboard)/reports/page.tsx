@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/DataTable";
+import { useCurrency } from "@/hooks/useCurrency";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"];
 
@@ -34,6 +35,7 @@ const MODULES = [
 ];
 
 export default function ReportsPage() {
+  const currency = useCurrency();
   const [activeModule, setActiveModule] = useState("warehouse");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -67,7 +69,7 @@ export default function ReportsPage() {
   }
 
   function formatCurrency(n: number) {
-    return `$${(n || 0).toLocaleString()}`;
+    return `${currency} ${(n || 0).toLocaleString()}`;
   }
 
   return (

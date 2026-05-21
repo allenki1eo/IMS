@@ -8,6 +8,7 @@ import { Fuel, TrendingDown, Droplets, DollarSign } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface TankSummary {
   id: string;
@@ -49,6 +50,7 @@ function tankStatusLabel(tank: TankSummary): { label: string; color: string } {
 }
 
 export default function FuelOverviewPage() {
+  const currency = useCurrency();
   const [stats, setStats] = useState<Stats | null>(null);
   const [tanks, setTanks] = useState<TankSummary[]>([]);
   const [recentIssues, setRecentIssues] = useState<RecentIssue[]>([]);
@@ -140,7 +142,7 @@ export default function FuelOverviewPage() {
               <DollarSign className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">${(stats?.totalCostThisMonth ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold">{currency} {(stats?.totalCostThisMonth ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               <p className="text-sm text-muted-foreground">Cost This Month</p>
             </div>
           </CardContent>

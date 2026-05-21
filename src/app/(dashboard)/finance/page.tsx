@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Landmark, BookOpen, Wallet, Banknote, FileText } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
@@ -19,6 +20,7 @@ interface FinanceStats {
 export default function FinancePage() {
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const currency = useCurrency();
 
   useEffect(() => {
     async function fetchStats() {
@@ -70,7 +72,7 @@ export default function FinancePage() {
 
   const cards = [
     { label: "Chart of Accounts", value: stats?.totalAccounts || 0, icon: BookOpen, href: "/finance/accounts" },
-    { label: "Bank Balance", value: `$${(stats?.totalBankBalance || 0).toLocaleString()}`, icon: Landmark, href: "/finance/bank-accounts" },
+    { label: "Bank Balance", value: `${currency} ${(stats?.totalBankBalance || 0).toLocaleString()}`, icon: Landmark, href: "/finance/bank-accounts" },
     { label: "Pending Payments", value: stats?.pendingPayments || 0, icon: Wallet, href: "/finance/payments?status=PENDING" },
     { label: "Completed Payments", value: stats?.completedPayments || 0, icon: Banknote, href: "/finance/payments?status=COMPLETED" },
     { label: "Draft Journals", value: stats?.draftJournals || 0, icon: FileText, href: "/finance/journal-entries?status=DRAFT" },
