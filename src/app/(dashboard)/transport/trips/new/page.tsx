@@ -76,12 +76,13 @@ export default function NewTripPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/vehicles?status=ACTIVE&pageSize=200").then((r) => r.json()),
-      fetch("/api/vehicles?vehicleType=TRAILER&status=ACTIVE&pageSize=200").then((r) => r.json()),
-      fetch("/api/drivers?isAvailable=true&pageSize=200").then((r) => r.json()),
+      fetch("/api/vehicles?pageSize=200").then((r) => r.json()),
+      fetch("/api/vehicles?vehicleType=TRAILER&pageSize=200").then((r) => r.json()),
+      fetch("/api/drivers?pageSize=200").then((r) => r.json()),
     ])
       .then(([vJson, trJson, dJson]) => {
-        setVehicles((vJson.data ?? []).filter((v: VehicleOption & { vehicleType?: string }) => v.vehicleType !== "TRAILER"));
+        const allVehicles: (VehicleOption & { vehicleType?: string })[] = vJson.data ?? [];
+        setVehicles(allVehicles.filter((v) => v.vehicleType !== "TRAILER"));
         setTrailers(trJson.data ?? []);
         setDrivers(dJson.data ?? []);
       })
