@@ -24,8 +24,8 @@ interface RecentIssue {
   id: string;
   reference: string;
   vehicle?: { plateNumber: string } | null;
-  driver?: { firstName: string; lastName: string } | null;
-  quantity: number;
+  driver?: { firstName?: string | null; lastName?: string | null; employee?: { fullName: string } | null } | null;
+  quantityLiters: number;
   issuedAt: string;
 }
 
@@ -242,9 +242,11 @@ export default function FuelOverviewPage() {
                           </Link>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {issue.driver ? `${issue.driver.firstName} ${issue.driver.lastName}` : "—"}
+                          {issue.driver
+                            ? (issue.driver.employee?.fullName ?? [issue.driver.firstName, issue.driver.lastName].filter(Boolean).join(" ") ?? "—")
+                            : "—"}
                         </td>
-                        <td className="px-4 py-3">{issue.quantity.toLocaleString()} L</td>
+                        <td className="px-4 py-3">{issue.quantityLiters.toLocaleString()} L</td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {format(new Date(issue.issuedAt), "dd MMM yyyy")}
                         </td>
