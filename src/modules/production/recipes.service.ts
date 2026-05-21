@@ -10,6 +10,17 @@ type RecipeMaterialInput = {
   wastagePct?: number;
 };
 
+type ItemCodeRow = {
+  id: string;
+  code: string;
+};
+
+function assertPositiveFiniteNumber(value: number, field: string) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${field} must be greater than 0`);
+  }
+}
+
 export async function listProductionRecipes(
   companyId: string,
   params: { search?: string; status?: string; page: number; pageSize: number }
@@ -73,6 +84,17 @@ export async function createProductionRecipe(
   ipAddress?: string
 ) {
   if (!data.materials.length) throw new Error("At least one material is required");
+  assertPositiveFiniteNumber(data.batchSize, "batchSize");
+
+  for (const mat of data.materials) {
+    if (!mat.description || !mat.description.trim()) {
+      throw new Error("material description is required");
+    }
+    assertPositiveFiniteNumber(mat.quantity, `material quantity for ${mat.description || "line"}`);
+    if (mat.wastagePct != null && (!Number.isFinite(mat.wastagePct) || mat.wastagePct < 0)) {
+      throw new Error(`wastage percentage for ${mat.description || "line"} cannot be negative`);
+    }
+  }
 
   const recipe = await db.productionRecipe.create({
     data: {
@@ -136,7 +158,7 @@ export async function calculateRecipeCapacity(
   }
 
   // Resolve codes to IDs
-  const itemsByCode =
+  const itemsByCode: ItemCodeRow[] =
     itemCodes.length > 0
       ? await db.item.findMany({
           where: { companyId, code: { in: itemCodes } },
@@ -241,5 +263,40 @@ export async function updateProductionRecipeStatus(
     companyId,
   });
   return updated;
+}
+
+export async function deleteProductionRecipe(
+  companyId: string,
+  id: string,
+  userId: string,
+  userName: string,
+  ipAddress?: string
+) {
+  const existing = await db.productionRecipe.findFirst({
+    where: { id, companyId },
+    include: { _count: { select: { batches: true } } },
+  });
+  if (!existing) throw new Error("Production recipe not found");
+  if (existing._count.batches > 0) {
+    throw new Error("Production recipe has batches and cannot be deleted");
+  }
+
+  await db.$transaction([
+    db.recipeMaterial.deleteMany({ where: { recipeId: id } }),
+    db.productionRecipe.delete({ where: { id } }),
+  ]);
+
+  await createAuditLog({
+    userId,
+    userName,
+    action: "PRODUCTION_RECIPE_DELETE",
+    module: "production",
+    resource: "recipe",
+    recordId: id,
+    oldValue: { code: existing.code, name: existing.name },
+    description: `Deleted production recipe: ${existing.name} (${existing.code})`,
+    ipAddress,
+    companyId,
+  });
 }
 

@@ -59,6 +59,10 @@ export default function NewProductionRecipePage() {
   }
 
   function selectItem(index: number, itemId: string) {
+    if (!itemId) {
+      updateMaterial(index, { itemId: "", itemCode: "" });
+      return;
+    }
     const item = items.find((it) => it.id === itemId);
     if (!item) return;
     updateMaterial(index, {
@@ -137,7 +141,7 @@ export default function NewProductionRecipePage() {
               <div className="space-y-1"><Label>Product Name <span className="text-destructive">*</span></Label><Input value={form.productName} onChange={(e) => setForm((p) => ({ ...p, productName: e.target.value }))} disabled={submitting} /></div>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1"><Label>Batch Size</Label><Input type="number" min="0" step="0.01" value={form.batchSize} onChange={(e) => setForm((p) => ({ ...p, batchSize: e.target.value }))} disabled={submitting} /></div>
+              <div className="space-y-1"><Label>Batch Size</Label><Input type="number" min="0.01" step="0.01" value={form.batchSize} onChange={(e) => setForm((p) => ({ ...p, batchSize: e.target.value }))} disabled={submitting} /></div>
               <div className="space-y-1"><Label>UOM</Label><Input value={form.uom} onChange={(e) => setForm((p) => ({ ...p, uom: e.target.value }))} disabled={submitting} /></div>
               <div className="space-y-1"><Label>Version</Label><Input value={form.version} onChange={(e) => setForm((p) => ({ ...p, version: e.target.value }))} disabled={submitting} /></div>
             </div>
@@ -186,7 +190,7 @@ export default function NewProductionRecipePage() {
                   </div>
                   <div className="sm:col-span-2 space-y-1">
                     <Label>Qty</Label>
-                    <Input type="number" min="0" step="0.01" value={line.quantity} onChange={(e) => updateMaterial(idx, { quantity: e.target.value })} disabled={submitting} />
+                    <Input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => updateMaterial(idx, { quantity: e.target.value })} disabled={submitting} />
                   </div>
                   <div className="sm:col-span-2 space-y-1">
                     <Label>UOM</Label>
