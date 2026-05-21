@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface IssueRow {
   id: string;
@@ -37,6 +38,8 @@ interface TankOption { id: string; name: string; }
 interface VehicleOption { id: string; plateNumber: string; }
 
 export default function IssuesPage() {
+  const { user } = useCurrentUser();
+  const currency = user?.companies?.[0]?.currency ?? "TZS";
   const [page, setPage] = useState(1);
   const [tankFilter, setTankFilter] = useState("ALL");
   const [vehicleFilter, setVehicleFilter] = useState("ALL");
@@ -144,7 +147,7 @@ export default function IssuesPage() {
       cell: (row: IssueRow) => (
         <span className="font-medium">
           {row.totalCost != null
-            ? `$${row.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ? `${currency} ${row.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             : "—"}
         </span>
       ),

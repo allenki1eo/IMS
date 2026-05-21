@@ -8,6 +8,7 @@ export interface JWTPayload {
 export interface CompanySummary {
   id: string;
   name: string;
+  currency: string;
 }
 
 export interface AuthUser {
