@@ -65,6 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Adjustments", href: "/warehouse/adjustments", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:adjustment:read" },
           { label: "Categories", href: "/warehouse/categories", icon: <Layers className="h-4 w-4" />, permission: "warehouse:category:read" },
           { label: "UOM", href: "/warehouse/uom", icon: <Layers className="h-4 w-4" />, permission: "warehouse:uom:read" },
+          { label: "Reports", href: "/warehouse/reports", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:stock:read" },
         ],
       },
       {
