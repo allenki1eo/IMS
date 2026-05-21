@@ -87,8 +87,9 @@ export default function TankDetailPage() {
   const loadTank = useCallback(() => {
     setLoading(true);
     fetch(`/api/fuel-tanks/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) { toast.error(d.error ?? "Failed to load tank"); return; }
         const t: Tank = d.data;
         setTank(t);
         if (t) {
