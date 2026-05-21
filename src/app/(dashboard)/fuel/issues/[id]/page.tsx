@@ -38,7 +38,7 @@ export default function FuelIssueDetailPage() {
     try {
       const res = await fetch(`/api/fuel-issues/${id}`);
       if (!res.ok) throw new Error();
-      setIssue(await res.json());
+      setIssue((await res.json()).data);
     } catch { toast.error("Failed to load fuel issue"); }
     finally { setLoading(false); }
   }, [id]);

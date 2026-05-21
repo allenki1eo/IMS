@@ -28,7 +28,7 @@ interface Receipt {
   tank?: { id: string; name: string; currentLevel: number; capacity: number } | null;
   supplierName: string | null;
   deliveryNoteRef: string | null;
-  quantity: number;
+  quantityLiters: number;
   pricePerLiter: number | null;
   totalCost: number | null;
   currency: string;
@@ -78,7 +78,7 @@ export default function ReceiptDetailPage() {
   if (!receipt) return <div className="text-muted-foreground">Receipt not found.</div>;
 
   const newLevel = receipt.tank
-    ? Math.min(receipt.tank.currentLevel + receipt.quantity, receipt.tank.capacity)
+    ? Math.min(receipt.tank.currentLevel + receipt.quantityLiters, receipt.tank.capacity)
     : null;
 
   return (
@@ -148,7 +148,7 @@ export default function ReceiptDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Quantity</p>
-                <p className="text-lg font-bold">{receipt.quantity.toLocaleString()} L</p>
+                <p className="text-lg font-bold">{receipt.quantityLiters.toLocaleString()} L</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Price / Liter</p>
@@ -220,7 +220,7 @@ export default function ReceiptDetailPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Quantity to Add</span>
-              <span className="font-medium text-green-600">+{receipt.quantity.toLocaleString()} L</span>
+              <span className="font-medium text-green-600">+{receipt.quantityLiters.toLocaleString()} L</span>
             </div>
             {receipt.tank && (
               <>

@@ -28,7 +28,7 @@ interface IssueRow {
   vehicle?: { id: string; plateNumber: string; usageType?: string; nextRefuelAt?: string | null } | null;
   driver?: { id: string; firstName: string; lastName: string } | null;
   tank?: { id: string; name: string } | null;
-  quantity: number;
+  quantityLiters: number;
   odometerReading: number | null;
   totalCost: number | null;
   issuedAt: string;
@@ -130,7 +130,7 @@ export default function IssuesPage() {
     {
       key: "quantity",
       header: "Qty (L)",
-      cell: (row: IssueRow) => <span>{row.quantity.toLocaleString()}</span>,
+      cell: (row: IssueRow) => <span>{row.quantityLiters.toLocaleString()}</span>,
     },
     {
       key: "odometer",

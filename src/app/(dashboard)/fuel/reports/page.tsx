@@ -87,7 +87,7 @@ export default function FuelReportsPage() {
     },
     { key: "totalLiters", header: "Total Liters", cell: (r: VehicleConsumption) => <span className="font-semibold">{r.totalLiters.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</span> },
     { key: "totalCost", header: "Total Cost", cell: (r: VehicleConsumption) => r.totalCost > 0 ? `${currency} ${r.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—" },
-    { key: "avgLiters", header: "Avg L / Issue", cell: (r: VehicleConsumption) => `${r.avgLitersPerIssue.toFixed(1)} L` },
+    { key: "avgLiters", header: "Avg L / Issue", cell: (r: VehicleConsumption) => `${(r.avgLitersPerIssue ?? 0).toFixed(1)} L` },
     { key: "issueCount", header: "Issues", cell: (r: VehicleConsumption) => <Badge variant="outline">{r.issueCount}</Badge> },
   ];
 

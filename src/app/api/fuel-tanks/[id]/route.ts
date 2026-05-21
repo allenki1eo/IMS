@@ -32,7 +32,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { branchId, name, code, fuelType, capacity, minLevel, notes } = body;
+  const { branchId, name, code, fuelType, capacity, minLevel, notes, status } = body;
 
   const { ipAddress } = getRequestMeta(request);
 
@@ -47,6 +47,7 @@ export async function PATCH(
         ...(capacity !== undefined ? { capacity } : {}),
         ...(minLevel !== undefined ? { minLevel } : {}),
         ...(notes !== undefined ? { notes } : {}),
+        ...(status !== undefined ? { isActive: status === "ACTIVE" || status === true } : {}),
       },
       updatedById: auth.user.id,
       userName: auth.user.fullName,

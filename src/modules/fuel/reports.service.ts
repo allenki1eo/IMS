@@ -63,7 +63,11 @@ export async function getConsumptionByVehicle(
     }
   }
 
-  return Array.from(grouped.values()).sort((a, b) => b.totalLiters - a.totalLiters);
+  const results = Array.from(grouped.values()).sort((a, b) => b.totalLiters - a.totalLiters);
+  return results.map((r) => ({
+    ...r,
+    avgLitersPerIssue: r.issueCount > 0 ? r.totalLiters / r.issueCount : 0,
+  }));
 }
 
 function getPeriodKey(date: Date, groupBy: "day" | "week" | "month"): string {

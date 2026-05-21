@@ -116,7 +116,7 @@ export default function NewReceiptPage() {
           tankId: form.tankId,
           supplierName: form.supplierName || undefined,
           deliveryNoteRef: form.deliveryNoteRef || undefined,
-          quantity: qty,
+          quantityLiters: qty,
           pricePerLiter: price || undefined,
           totalCost: totalCost || undefined,
           currency: form.currency,
