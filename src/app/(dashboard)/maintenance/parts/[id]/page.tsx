@@ -33,6 +33,7 @@ interface SparePart {
   minStock: number;
   description?: string | null;
   status: string;
+  createdAt?: string;
   category?: { id: string; name: string } | null;
 }
 
@@ -48,8 +49,10 @@ interface TransactionRow {
   quantity: number;
   unitCost?: number | null;
   referenceId?: string | null;
+  referenceType?: string | null;
   notes?: string | null;
   workOrder?: { reference: string } | null;
+  isSynthetic?: boolean;
 }
 
 function stockStatusLabel(part: SparePart): { label: string; color: string } {
@@ -105,7 +108,7 @@ export default function SparePartDetailPage() {
             categoryId: p.category?.id ?? "",
             partNumber: p.partNumber ?? "",
             uom: p.uom,
-            unitCost: String(p.unitCost),
+            unitCost: p.unitCost != null ? String(p.unitCost) : "",
             minStock: String(p.minStock),
             description: p.description ?? "",
             status: p.status,
@@ -120,12 +123,30 @@ export default function SparePartDetailPage() {
 
   useEffect(() => {
     if (activeTab === "transactions") {
-      fetch(`/api/maintenance/spare-parts/${id}/receipts?pageSize=100`)
+      fetch(`/api/maintenance/spare-parts/${id}/receipts?all=true&pageSize=100`)
         .then((r) => r.json())
-        .then((d) => setTransactions(d.data ?? []))
+        .then((d) => {
+          const rows: TransactionRow[] = d.data ?? [];
+          if (!rows.length && part && part.currentStock > 0) {
+            setTransactions([
+              {
+                id: `opening-${part.id}`,
+                createdAt: part.createdAt ?? new Date().toISOString(),
+                transactionType: "OPENING",
+                quantity: part.currentStock,
+                unitCost: part.unitCost ?? null,
+                referenceType: "OPENING_BALANCE",
+                notes: "Opening stock balance",
+                isSynthetic: true,
+              },
+            ]);
+            return;
+          }
+          setTransactions(rows);
+        })
         .catch(() => toast.error("Failed to load transactions"));
     }
-  }, [activeTab, id]);
+  }, [activeTab, id, part]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -177,6 +198,7 @@ export default function SparePartDetailPage() {
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to receive stock"); return; }
       setPart((prev) => prev ? { ...prev, currentStock: prev.currentStock + parseFloat(receiveForm.quantity) } : prev);
+      setTransactions((prev) => [json.data, ...prev.filter((tx) => !tx.isSynthetic)]);
       setReceiveForm({ quantity: "", unitCost: "", reference: "", notes: "" });
       setShowReceiveDialog(false);
       setActiveTab("transactions");
@@ -513,14 +535,14 @@ export default function SparePartDetailPage() {
                           {format(new Date(tx.createdAt), "dd MMM yyyy")}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tx.transactionType === "RECEIPT" ? "text-green-600" : "text-red-600"}`}>
-                            {tx.transactionType === "RECEIPT" ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tx.transactionType === "ISSUE" ? "text-red-600" : "text-green-600"}`}>
+                            {tx.transactionType === "ISSUE" ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
                             {tx.transactionType}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={tx.transactionType === "RECEIPT" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                            {tx.transactionType === "RECEIPT" ? "+" : "-"}{tx.quantity.toLocaleString()}
+                          <span className={tx.transactionType === "ISSUE" ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
+                            {tx.transactionType === "ISSUE" ? "-" : "+"}{tx.quantity.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
@@ -529,8 +551,8 @@ export default function SparePartDetailPage() {
                             : "—"}
                         </td>
                         <td className="px-4 py-3">
-                          {tx.referenceId
-                            ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{tx.referenceId}</code>
+                          {tx.referenceId || tx.referenceType
+                            ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{tx.referenceId ?? tx.referenceType}</code>
                             : "—"}
                         </td>
                         <td className="px-4 py-3">

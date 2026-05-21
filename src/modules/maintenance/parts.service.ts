@@ -211,20 +211,41 @@ export async function createPart(
     if (cat.companyId !== companyId) throw new Error("Spare part category not found");
   }
 
-  const part = await db.sparePart.create({
-    data: {
-      companyId,
-      categoryId: data.categoryId ?? null,
-      code: data.code,
-      name: data.name,
-      description: data.description ?? null,
-      partNumber: data.partNumber ?? null,
-      uom: data.uom ?? "PCS",
-      currentStock: data.currentStock ?? 0,
-      minStock: data.minStock ?? 0,
-      unitCost: data.unitCost ?? null,
-      createdById,
-    },
+  const openingStock = data.currentStock ?? 0;
+  const part = await db.$transaction(async (tx: any) => {
+    const created = await tx.sparePart.create({
+      data: {
+        companyId,
+        categoryId: data.categoryId ?? null,
+        code: data.code,
+        name: data.name,
+        description: data.description ?? null,
+        partNumber: data.partNumber ?? null,
+        uom: data.uom ?? "PCS",
+        currentStock: openingStock,
+        minStock: data.minStock ?? 0,
+        unitCost: data.unitCost ?? null,
+        createdById,
+      },
+    });
+
+    if (openingStock > 0) {
+      await tx.sparePartTransaction.create({
+        data: {
+          companyId,
+          sparePartId: created.id,
+          transactionType: "OPENING",
+          quantity: openingStock,
+          unitCost: data.unitCost ?? null,
+          totalCost: data.unitCost != null ? openingStock * data.unitCost : null,
+          referenceType: "OPENING_BALANCE",
+          notes: "Opening stock balance",
+          createdById,
+        },
+      });
+    }
+
+    return created;
   });
 
   await createAuditLog({

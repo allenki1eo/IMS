@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { listReceipts, receiveStock } from "@/modules/maintenance/receipts.service";
+import { listReceipts, listTransactions, receiveStock } from "@/modules/maintenance/receipts.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
@@ -17,8 +17,9 @@ export async function GET(
   const { id: sparePartId } = await params;
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
+  const includeAll = searchParams.get("all") === "true";
 
-  const { data, meta } = await listReceipts(companyId, {
+  const { data, meta } = await (includeAll ? listTransactions : listReceipts)(companyId, {
     sparePartId,
     page: pagination.page,
     pageSize: pagination.pageSize,
