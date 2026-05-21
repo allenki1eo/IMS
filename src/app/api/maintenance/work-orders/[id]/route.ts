@@ -1,7 +1,5 @@
 import { NextRequest } from "next/server";
-import { getWorkOrder, updateWorkOrder } from "@/modules/maintenance/workorders.service";
-import { db } from "@/lib/db";
-import { createAuditLog } from "@/lib/audit";
+import { deleteWorkOrder, getWorkOrder, updateWorkOrder } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
@@ -68,6 +66,7 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Work order not found") return notFound(msg);
     if (msg.includes("Only PENDING")) return badRequest(msg);
+    if (msg.includes("cannot be negative")) return badRequest(msg);
     return handleError(err);
   }
 }
@@ -86,26 +85,12 @@ export async function DELETE(
   const { ipAddress } = getRequestMeta(request);
 
   try {
-    const existing = await db.workOrder.findFirst({ where: { id, companyId } });
-    if (!existing) return notFound("Work order not found");
-
-    await db.workOrder.delete({ where: { id } });
-
-    await createAuditLog({
-      userId: auth.user.id,
-      userName: auth.user.fullName,
-      action: "WORK_ORDER_DELETE",
-      module: "maintenance",
-      resource: "workorder",
-      recordId: id,
-      oldValue: { reference: existing.reference, status: existing.status },
-      description: `Deleted work order: ${existing.reference}`,
-      ipAddress,
-      companyId,
-    });
-
+    await deleteWorkOrder(companyId, id, auth.user.id, auth.user.fullName, ipAddress);
     return noContent();
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (msg === "Work order not found") return notFound(msg);
+    if (msg.includes("cannot be deleted")) return badRequest(msg);
     return handleError(err);
   }
 }

@@ -37,6 +37,7 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Work order not found") return notFound(msg);
     if (msg.includes("Only IN_PROGRESS")) return badRequest(msg);
+    if (msg.includes("Insufficient stock") || msg.includes("cannot be negative") || msg.includes("odometerAtService")) return badRequest(msg);
     return handleError(err);
   }
 }

@@ -263,7 +263,7 @@ export default function ScheduleDetailPage() {
                       id="intervalKm"
                       name="intervalKm"
                       type="number"
-                      min="0"
+                      min="1"
                       value={form.intervalKm}
                       onChange={handleChange}
                       disabled={saving}
@@ -275,7 +275,7 @@ export default function ScheduleDetailPage() {
                       id="intervalDays"
                       name="intervalDays"
                       type="number"
-                      min="0"
+                      min="1"
                       value={form.intervalDays}
                       onChange={handleChange}
                       disabled={saving}
