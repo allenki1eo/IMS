@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePermission } from "@/hooks/usePermission";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
+import { useCurrency } from "@/hooks/useCurrency";
 
 const PAGE_SIZE = 20;
 
@@ -20,6 +21,7 @@ export default function AccountsPage() {
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:account:create");
+  const currency = useCurrency();
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -54,7 +56,7 @@ export default function AccountsPage() {
     {
       key: "currentBalance",
       header: "Balance",
-      cell: (row: any) => `$${(row.currentBalance || 0).toLocaleString()}`,
+      cell: (row: any) => `${currency} ${(row.currentBalance || 0).toLocaleString()}`,
     },
     {
       key: "isActive",

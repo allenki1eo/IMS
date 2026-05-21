@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermission } from "@/hooks/usePermission";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function AccountDetailPage() {
   const { id } = useParams();
@@ -24,6 +25,7 @@ export default function AccountDetailPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const canUpdate = usePermission("finance:account:update");
+  const currency = useCurrency();
 
   async function fetchAccount() {
     try {
@@ -115,8 +117,8 @@ export default function AccountDetailPage() {
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Account Type</CardTitle></CardHeader><CardContent><Badge>{account.accountType}</Badge></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Opening Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">${account.openingBalance.toLocaleString()}</div></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">${account.currentBalance.toLocaleString()}</div></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Opening Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {account.openingBalance.toLocaleString()}</div></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {account.currentBalance.toLocaleString()}</div></CardContent></Card>
           </div>
 
           {account.children?.length > 0 && (
@@ -152,8 +154,8 @@ export default function AccountDetailPage() {
             <div className="space-y-4">
               {ledger?.openingBalance !== undefined && (
                 <div className="flex justify-between text-sm bg-muted p-3 rounded">
-                  <span>Opening Balance: <strong>${ledger.openingBalance.toLocaleString()}</strong></span>
-                  <span>Closing Balance: <strong>${ledger.closingBalance.toLocaleString()}</strong></span>
+                  <span>Opening Balance: <strong>{currency} {ledger.openingBalance.toLocaleString()}</strong></span>
+                  <span>Closing Balance: <strong>{currency} {ledger.closingBalance.toLocaleString()}</strong></span>
                 </div>
               )}
               <div className="border rounded-lg overflow-hidden">
@@ -176,9 +178,9 @@ export default function AccountDetailPage() {
                         <td className="px-4 py-2 font-medium">{row.reference}</td>
                         <td className="px-4 py-2"><Badge variant="outline">{row.voucherType}</Badge></td>
                         <td className="px-4 py-2">{row.description}</td>
-                        <td className="px-4 py-2 text-right">{row.debit > 0 ? `$${row.debit.toLocaleString()}` : "-"}</td>
-                        <td className="px-4 py-2 text-right">{row.credit > 0 ? `$${row.credit.toLocaleString()}` : "-"}</td>
-                        <td className="px-4 py-2 text-right font-bold">${row.balance.toLocaleString()}</td>
+                        <td className="px-4 py-2 text-right">{row.debit > 0 ? `${currency} ${row.debit.toLocaleString()}` : "-"}</td>
+                        <td className="px-4 py-2 text-right">{row.credit > 0 ? `${currency} ${row.credit.toLocaleString()}` : "-"}</td>
+                        <td className="px-4 py-2 text-right font-bold">{currency} {row.balance.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>

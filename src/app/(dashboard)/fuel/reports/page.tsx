@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface VehicleConsumption {
   vehicleId: string;
@@ -33,6 +34,7 @@ const startOfMonth = () => {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function FuelReportsPage() {
+  const currency = useCurrency();
   const [tab, setTab] = useState<"vehicle" | "period">("vehicle");
 
   // By Vehicle
@@ -84,7 +86,7 @@ export default function FuelReportsPage() {
       ),
     },
     { key: "totalLiters", header: "Total Liters", cell: (r: VehicleConsumption) => <span className="font-semibold">{r.totalLiters.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</span> },
-    { key: "totalCost", header: "Total Cost", cell: (r: VehicleConsumption) => r.totalCost > 0 ? `$${r.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—" },
+    { key: "totalCost", header: "Total Cost", cell: (r: VehicleConsumption) => r.totalCost > 0 ? `${currency} ${r.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—" },
     { key: "avgLiters", header: "Avg L / Issue", cell: (r: VehicleConsumption) => `${r.avgLitersPerIssue.toFixed(1)} L` },
     { key: "issueCount", header: "Issues", cell: (r: VehicleConsumption) => <Badge variant="outline">{r.issueCount}</Badge> },
   ];
@@ -92,7 +94,7 @@ export default function FuelReportsPage() {
   const periodColumns = [
     { key: "period", header: "Period", cell: (r: PeriodConsumption) => <span className="font-mono text-sm">{r.period}</span> },
     { key: "totalLiters", header: "Total Liters", cell: (r: PeriodConsumption) => <span className="font-semibold">{r.totalLiters.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</span> },
-    { key: "totalCost", header: "Total Cost", cell: (r: PeriodConsumption) => r.totalCost > 0 ? `$${r.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—" },
+    { key: "totalCost", header: "Total Cost", cell: (r: PeriodConsumption) => r.totalCost > 0 ? `${currency} ${r.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—" },
     { key: "issueCount", header: "Issues", cell: (r: PeriodConsumption) => <Badge variant="outline">{r.issueCount}</Badge> },
   ];
 

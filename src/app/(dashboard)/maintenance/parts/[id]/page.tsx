@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,6 +59,7 @@ function stockStatusLabel(part: SparePart): { label: string; color: string } {
 }
 
 export default function SparePartDetailPage() {
+  const currency = useCurrency();
   const { id } = useParams<{ id: string }>();
   const [part, setPart] = useState<SparePart | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -335,11 +337,11 @@ export default function SparePartDetailPage() {
               <div className="text-sm space-y-1 border-t pt-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Unit Cost</span>
-                  <span>${part.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>{currency} {part.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between font-medium">
                   <span className="text-muted-foreground">Stock Value</span>
-                  <span>${(part.currentStock * part.unitCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>{currency} {(part.currentStock * part.unitCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
               {part.partNumber && (
@@ -523,7 +525,7 @@ export default function SparePartDetailPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {tx.unitCost != null
-                            ? `$${tx.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            ? `${currency} ${tx.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                             : "—"}
                         </td>
                         <td className="px-4 py-3">

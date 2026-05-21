@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingSpinner } from "@/components/shared/LoadingState";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +65,7 @@ const DEFAULT: FormData = {
 };
 
 export default function NewIssuePage() {
+  const currency = useCurrency();
   const router = useRouter();
   const [form, setForm] = useState<FormData>(DEFAULT);
   const [submitting, setSubmitting] = useState(false);
@@ -343,13 +345,13 @@ export default function NewIssuePage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Price / L</span>
-                <span>{price > 0 ? `$${price.toFixed(3)}` : "—"}</span>
+                <span>{price > 0 ? `${currency} ${price.toFixed(3)}` : "—"}</span>
               </div>
               <div className="border-t pt-3 flex justify-between font-semibold">
                 <span>Total Cost</span>
                 <span className="text-lg">
                   {totalCost > 0
-                    ? `$${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ? `${currency} ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : "—"}
                 </span>
               </div>
