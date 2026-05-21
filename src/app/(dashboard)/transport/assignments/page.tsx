@@ -159,6 +159,7 @@ export default function AssignmentsPage() {
       const res = await fetch(`/api/vehicle-assignments/${assignmentId}/return`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to return vehicle"); return; }
