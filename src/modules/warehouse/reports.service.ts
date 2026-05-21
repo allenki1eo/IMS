@@ -6,30 +6,41 @@ export async function getCategoryStockSummary(companyId: string) {
     orderBy: { name: "asc" },
     include: {
       _count: { select: { items: true } },
-      items: {
-        select: {
-          id: true,
-          stockBalances: { select: { quantity: true } },
-        },
-      },
     },
   });
 
-  return categories.map((cat) => {
-    const totalStockQty = cat.items.reduce(
-      (sum, item) =>
-        sum + item.stockBalances.reduce((s, b) => s + (b.quantity || 0), 0),
-      0
-    );
-    return {
-      id: cat.id,
-      name: cat.name,
-      code: cat.code,
-      description: cat.description,
-      itemCount: cat._count.items,
-      totalStockQty,
-    };
+  // Get total stock per category in one query
+  const stockByCategory = await db.stockBalance.groupBy({
+    by: ["itemId"],
+    where: { item: { companyId, categoryId: { in: categories.map((c) => c.id) } } },
+    _sum: { quantity: true },
   });
+
+  const itemCategoryMap = new Map<string, string>();
+  const items = await db.item.findMany({
+    where: { companyId, categoryId: { in: categories.map((c) => c.id) } },
+    select: { id: true, categoryId: true },
+  });
+  for (const item of items) {
+    if (item.categoryId) itemCategoryMap.set(item.id, item.categoryId);
+  }
+
+  const categoryStockMap = new Map<string, number>();
+  for (const row of stockByCategory) {
+    const catId = itemCategoryMap.get(row.itemId);
+    if (catId) {
+      categoryStockMap.set(catId, (categoryStockMap.get(catId) || 0) + (row._sum.quantity || 0));
+    }
+  }
+
+  return categories.map((cat) => ({
+    id: cat.id,
+    name: cat.name,
+    code: cat.code,
+    description: cat.description,
+    itemCount: cat._count.items,
+    totalStockQty: categoryStockMap.get(cat.id) || 0,
+  }));
 }
 
 export async function getItemsStockSummary(
