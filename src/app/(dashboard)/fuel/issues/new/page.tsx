@@ -142,7 +142,7 @@ export default function NewIssuePage() {
           vehicleId: form.vehicleId,
           driverId: form.driverId || undefined,
           tripRef: form.tripRef || undefined,
-          quantity: qty,
+          quantityLiters: qty,
           pricePerLiter: price || undefined,
           totalCost: totalCost || undefined,
           odometerReading: parseFloat(form.odometerReading) || undefined,
