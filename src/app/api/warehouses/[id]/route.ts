@@ -31,7 +31,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, code, address, branchId, managerId, warehouseType } = body;
+  const { name, code, address, branchId, warehouseType } = body;
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
@@ -43,7 +43,6 @@ export async function PATCH(
         ...(code !== undefined ? { code } : {}),
         ...(address !== undefined ? { address } : {}),
         ...(branchId !== undefined ? { branchId } : {}),
-        ...(managerId !== undefined ? { managerId } : {}),
         ...(warehouseType !== undefined ? { warehouseType } : {}),
       },
       updatedById: auth.user.id,

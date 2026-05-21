@@ -18,7 +18,7 @@ interface WarehouseRow {
   id: string;
   name: string;
   code: string;
-  status: string;
+  isActive: boolean;
   branch?: { name: string } | null;
   _count?: { locations: number };
 }
@@ -80,7 +80,7 @@ export default function WarehousesPage() {
     {
       key: "status",
       header: "Status",
-      cell: (row: WarehouseRow) => <StatusBadge status={row.status} />,
+      cell: (row: WarehouseRow) => <StatusBadge status={row.isActive} />,
     },
     {
       key: "actions",

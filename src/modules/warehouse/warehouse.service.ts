@@ -92,7 +92,6 @@ export async function updateWarehouse(params: {
     code?: string;
     address?: string | null;
     branchId?: string | null;
-    managerId?: string | null;
     warehouseType?: string | null;
   };
   updatedById: string;

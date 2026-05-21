@@ -122,7 +122,11 @@ export async function createTransfer(params: {
   // Validate source stock is sufficient for each line
   for (const line of lines) {
     const balances = await db.stockBalance.findMany({
-      where: { itemId: line.itemId, warehouseId: fromWarehouseId },
+      where: {
+        itemId: line.itemId,
+        warehouseId: fromWarehouseId,
+        ...(line.fromLocationId ? { locationId: line.fromLocationId } : {}),
+      },
     });
     const totalAvailable = balances.reduce((sum, b) => sum + b.quantity, 0);
     if (totalAvailable < line.quantity) {
