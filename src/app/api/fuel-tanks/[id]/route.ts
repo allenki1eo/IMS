@@ -13,10 +13,14 @@ export async function GET(
   if ("error" in auth) return auth.error;
 
   const { id } = await params;
-  const tank = await getTankById(id);
-  if (!tank) return notFound("Fuel tank not found");
-
-  return success(tank);
+  try {
+    const tank = await getTankById(id);
+    if (!tank) return notFound("Fuel tank not found");
+    return success(tank);
+  } catch (err) {
+    console.error("[API Error] GET /api/fuel-tanks/[id]", err);
+    return handleError(err);
+  }
 }
 
 export async function PATCH(
