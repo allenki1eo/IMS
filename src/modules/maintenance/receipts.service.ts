@@ -57,6 +57,49 @@ export async function listReceipts(
   return { data: receipts, meta: { total, page, pageSize } };
 }
 
+export async function listTransactions(
+  companyId: string,
+  params: {
+    sparePartId?: string;
+    page: number;
+    pageSize: number;
+  }
+) {
+  const { sparePartId, page, pageSize } = params;
+  const skip = (page - 1) * pageSize;
+
+  const where = {
+    companyId,
+    ...(sparePartId ? { sparePartId } : {}),
+  };
+
+  const [transactions, total] = await Promise.all([
+    db.sparePartTransaction.findMany({
+      where,
+      skip,
+      take: pageSize,
+      orderBy: { createdAt: "desc" },
+      include: {
+        sparePart: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            uom: true,
+            currentStock: true,
+            category: {
+              select: { id: true, name: true, code: true },
+            },
+          },
+        },
+      },
+    }),
+    db.sparePartTransaction.count({ where }),
+  ]);
+
+  return { data: transactions, meta: { total, page, pageSize } };
+}
+
 export async function getReceipt(companyId: string, id: string) {
   const receipt = await db.sparePartTransaction.findUnique({
     where: { id },
