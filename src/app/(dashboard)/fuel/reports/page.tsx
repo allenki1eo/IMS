@@ -53,7 +53,11 @@ export default function FuelReportsPage() {
   const fetchByVehicle = useCallback(async () => {
     setVLoading(true);
     try {
-      const params = new URLSearchParams({ from: new Date(vFrom).toISOString(), to: new Date(vTo).toISOString() });
+      const [fy, fm, fd] = vFrom.split("-").map(Number);
+      const [ty, tm, td] = vTo.split("-").map(Number);
+      const from = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0)).toISOString();
+      const to = new Date(Date.UTC(ty, tm - 1, td, 23, 59, 59, 999)).toISOString();
+      const params = new URLSearchParams({ from, to });
       const res = await fetch(`/api/fuel/consumption-by-vehicle?${params}`);
       const json = await res.json();
       setVData(json.data ?? json);
@@ -64,7 +68,11 @@ export default function FuelReportsPage() {
   const fetchByPeriod = useCallback(async () => {
     setPLoading(true);
     try {
-      const params = new URLSearchParams({ groupBy, from: new Date(pFrom).toISOString(), to: new Date(pTo).toISOString() });
+      const [fy, fm, fd] = pFrom.split("-").map(Number);
+      const [ty, tm, td] = pTo.split("-").map(Number);
+      const from = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0)).toISOString();
+      const to = new Date(Date.UTC(ty, tm - 1, td, 23, 59, 59, 999)).toISOString();
+      const params = new URLSearchParams({ groupBy, from, to });
       const res = await fetch(`/api/fuel/consumption-by-period?${params}`);
       const json = await res.json();
       setPData(json.data ?? json);
