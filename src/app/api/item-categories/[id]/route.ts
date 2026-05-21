@@ -1,7 +1,31 @@
 import { NextRequest } from "next/server";
 import { updateCategory } from "@/modules/warehouse/items.service";
-import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, notFound, handleError } from "@/lib/response";
+import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
+import { success, notFound, badRequest, handleError } from "@/lib/response";
+import { db } from "@/lib/db";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermission(request, "warehouse:category:read");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { id } = await params;
+  const category = await db.itemCategory.findUnique({
+    where: { id },
+    include: {
+      parent: { select: { id: true, name: true } },
+      _count: { select: { items: true } },
+    },
+  });
+
+  if (!category || category.companyId !== companyId) return notFound("Category not found");
+  return success(category);
+}
 
 export async function PATCH(
   request: NextRequest,
