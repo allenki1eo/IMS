@@ -24,6 +24,34 @@ export interface DaystorePlan {
   }>;
 }
 
+type DaystoreBatchRow = {
+  id: string;
+  reference: string;
+  productName: string;
+  plannedQty: number;
+  uom: string;
+  status: string;
+  line: { name: string } | null;
+  materials: Array<{
+    itemId: string | null;
+    itemCode: string | null;
+    description: string;
+    uom: string;
+    plannedQty: number;
+  }>;
+};
+
+type ItemCodeRow = {
+  id: string;
+  code: string;
+};
+
+type StockBalanceRow = {
+  itemId: string;
+  quantity: number | null;
+  warehouse: { warehouseType: string } | null;
+};
+
 function startOfDay(d: Date) {
   const date = new Date(d);
   date.setHours(0, 0, 0, 0);
@@ -43,7 +71,7 @@ export async function getDaystorePlan(
   const from = startOfDay(date);
   const to = endOfDay(date);
 
-  const batches = await db.productionBatch.findMany({
+  const batches: DaystoreBatchRow[] = await db.productionBatch.findMany({
     where: {
       companyId,
       plannedStart: { gte: from, lte: to },
@@ -105,7 +133,7 @@ export async function getDaystorePlan(
   }
 
   // Find items by code
-  const itemsByCode =
+  const itemsByCode: ItemCodeRow[] =
     itemCodes.length > 0
       ? await db.item.findMany({
           where: { companyId, code: { in: itemCodes } },
@@ -124,7 +152,7 @@ export async function getDaystorePlan(
   );
 
   // Fetch stock balances
-  const stockBalances =
+  const stockBalances: StockBalanceRow[] =
     allItemIds.length > 0
       ? await db.stockBalance.findMany({
           where: { itemId: { in: allItemIds } },

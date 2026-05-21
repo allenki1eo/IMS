@@ -1,7 +1,5 @@
 import { NextRequest } from "next/server";
-import { getProductionRecipe } from "@/modules/production/recipes.service";
-import { db } from "@/lib/db";
-import { createAuditLog } from "@/lib/audit";
+import { deleteProductionRecipe, getProductionRecipe } from "@/modules/production/recipes.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
@@ -35,26 +33,12 @@ export async function DELETE(
   const { ipAddress } = getRequestMeta(request);
 
   try {
-    const existing = await db.productionRecipe.findFirst({ where: { id, companyId } });
-    if (!existing) return notFound("Production recipe not found");
-
-    await db.productionRecipe.delete({ where: { id } });
-
-    await createAuditLog({
-      userId: auth.user.id,
-      userName: auth.user.fullName,
-      action: "PRODUCTION_RECIPE_DELETE",
-      module: "production",
-      resource: "recipe",
-      recordId: id,
-      oldValue: { code: existing.code, name: existing.name },
-      description: `Deleted production recipe: ${existing.name} (${existing.code})`,
-      ipAddress,
-      companyId,
-    });
-
+    await deleteProductionRecipe(companyId, id, auth.user.id, auth.user.fullName, ipAddress);
     return noContent();
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (msg.includes("not found")) return notFound(msg);
+    if (msg.includes("cannot be deleted")) return badRequest(msg);
     return handleError(err);
   }
 }

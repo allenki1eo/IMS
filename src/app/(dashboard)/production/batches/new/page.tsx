@@ -158,7 +158,7 @@ export default function NewProductionBatchPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1 sm:col-span-1"><Label>Product Name</Label><Input value={form.productName} onChange={(e) => setForm((p) => ({ ...p, productName: e.target.value }))} disabled={submitting} /></div>
-              <div className="space-y-1"><Label>Planned Qty</Label><Input type="number" min="0" step="0.01" value={form.plannedQty} onChange={(e) => setForm((p) => ({ ...p, plannedQty: e.target.value }))} disabled={submitting} /></div>
+              <div className="space-y-1"><Label>Planned Qty</Label><Input type="number" min="0.01" step="0.01" value={form.plannedQty} onChange={(e) => setForm((p) => ({ ...p, plannedQty: e.target.value }))} disabled={submitting} /></div>
               <div className="space-y-1"><Label>UOM</Label><Input value={form.uom} onChange={(e) => setForm((p) => ({ ...p, uom: e.target.value }))} disabled={submitting} /></div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
