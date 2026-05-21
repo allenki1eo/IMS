@@ -24,7 +24,7 @@ interface ItemOption {
   code: string;
   name: string;
   uom?: { symbol: string } | null;
-  stockBalances: { quantity: number }[];
+  stockBalances?: { quantity: number }[];
 }
 
 interface MaterialForm {
@@ -76,7 +76,7 @@ export default function NewProductionRecipePage() {
   function currentStock(itemId: string): number {
     const item = items.find((it) => it.id === itemId);
     if (!item) return 0;
-    return item.stockBalances.reduce((sum, b) => sum + (b.quantity || 0), 0);
+    return (item.stockBalances ?? []).reduce((sum, b) => sum + (b.quantity || 0), 0);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -174,7 +174,7 @@ export default function NewProductionRecipePage() {
                         <SelectItem value="__none">None (manual entry)</SelectItem>
                         {items.map((it) => (
                           <SelectItem key={it.id} value={it.id}>
-                            {it.code} — {it.name} (Stock: {it.stockBalances.reduce((s, b) => s + (b.quantity || 0), 0)})
+                            {it.code} — {it.name} (Stock: {(it.stockBalances ?? []).reduce((s, b) => s + (b.quantity || 0), 0)})
                           </SelectItem>
                         ))}
                       </SelectContent>
