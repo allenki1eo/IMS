@@ -1947,3 +1947,73 @@ model TraStampActivation {
   @@index([companyId])
   @@map("tra_stamp_activations")
 }
+
+// ─── Tally Integration ────────────────────────────────────────────────────────
+
+model TallySyncLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  syncedAt    DateTime @default(now())
+  status      String   @default("SUCCESS")
+  vouchersIn  Int      @default(0)
+  ledgersIn   Int      @default(0)
+  errorMsg    String?
+  triggeredBy String   @default("agent")
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@map("tally_sync_logs")
+}
+
+model TallyVoucher {
+  id            String   @id @default(cuid())
+  companyId     String
+  tallyId       String
+  voucherType   String
+  voucherNumber String
+  date          DateTime
+  narration     String?
+  amount        Float    @default(0)
+  currency      String   @default("TZS")
+  partyName     String?
+  ledgerEntries String
+  rawXml        String?
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@unique([companyId, tallyId])
+  @@index([companyId])
+  @@index([voucherType])
+  @@index([date])
+  @@map("tally_vouchers")
+}
+
+model TallyLedger {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  group      String?
+  openingBal Float    @default(0)
+  closingBal Float    @default(0)
+  currency   String   @default("TZS")
+  syncedAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("tally_ledgers")
+}
+
+model TallyApiKey {
+  id          String    @id @default(cuid())
+  companyId   String
+  keyHash     String    @unique
+  label       String
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  createdById String
+
+  @@index([companyId])
+  @@map("tally_api_keys")
+}
