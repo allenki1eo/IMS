@@ -187,6 +187,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Day Book", href: "/finance/day-book", icon: <BookOpen className="h-4 w-4" />, permission: "finance:journal:read" },
           { label: "Outstanding", href: "/finance/outstanding", icon: <CreditCard className="h-4 w-4" />, permission: "finance:payment:read" },
           { label: "Reports", href: "/finance/reports", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
+          { label: "Tally Sync", href: "/finance/tally", icon: <ArrowRightLeft className="h-4 w-4" />, permission: "finance:tally:read" },
         ],
       },
       {
