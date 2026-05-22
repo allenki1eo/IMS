@@ -2,10 +2,22 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 import { convertAmount } from "./exchange-rates.service";
 
+type TxClient = any;
+interface AccountValidationRow {
+  id: string;
+  isActive: boolean;
+}
+
 function generateRef(): string {
   const d = new Date();
   const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
   return `JE-${date}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+}
+
+function parseFinanceDate(value: string, label: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new Error(`${label} is invalid`);
+  return date;
 }
 
 export async function listJournalEntries(
@@ -30,8 +42,8 @@ export async function listJournalEntries(
     ...(fromDate || toDate
       ? {
           entryDate: {
-            ...(fromDate ? { gte: new Date(fromDate) } : {}),
-            ...(toDate ? { lte: new Date(toDate) } : {}),
+            ...(fromDate ? { gte: new Date(`${fromDate}T00:00:00`) } : {}),
+            ...(toDate ? { lte: new Date(`${toDate}T23:59:59`) } : {}),
           },
         }
       : {}),
@@ -98,14 +110,21 @@ export async function createJournalEntry(
   userName: string,
   ipAddress: string
 ) {
+  const entryDate = parseFinanceDate(data.entryDate, "Entry date");
+  if (!data.description?.trim()) throw new Error("Description is required");
+  if (!Array.isArray(data.lines) || data.lines.length < 2) throw new Error("Journal entry must have at least 2 lines");
+
   const totalDebit = data.lines.reduce((sum, l) => sum + (l.debit || 0), 0);
   const totalCredit = data.lines.reduce((sum, l) => sum + (l.credit || 0), 0);
+  if (totalDebit <= 0 || totalCredit <= 0) throw new Error("Journal entry must have debit and credit amounts");
 
   if (Math.abs(totalDebit - totalCredit) > 0.001) {
     throw new Error(`Journal entry is unbalanced. Debit: ${totalDebit}, Credit: ${totalCredit}`);
   }
 
-  if (data.lines.length < 2) throw new Error("Journal entry must have at least 2 lines");
+  if (data.lines.some((line) => (line.debit || 0) > 0 && (line.credit || 0) > 0)) {
+    throw new Error("A journal line cannot have both debit and credit");
+  }
 
   // Validate accounts exist
   const accountIds = data.lines.map((l) => l.accountId);
@@ -113,8 +132,8 @@ export async function createJournalEntry(
     where: { id: { in: accountIds }, companyId },
     select: { id: true, isActive: true },
   });
-  if (accounts.length !== accountIds.length) throw new Error("One or more accounts not found");
-  if (accounts.some((a) => !a.isActive)) throw new Error("One or more accounts are inactive");
+  if (accounts.length !== new Set(accountIds).size) throw new Error("One or more accounts not found");
+  if ((accounts as AccountValidationRow[]).some((account) => !account.isActive)) throw new Error("One or more accounts are inactive");
 
   const currency = data.currency ?? "TZS";
   let exchangeRate = data.exchangeRate ?? null;
@@ -124,13 +143,13 @@ export async function createJournalEntry(
     exchangeRate = conversion.rate;
   }
 
-  const entry = await db.$transaction(async (tx) => {
+  const entry = await db.$transaction(async (tx: TxClient) => {
     const je = await tx.journalEntry.create({
       data: {
         companyId,
         reference: generateRef(),
-        entryDate: new Date(data.entryDate),
-        description: data.description,
+        entryDate,
+        description: data.description.trim(),
         notes: data.notes,
         voucherType: data.voucherType || "JOURNAL",
         status: "DRAFT",
@@ -183,7 +202,7 @@ export async function postJournalEntry(
   if (!entry || entry.companyId !== companyId) throw new Error("Journal entry not found");
   if (entry.status !== "DRAFT") throw new Error("Only draft journal entries can be posted");
 
-  await db.$transaction(async (tx) => {
+  await db.$transaction(async (tx: TxClient) => {
     // Update entry status
     await tx.journalEntry.update({
       where: { id },
@@ -236,7 +255,7 @@ export async function reverseJournalEntry(
   if (!entry || entry.companyId !== companyId) throw new Error("Journal entry not found");
   if (entry.status !== "POSTED") throw new Error("Only posted journal entries can be reversed");
 
-  await db.$transaction(async (tx) => {
+  await db.$transaction(async (tx: TxClient) => {
     // Reverse the balance changes
     for (const line of entry.lines) {
       const change = (line.credit || 0) - (line.debit || 0); // opposite

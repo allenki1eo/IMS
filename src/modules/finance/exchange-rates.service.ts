@@ -1,6 +1,17 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+function normalizeCurrency(code: string) {
+  return code.trim().toUpperCase();
+}
+
+function normalizeRateDate(value?: Date | string) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) throw new Error("Effective date is invalid");
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
 export async function listExchangeRates(
   companyId: string,
   params: {
@@ -93,8 +104,6 @@ export async function createExchangeRate(params: {
 }) {
   const {
     companyId,
-    fromCurrency,
-    toCurrency,
     rate,
     source,
     effectiveDate,
@@ -103,13 +112,18 @@ export async function createExchangeRate(params: {
     userName,
     ipAddress,
   } = params;
+  const fromCurrency = normalizeCurrency(params.fromCurrency);
+  const toCurrency = normalizeCurrency(params.toCurrency);
+  if (fromCurrency === toCurrency) throw new Error("Currencies must be different");
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error("Exchange rate must be greater than zero");
+  const normalizedEffectiveDate = normalizeRateDate(effectiveDate);
 
   const existing = await db.exchangeRate.findFirst({
     where: {
       companyId,
       fromCurrency,
       toCurrency,
-      effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
+      effectiveDate: normalizedEffectiveDate,
     },
   });
 
@@ -126,7 +140,7 @@ export async function createExchangeRate(params: {
       toCurrency,
       rate,
       source: source ?? "MANUAL",
-      effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
+      effectiveDate: normalizedEffectiveDate,
       notes: notes ?? null,
       createdById,
     },
@@ -164,6 +178,10 @@ export async function updateExchangeRate(params: {
   const existing = await db.exchangeRate.findUnique({ where: { id } });
   if (!existing || existing.companyId !== companyId)
     throw new Error("Exchange rate not found");
+
+  if (rate !== undefined && (!Number.isFinite(rate) || rate <= 0)) {
+    throw new Error("Exchange rate must be greater than zero");
+  }
 
   const updated = await db.exchangeRate.update({
     where: { id },
