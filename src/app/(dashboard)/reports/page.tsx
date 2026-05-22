@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
 } from "recharts";
 import {
   Warehouse, Truck, Fuel, Wrench, ShoppingCart,
@@ -19,8 +18,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/DataTable";
 import { useCurrency } from "@/hooks/useCurrency";
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"];
 
 const MODULES = [
   { key: "warehouse", label: "Warehouse", icon: Warehouse },
@@ -43,15 +40,23 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
 
   async function fetchReport() {
+    if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
+      toast.error("From date must be before to date");
+      return;
+    }
+
     setLoading(true);
     try {
-      const url = `/api/reports/${activeModule}?fromDate=${fromDate}&toDate=${toDate}`;
-      const res = await fetch(url);
+      const params = new URLSearchParams();
+      if (fromDate) params.set("fromDate", fromDate);
+      if (toDate) params.set("toDate", toDate);
+      const query = params.toString();
+      const res = await fetch(`/api/reports/${activeModule}${query ? `?${query}` : ""}`);
       const json = await res.json();
       if (res.ok) {
         setReport(json.data);
       } else {
-        toast.error(json.message || "Failed to load report");
+        toast.error(json.error || json.message || "Failed to load report");
       }
     } catch {
       toast.error("Failed to load report");
@@ -65,7 +70,9 @@ export default function ReportsPage() {
   }, [activeModule]);
 
   function formatDate(d: string) {
-    return new Date(d).toLocaleDateString();
+    if (!d) return "-";
+    const date = new Date(d);
+    return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
   }
 
   function formatCurrency(n: number) {
@@ -119,7 +126,7 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-xl font-bold">
-                    {typeof value === "number" && key.toLowerCase().includes("value")
+                    {typeof value === "number" && ["value", "cost", "amount", "debit", "credit"].some((part) => key.toLowerCase().includes(part))
                       ? formatCurrency(value)
                       : typeof value === "number"
                       ? value.toLocaleString()
@@ -136,7 +143,7 @@ export default function ReportsPage() {
               <h3 className="font-semibold">Goods Received Notes</h3>
               <DataTable
                 columns={[
-                  { key: "grnNumber", header: "GRN #" },
+                  { key: "reference", header: "GRN #" },
                   { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
                   { key: "totalAmount", header: "Total", cell: (r: any) => formatCurrency(r.totalAmount) },
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
@@ -174,7 +181,7 @@ export default function ReportsPage() {
               <DataTable
                 columns={[
                   { key: "tank", header: "Tank", cell: (r: any) => r.tank?.name },
-                  { key: "quantity", header: "Quantity" },
+                  { key: "quantityLiters", header: "Quantity (L)" },
                   { key: "totalCost", header: "Cost", cell: (r: any) => formatCurrency(r.totalCost) },
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
@@ -185,7 +192,7 @@ export default function ReportsPage() {
               <DataTable
                 columns={[
                   { key: "vehicle", header: "Vehicle", cell: (r: any) => r.vehicle?.plateNumber },
-                  { key: "quantity", header: "Quantity" },
+                  { key: "quantityLiters", header: "Quantity (L)" },
                   { key: "totalCost", header: "Cost", cell: (r: any) => formatCurrency(r.totalCost) },
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
@@ -233,7 +240,7 @@ export default function ReportsPage() {
               <h3 className="font-semibold">Purchase Orders</h3>
               <DataTable
                 columns={[
-                  { key: "poNumber", header: "PO #" },
+                  { key: "reference", header: "PO #" },
                   { key: "supplier", header: "Supplier", cell: (r: any) => r.supplier?.name },
                   { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
                   { key: "totalAmount", header: "Total", cell: (r: any) => formatCurrency(r.totalAmount) },
@@ -250,12 +257,12 @@ export default function ReportsPage() {
               <h3 className="font-semibold">Production Batches</h3>
               <DataTable
                 columns={[
-                  { key: "batchNumber", header: "Batch #" },
+                  { key: "reference", header: "Batch #" },
                   { key: "line", header: "Line", cell: (r: any) => r.line?.name },
                   { key: "recipe", header: "Recipe", cell: (r: any) => r.recipe?.name },
                   { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
-                  { key: "plannedQuantity", header: "Planned" },
-                  { key: "actualQuantity", header: "Actual" },
+                  { key: "plannedQty", header: "Planned" },
+                  { key: "actualQty", header: "Actual" },
                 ]}
                 data={report.batches || []}
                 emptyTitle="No batches in this period"
@@ -271,7 +278,13 @@ export default function ReportsPage() {
                   { key: "reference", header: "Ref" },
                   { key: "standard", header: "Standard", cell: (r: any) => r.standard?.name },
                   { key: "item", header: "Item", cell: (r: any) => r.item?.name },
-                  { key: "result", header: "Result", cell: (r: any) => <Badge variant={r.result === "PASS" ? "default" : "destructive"}>{r.result}</Badge> },
+                  {
+                    key: "result",
+                    header: "Result",
+                    cell: (r: any) => r.result ? (
+                      <Badge variant={r.result === "PASS" ? "default" : "destructive"}>{r.result}</Badge>
+                    ) : "-",
+                  },
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}
                 data={report.tests || []}
@@ -296,9 +309,10 @@ export default function ReportsPage() {
               <h3 className="font-semibold">Dispatch Orders</h3>
               <DataTable
                 columns={[
-                  { key: "doNumber", header: "DO #" },
+                  { key: "reference", header: "DO #" },
                   { key: "customerName", header: "Customer" },
                   { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
+                  { key: "totalQuantity", header: "Qty" },
                   { key: "totalAmount", header: "Total", cell: (r: any) => formatCurrency(r.totalAmount) },
                   { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
                 ]}

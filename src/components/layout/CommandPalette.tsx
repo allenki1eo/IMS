@@ -85,7 +85,7 @@ const COMMANDS: CommandItem[] = [
 
   // Analytics
   { label: "Analytics", href: "/analytics", icon: <BarChart3 className="h-4 w-4" />, group: "Analytics", permission: "production:report:read" },
-  { label: "Reports", href: "/reports", icon: <BarChart3 className="h-4 w-4" />, group: "Analytics", permission: "warehouse:stock:read" },
+  { label: "Reports", href: "/reports", icon: <BarChart3 className="h-4 w-4" />, group: "Analytics", permission: "reports:report:read" },
 ];
 
 interface CommandPaletteProps {
