@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BREWERY_SAMPLE_POINTS, BREWERY_TEST_STAGES, BREWERY_TEST_TYPES } from "@/modules/qc/brewery-qc";
 
 interface StandardOption {
   id: string;
@@ -31,17 +32,20 @@ interface ItemOption {
   code?: string;
 }
 
-const TEST_TYPES = [
-  { value: "INCOMING", label: "Incoming" },
-  { value: "IN_PROCESS", label: "In Process" },
-  { value: "FINAL", label: "Final" },
-  { value: "PERIODIC", label: "Periodic" },
-];
+interface BatchOption {
+  id: string;
+  reference: string;
+  productName: string;
+  status: string;
+}
 
 interface FormData {
   testType: string;
+  testStage: string;
+  samplePoint: string;
   standardId: string;
   itemId: string;
+  productionBatchId: string;
   batchNumber: string;
   sampleQty: string;
   sampleUnit: string;
@@ -54,9 +58,12 @@ export default function NewQcTestPage() {
   const prefillStandardId = searchParams.get("standardId") ?? "";
 
   const [form, setForm] = useState<FormData>({
-    testType: "INCOMING",
+    testType: "WORT",
+    testStage: "",
+    samplePoint: "",
     standardId: prefillStandardId,
     itemId: "",
+    productionBatchId: "",
     batchNumber: "",
     sampleQty: "",
     sampleUnit: "",
@@ -65,15 +72,18 @@ export default function NewQcTestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [standards, setStandards] = useState<StandardOption[]>([]);
   const [items, setItems] = useState<ItemOption[]>([]);
+  const [batches, setBatches] = useState<BatchOption[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/qc/standards?pageSize=200").then((r) => r.json()),
       fetch("/api/items?pageSize=200").then((r) => r.json()),
+      fetch("/api/production/batches?pageSize=200").then((r) => r.json()),
     ])
-      .then(([stdData, itemsData]) => {
+      .then(([stdData, itemsData, batchData]) => {
         setStandards(stdData.data ?? []);
         setItems(itemsData.data ?? []);
+        setBatches(batchData.data ?? []);
       })
       .catch(() => {});
   }, []);
@@ -97,8 +107,11 @@ export default function NewQcTestPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           testType: form.testType,
+          testStage: form.testStage || undefined,
+          samplePoint: form.samplePoint || undefined,
           standardId: form.standardId || undefined,
           itemId: form.itemId || undefined,
+          productionBatchId: form.productionBatchId || undefined,
           batchNumber: form.batchNumber.trim() || undefined,
           sampleQty: form.sampleQty ? parseFloat(form.sampleQty) : undefined,
           sampleUnit: form.sampleUnit.trim() || undefined,
@@ -148,11 +161,47 @@ export default function NewQcTestPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEST_TYPES.map((t) => (
+                  {BREWERY_TEST_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Brewing Stage</Label>
+                <Select
+                  value={form.testStage || "__none"}
+                  onValueChange={(v) => setForm((p) => ({ ...p, testStage: v === "__none" ? "" : v }))}
+                  disabled={submitting}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select stage" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">No stage</SelectItem>
+                    {BREWERY_TEST_STAGES.map((stage) => (
+                      <SelectItem key={stage.value} value={stage.value}>{stage.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label>Sample Point</Label>
+                <Select
+                  value={form.samplePoint || "__none"}
+                  onValueChange={(v) => setForm((p) => ({ ...p, samplePoint: v === "__none" ? "" : v }))}
+                  disabled={submitting}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select sample point" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">No sample point</SelectItem>
+                    {BREWERY_SAMPLE_POINTS.map((point) => (
+                      <SelectItem key={point.value} value={point.value}>{point.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -170,6 +219,35 @@ export default function NewQcTestPage() {
                   {standards.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.code} — {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Production Batch (optional)</Label>
+              <Select
+                value={form.productionBatchId || "__none"}
+                onValueChange={(v) => {
+                  const batchId = v === "__none" ? "" : v;
+                  const selected = batches.find((batch) => batch.id === batchId);
+                  setForm((p) => ({
+                    ...p,
+                    productionBatchId: batchId,
+                    batchNumber: selected?.reference ?? p.batchNumber,
+                  }));
+                }}
+                disabled={submitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select production batch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">No production batch</SelectItem>
+                  {batches.map((batch) => (
+                    <SelectItem key={batch.id} value={batch.id}>
+                      {batch.reference} - {batch.productName}
                     </SelectItem>
                   ))}
                 </SelectContent>

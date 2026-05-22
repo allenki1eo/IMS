@@ -21,25 +21,32 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
+import { BREWERY_TEST_STAGES, BREWERY_TEST_TYPES, RELEASE_DECISIONS } from "@/modules/qc/brewery-qc";
 
 interface TestRow {
   id: string;
   reference: string;
   testType: string;
+  testStage?: string | null;
+  samplePoint?: string | null;
   item?: { name: string } | null;
+  productionBatch?: { reference: string; productName: string } | null;
   batchNumber?: string | null;
   standard?: { name: string } | null;
   status: string;
   overallResult?: string | null;
+  releaseDecision?: string | null;
   createdAt: string;
 }
 
 const TYPE_FILTERS = [
   { label: "All Types", value: "ALL" },
-  { label: "Incoming", value: "INCOMING" },
-  { label: "In Process", value: "IN_PROCESS" },
-  { label: "Final", value: "FINAL" },
-  { label: "Periodic", value: "PERIODIC" },
+  ...BREWERY_TEST_TYPES,
+];
+
+const STAGE_FILTERS = [
+  { label: "All Stages", value: "ALL" },
+  ...BREWERY_TEST_STAGES,
 ];
 
 const STATUS_FILTERS = [
@@ -52,20 +59,27 @@ const STATUS_FILTERS = [
 
 function testTypeBadge(type: string) {
   const colors: Record<string, string> = {
-    INCOMING: "bg-blue-100 text-blue-700",
-    IN_PROCESS: "bg-purple-100 text-purple-700",
-    FINAL: "bg-green-100 text-green-700",
-    PERIODIC: "bg-gray-100 text-gray-600",
+    RAW_MATERIAL: "bg-amber-100 text-amber-700",
+    WATER: "bg-sky-100 text-sky-700",
+    WORT: "bg-orange-100 text-orange-700",
+    FERMENTATION: "bg-purple-100 text-purple-700",
+    BRIGHT_BEER: "bg-green-100 text-green-700",
+    PACKAGING: "bg-blue-100 text-blue-700",
+    MICROBIOLOGY: "bg-red-100 text-red-700",
+    SENSORY: "bg-pink-100 text-pink-700",
+    RETAIN_SAMPLE: "bg-slate-100 text-slate-700",
+    CALIBRATION: "bg-gray-100 text-gray-600",
   };
+  const label = BREWERY_TEST_TYPES.find((item) => item.value === type)?.label ?? type.replace(/_/g, " ");
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-600"}`}>
-      {type.replace(/_/g, " ")}
+      {label}
     </span>
   );
 }
 
 function resultBadge(result: string | null | undefined) {
-  if (!result) return <span className="text-muted-foreground text-xs">—</span>;
+  if (!result) return <span className="text-muted-foreground text-xs">-</span>;
   const colors: Record<string, string> = {
     PASS: "bg-green-100 text-green-700",
     FAIL: "bg-red-100 text-red-700",
@@ -78,11 +92,33 @@ function resultBadge(result: string | null | undefined) {
   );
 }
 
+function labelFor(options: readonly { value: string; label: string }[], value: string | null | undefined) {
+  if (!value) return null;
+  return options.find((item) => item.value === value)?.label ?? value.replace(/_/g, " ");
+}
+
+function releaseBadge(decision: string | null | undefined) {
+  if (!decision) return <span className="text-muted-foreground text-xs">-</span>;
+  const colors: Record<string, string> = {
+    HOLD: "bg-amber-100 text-amber-700",
+    RELEASED: "bg-green-100 text-green-700",
+    CONDITIONAL_RELEASE: "bg-blue-100 text-blue-700",
+    REJECTED: "bg-red-100 text-red-700",
+  };
+  const label = RELEASE_DECISIONS.find((item) => item.value === decision)?.label ?? decision.replace(/_/g, " ");
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[decision] ?? "bg-gray-100 text-gray-600"}`}>
+      {label}
+    </span>
+  );
+}
+
 const PAGE_SIZE = 20;
 
 export default function QcTestsPage() {
   const [page, setPage] = useState(1);
   const [testType, setTestType] = useState("ALL");
+  const [testStage, setTestStage] = useState("ALL");
   const [status, setStatus] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
@@ -90,6 +126,7 @@ export default function QcTestsPage() {
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) params.set("search", debounced);
   if (testType !== "ALL") params.set("testType", testType);
+  if (testStage !== "ALL") params.set("testStage", testStage);
   if (status !== "ALL") params.set("status", status);
   const { data: tests, total, loading, mutate } = usePagedData<TestRow>(`/api/qc/tests?${params}`);
 
@@ -123,11 +160,24 @@ export default function QcTestsPage() {
     },
     {
       key: "itemBatch",
-      header: "Item / Batch",
+      header: "Batch / Item",
+      cell: (row: TestRow) => {
+        const primary = row.productionBatch?.reference ?? row.batchNumber ?? row.item?.name;
+        const secondary = row.productionBatch?.productName ?? (row.productionBatch ? row.item?.name : null);
+        return (
+          <span className="text-muted-foreground">
+            {primary ?? "-"}
+            {secondary ? ` (${secondary})` : ""}
+          </span>
+        );
+      },
+    },
+    {
+      key: "stage",
+      header: "Stage",
       cell: (row: TestRow) => (
         <span className="text-muted-foreground">
-          {row.item?.name ?? "—"}
-          {row.batchNumber ? ` (${row.batchNumber})` : ""}
+          {labelFor(BREWERY_TEST_STAGES, row.testStage) ?? "-"}
         </span>
       ),
     },
@@ -135,7 +185,7 @@ export default function QcTestsPage() {
       key: "standard",
       header: "Standard",
       cell: (row: TestRow) => (
-        <span className="text-muted-foreground">{row.standard?.name ?? "—"}</span>
+        <span className="text-muted-foreground">{row.standard?.name ?? "-"}</span>
       ),
     },
     {
@@ -147,6 +197,11 @@ export default function QcTestsPage() {
       key: "overallResult",
       header: "Result",
       cell: (row: TestRow) => resultBadge(row.overallResult),
+    },
+    {
+      key: "releaseDecision",
+      header: "Release",
+      cell: (row: TestRow) => releaseBadge(row.releaseDecision),
     },
     {
       key: "createdAt",
@@ -177,7 +232,7 @@ export default function QcTestsPage() {
     <div>
       <PageHeader
         title="Lab Tests"
-        description="Manage quality control lab tests and results"
+        description="Manage brewery quality control lab tests and results"
         actions={
           <PermissionGuard require="qc:test:create">
             <Button asChild>
@@ -207,6 +262,16 @@ export default function QcTestsPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={testStage} onValueChange={(v) => { setTestStage(v); setPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STAGE_FILTERS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
@@ -228,7 +293,7 @@ export default function QcTestsPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No lab tests found"
-        emptyDescription="Create your first lab test to get started."
+        emptyDescription="Create your first brewery lab test to get started."
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
