@@ -204,6 +204,9 @@ const PERMISSIONS = [
   { module: "tra-stamps", resource: "stamp", action: "read", description: "View TRA stamps" },
   { module: "tra-stamps", resource: "stamp", action: "create", description: "Receive TRA stamp batches" },
   { module: "tra-stamps", resource: "stamp", action: "activate", description: "Activate TRA stamps" },
+  // Tally Integration
+  { module: "finance", resource: "tally", action: "read", description: "View Tally sync data (vouchers, ledgers, logs)" },
+  { module: "finance", resource: "tally", action: "manage", description: "Manage Tally API keys and configuration" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -281,6 +284,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
     "reports:report:read",
     "tra-stamps:stamp:read", "tra-stamps:stamp:create", "tra-stamps:stamp:activate",
+    "finance:tally:read", "finance:tally:manage",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
