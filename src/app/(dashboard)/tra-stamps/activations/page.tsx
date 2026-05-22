@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { usePagedData } from "@/hooks/usePagedData";
 
@@ -86,9 +87,11 @@ export default function StampActivationsPage() {
         title="Stamp Activations"
         description="Records of TRA stamps applied to products"
         actions={
-          <Button asChild>
-            <Link href="/tra-stamps/activations/new">Record Activation</Link>
-          </Button>
+          <PermissionGuard require="tra-stamps:stamp:activate">
+            <Button asChild>
+              <Link href="/tra-stamps/activations/new">Record Activation</Link>
+            </Button>
+          </PermissionGuard>
         }
       />
       <DataTable
