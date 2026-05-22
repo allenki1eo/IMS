@@ -22,7 +22,10 @@ export async function POST(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Dispatch order not found") return notFound(msg);
-    if (msg === "Only DRAFT, CONFIRMED, or DISPATCHED orders can be cancelled") return badRequest(msg);
+    if (
+      msg === "Only DRAFT, CONFIRMED, or DISPATCHED orders can be cancelled" ||
+      msg === "Unable to reverse dispatched lot quantity"
+    ) return badRequest(msg);
     return handleError(err);
   }
 }

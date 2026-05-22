@@ -1,6 +1,11 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+type LotWithProduct = {
+  quantityIn: number;
+  quantityOut: number;
+};
+
 export async function listLots(
   companyId: string,
   params: {
@@ -32,7 +37,7 @@ export async function listLots(
     db.fGLot.count({ where }),
   ]);
 
-  const data = lots.map((lot) => ({
+  const data = (lots as LotWithProduct[]).map((lot) => ({
     ...lot,
     availableQty: lot.quantityIn - lot.quantityOut,
   }));
@@ -73,6 +78,7 @@ export async function receiveLot(
   const product = await db.fGProduct.findUnique({ where: { id: data.productId } });
   if (!product) throw new Error("Product not found");
   if (product.companyId !== companyId) throw new Error("Product not found");
+  if (!product.isActive) throw new Error("Product is inactive");
 
   if (data.warehouseId) {
     const warehouse = await db.warehouse.findUnique({ where: { id: data.warehouseId } });
@@ -80,7 +86,14 @@ export async function receiveLot(
     if (warehouse.companyId !== companyId) throw new Error("Warehouse not found");
   }
 
-  if (data.quantityIn <= 0) throw new Error("Quantity must be greater than zero");
+  if (!Number.isFinite(data.quantityIn) || data.quantityIn <= 0) throw new Error("Quantity must be greater than zero");
+  if (data.unitCost != null && (!Number.isFinite(data.unitCost) || data.unitCost < 0)) {
+    throw new Error("Unit cost cannot be negative");
+  }
+  if (data.bestBefore) {
+    const bestBefore = new Date(data.bestBefore);
+    if (Number.isNaN(bestBefore.getTime())) throw new Error("Best before date is invalid");
+  }
 
   const lot = await db.fGLot.create({
     data: {
@@ -142,6 +155,16 @@ export async function updateLot(
     const warehouse = await db.warehouse.findUnique({ where: { id: data.warehouseId } });
     if (!warehouse) throw new Error("Warehouse not found");
     if (warehouse.companyId !== companyId) throw new Error("Warehouse not found");
+  }
+  if (data.unitCost != null && (!Number.isFinite(data.unitCost) || data.unitCost < 0)) {
+    throw new Error("Unit cost cannot be negative");
+  }
+  if (data.bestBefore) {
+    const bestBefore = new Date(data.bestBefore);
+    if (Number.isNaN(bestBefore.getTime())) throw new Error("Best before date is invalid");
+  }
+  if (data.status === "AVAILABLE" && existing.quantityOut >= existing.quantityIn) {
+    throw new Error("Depleted lots cannot be marked available");
   }
 
   const updateData: Record<string, unknown> = {};
