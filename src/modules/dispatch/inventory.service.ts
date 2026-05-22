@@ -50,6 +50,12 @@ export async function getLot(companyId: string, id: string) {
     where: { id },
     include: {
       product: { select: { id: true, code: true, name: true, uom: true } },
+      warehouse: { select: { id: true, code: true, name: true } },
+      dispatchLines: {
+        include: {
+          order: { select: { id: true, reference: true, customerName: true } },
+        },
+      },
       _count: { select: { dispatchLines: true } },
     },
   });
