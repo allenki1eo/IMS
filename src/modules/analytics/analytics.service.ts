@@ -1,13 +1,28 @@
 import { db } from "@/lib/db";
 
+type AnyRow = Record<string, any>;
+
+function normalizeMonths(months: number) {
+  if (!Number.isFinite(months)) return 6;
+  return Math.min(Math.max(Math.trunc(months), 1), 24);
+}
+
 export async function getExecutiveKPIs(companyId: string) {
+  const lowStockBalancesPromise = db.stockBalance.findMany({
+    where: { warehouse: { companyId }, item: { isActive: true } },
+    select: {
+      quantity: true,
+      item: { select: { reorderPoint: true } },
+    },
+  });
+
   const [
     totalUsers,
     totalDepartments,
     totalEmployees,
     totalWarehouses,
     totalItems,
-    lowStockCount,
+    lowStockBalances,
     totalVehicles,
     totalDrivers,
     activeTrips,
@@ -25,12 +40,12 @@ export async function getExecutiveKPIs(companyId: string) {
     pendingPayments,
     totalAccounts,
   ] = await Promise.all([
-    db.user.count({ where: { isActive: true } as any }),
+    db.user.count({ where: { isActive: true, employee: { companyId } } }),
     db.department.count({ where: { companyId, isActive: true } as any }),
     db.employee.count({ where: { companyId } as any }),
     db.warehouse.count({ where: { companyId, isActive: true } as any }),
     db.item.count({ where: { companyId, isActive: true } as any }),
-    db.stockBalance.count({ where: { quantity: { lte: 10 } } as any }),
+    lowStockBalancesPromise,
     db.vehicle.count({ where: { companyId, status: { not: "DECOMMISSIONED" } } as any }),
     db.driver.count({ where: { companyId, status: "ACTIVE" } as any }),
     db.tripOrder.count({ where: { companyId, status: { in: ["PLANNED", "DISPATCHED"] } } as any }),
@@ -48,6 +63,10 @@ export async function getExecutiveKPIs(companyId: string) {
     db.payment.aggregate({ where: { companyId, status: "PENDING" } as any, _sum: { amount: true } }),
     db.account.count({ where: { companyId, isActive: true } as any }),
   ]);
+  const lowStockCount = (lowStockBalances as AnyRow[]).filter((balance) => {
+    const reorderPoint = balance.item?.reorderPoint;
+    return reorderPoint !== null && reorderPoint !== undefined && balance.quantity <= reorderPoint;
+  }).length;
 
   return {
     totalUsers,
@@ -76,6 +95,7 @@ export async function getExecutiveKPIs(companyId: string) {
 }
 
 export async function getMonthlyTrends(companyId: string, months = 6) {
+  months = normalizeMonths(months);
   const now = new Date();
   const result: any[] = [];
 
@@ -128,35 +148,42 @@ export async function getOperationalMetrics(companyId: string) {
     maintenanceByStatus,
     qcResults,
   ] = await Promise.all([
-    db.stockBalance.groupBy({ by: ["warehouseId"], where: { } as any, _sum: { quantity: true } }),
+    db.stockBalance.groupBy({ by: ["warehouseId"], where: { warehouse: { companyId } }, _sum: { quantity: true } }),
     db.tripOrder.groupBy({ by: ["status"], where: { companyId }, _count: { id: true } }),
     db.fuelIssue.groupBy({ by: ["vehicleId"], where: { companyId } as any, _sum: { quantityLiters: true }, orderBy: { _sum: { quantityLiters: "desc" } }, take: 10 }),
     db.workOrder.groupBy({ by: ["status"], where: { companyId }, _count: { id: true } }),
     db.qualityTest.groupBy({ by: ["result"], where: { companyId }, _count: { id: true } }),
   ]);
 
-  const warehouseIds = stockByWarehouse.map((s) => s.warehouseId);
+  const stockRows = stockByWarehouse as AnyRow[];
+  const tripRows = tripStatusBreakdown as AnyRow[];
+  const fuelRows = fuelConsumptionByVehicle as AnyRow[];
+  const maintenanceRows = maintenanceByStatus as AnyRow[];
+  const qcRows = qcResults as AnyRow[];
+
+  const warehouseIds = stockRows.map((stock) => stock.warehouseId);
   const warehouses = warehouseIds.length > 0
     ? await db.warehouse.findMany({ where: { id: { in: warehouseIds } }, select: { id: true, name: true } })
     : [];
-  const warehouseMap = Object.fromEntries(warehouses.map((w) => [w.id, w.name]));
+  const warehouseMap = Object.fromEntries((warehouses as AnyRow[]).map((warehouse) => [warehouse.id, warehouse.name]));
 
-  const vehicleIds = fuelConsumptionByVehicle.map((f) => f.vehicleId).filter(Boolean);
+  const vehicleIds = fuelRows.map((fuel) => fuel.vehicleId).filter(Boolean);
   const vehicles = vehicleIds.length > 0
     ? await db.vehicle.findMany({ where: { id: { in: vehicleIds as string[] } }, select: { id: true, plateNumber: true } })
     : [];
-  const vehicleMap = Object.fromEntries(vehicles.map((v) => [v.id, v.plateNumber]));
+  const vehicleMap = Object.fromEntries((vehicles as AnyRow[]).map((vehicle) => [vehicle.id, vehicle.plateNumber]));
 
   return {
-    stockByWarehouse: stockByWarehouse.map((s) => ({ name: warehouseMap[s.warehouseId] || s.warehouseId, value: s._sum.quantity || 0 })),
-    tripStatusBreakdown: tripStatusBreakdown.map((t) => ({ name: t.status, value: t._count.id })),
-    fuelConsumptionByVehicle: fuelConsumptionByVehicle.map((f) => ({ name: vehicleMap[f.vehicleId || ""] || f.vehicleId, value: f._sum.quantityLiters || 0 })),
-    maintenanceByStatus: maintenanceByStatus.map((m) => ({ name: m.status, value: m._count.id })),
-    qcResults: qcResults.map((q) => ({ name: q.result || "PENDING", value: q._count.id })),
+    stockByWarehouse: stockRows.map((stock) => ({ name: warehouseMap[stock.warehouseId] || stock.warehouseId, value: stock._sum.quantity || 0 })),
+    tripStatusBreakdown: tripRows.map((trip) => ({ name: trip.status, value: trip._count.id })),
+    fuelConsumptionByVehicle: fuelRows.map((fuel) => ({ name: vehicleMap[fuel.vehicleId || ""] || fuel.vehicleId || "Unassigned", value: fuel._sum.quantityLiters || 0 })),
+    maintenanceByStatus: maintenanceRows.map((maintenance) => ({ name: maintenance.status, value: maintenance._count.id })),
+    qcResults: qcRows.map((qc) => ({ name: qc.result || "PENDING", value: qc._count.id })),
   };
 }
 
 export async function getFinancialTrends(companyId: string, months = 6) {
+  months = normalizeMonths(months);
   const now = new Date();
   const result: any[] = [];
 

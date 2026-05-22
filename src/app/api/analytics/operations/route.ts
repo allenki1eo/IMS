@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
   try {
     const metrics = await getOperationalMetrics(companyId);
     return success(metrics);
-  } catch {
+  } catch (err) {
+    console.error("[Analytics operations]", err);
     return badRequest("Failed to load operational metrics");
   }
 }
