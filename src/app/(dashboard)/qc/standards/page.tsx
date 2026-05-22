@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -11,6 +11,13 @@ import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
 
@@ -23,16 +30,32 @@ interface StandardRow {
   isActive: boolean;
 }
 
+interface BreweryTemplate {
+  code: string;
+  name: string;
+  description: string;
+}
+
 const PAGE_SIZE = 20;
 
 export default function QcStandardsPage() {
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<BreweryTemplate[]>([]);
+  const [templateCode, setTemplateCode] = useState("");
+  const [installing, setInstalling] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) params.set("search", debounced);
   const { data: standards, total, loading, mutate } = usePagedData<StandardRow>(`/api/qc/standards?${params}`);
+
+  useEffect(() => {
+    fetch("/api/qc/brewery/templates")
+      .then((res) => res.json())
+      .then((json) => setTemplates(json.data?.standardTemplates ?? []))
+      .catch(() => {});
+  }, []);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -44,6 +67,34 @@ export default function QcStandardsPage() {
     } else {
       const d = await res.json().catch(() => ({}));
       toast.error(d.message ?? "Failed to delete quality standard");
+    }
+  }
+
+  async function handleInstallTemplate() {
+    if (!templateCode) {
+      toast.error("Select a brewery template first");
+      return;
+    }
+
+    setInstalling(true);
+    try {
+      const res = await fetch("/api/qc/brewery/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateCode }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "Failed to install template");
+        return;
+      }
+      toast.success("Brewery QC template installed");
+      setTemplateCode("");
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setInstalling(false);
     }
   }
 
@@ -118,13 +169,31 @@ export default function QcStandardsPage() {
         }
       />
 
-      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={(v) => { setSearch(v); setPage(1); }}
           placeholder="Search by code or name..."
           className="w-full sm:max-w-xs"
         />
+        <PermissionGuard require="qc:standard:create">
+          <Select value={templateCode || "__none"} onValueChange={(value) => setTemplateCode(value === "__none" ? "" : value)}>
+            <SelectTrigger className="w-full sm:w-[260px]">
+              <SelectValue placeholder="Install brewery template" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">Select brewery template</SelectItem>
+              {templates.map((template) => (
+                <SelectItem key={template.code} value={template.code}>
+                  {template.code} - {template.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button type="button" variant="outline" onClick={handleInstallTemplate} disabled={installing}>
+            Install Template
+          </Button>
+        </PermissionGuard>
       </div>
 
       <DataTable

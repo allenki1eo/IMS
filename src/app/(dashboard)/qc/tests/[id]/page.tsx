@@ -13,20 +13,18 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BREWERY_SAMPLE_POINTS, BREWERY_TEST_STAGES, BREWERY_TEST_TYPES, RELEASE_DECISIONS } from "@/modules/qc/brewery-qc";
 
 interface TestResult {
   id: string;
-  parameter: {
-    id: string;
-    name: string;
-    unit?: string | null;
-    minValue?: number | null;
-    maxValue?: number | null;
-    targetValue?: number | null;
-  };
+  parameterName: string;
+  unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  targetValue?: number | null;
   actualValue?: number | null;
   textResult?: string | null;
-  passed?: boolean | null;
+  isPassed?: boolean | null;
 }
 
 interface NcrSummary {
@@ -41,9 +39,14 @@ interface LabTest {
   id: string;
   reference: string;
   testType: string;
+  testStage?: string | null;
+  samplePoint?: string | null;
   status: string;
   overallResult?: string | null;
+  result?: string | null;
+  releaseDecision?: string | null;
   item?: { id: string; name: string } | null;
+  productionBatch?: { id: string; reference: string; productName: string; status: string } | null;
   standard?: { id: string; name: string; code: string } | null;
   batchNumber?: string | null;
   sampleQty?: number | null;
@@ -53,32 +56,26 @@ interface LabTest {
   createdAt: string;
   results: TestResult[];
   ncrs?: NcrSummary[];
-}
-
-function resultBadge(result: string | null | undefined) {
-  if (!result) return null;
-  const colors: Record<string, string> = {
-    PASS: "bg-green-100 text-green-700",
-    FAIL: "bg-red-100 text-red-700",
-    CONDITIONAL: "bg-amber-100 text-amber-700",
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[result] ?? "bg-gray-100 text-gray-600"}`}>
-      {result}
-    </span>
-  );
+  nonConformances?: NcrSummary[];
 }
 
 function testTypeBadge(type: string) {
   const colors: Record<string, string> = {
-    INCOMING: "bg-blue-100 text-blue-700",
-    IN_PROCESS: "bg-purple-100 text-purple-700",
-    FINAL: "bg-green-100 text-green-700",
-    PERIODIC: "bg-gray-100 text-gray-600",
+    RAW_MATERIAL: "bg-amber-100 text-amber-700",
+    WATER: "bg-sky-100 text-sky-700",
+    WORT: "bg-orange-100 text-orange-700",
+    FERMENTATION: "bg-purple-100 text-purple-700",
+    BRIGHT_BEER: "bg-green-100 text-green-700",
+    PACKAGING: "bg-blue-100 text-blue-700",
+    MICROBIOLOGY: "bg-red-100 text-red-700",
+    SENSORY: "bg-pink-100 text-pink-700",
+    RETAIN_SAMPLE: "bg-slate-100 text-slate-700",
+    CALIBRATION: "bg-gray-100 text-gray-600",
   };
+  const label = labelFor(BREWERY_TEST_TYPES, type);
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-600"}`}>
-      {type.replace(/_/g, " ")}
+      {label}
     </span>
   );
 }
@@ -97,11 +94,32 @@ function severityBadge(severity: string) {
 }
 
 function passFailBadge(passed: boolean | null | undefined) {
-  if (passed === null || passed === undefined) return <span className="text-muted-foreground text-xs">—</span>;
+  if (passed === null || passed === undefined) return <span className="text-muted-foreground text-xs">-</span>;
   return passed ? (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">Pass</span>
   ) : (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">Fail</span>
+  );
+}
+
+function labelFor(options: readonly { value: string; label: string }[], value: string | null | undefined) {
+  if (!value) return "-";
+  return options.find((item) => item.value === value)?.label ?? value.replace(/_/g, " ");
+}
+
+function releaseBadge(decision: string | null | undefined) {
+  if (!decision) return <span className="text-muted-foreground">-</span>;
+  const colors: Record<string, string> = {
+    HOLD: "bg-amber-100 text-amber-700",
+    RELEASED: "bg-green-100 text-green-700",
+    CONDITIONAL_RELEASE: "bg-blue-100 text-blue-700",
+    REJECTED: "bg-red-100 text-red-700",
+  };
+  const label = RELEASE_DECISIONS.find((item) => item.value === decision)?.label ?? decision.replace(/_/g, " ");
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[decision] ?? "bg-gray-100 text-gray-600"}`}>
+      {label}
+    </span>
   );
 }
 
@@ -110,6 +128,7 @@ export default function QcTestDetailPage() {
   const [test, setTest] = useState<LabTest | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [releaseLoading, setReleaseLoading] = useState(false);
   const [resultEdits, setResultEdits] = useState<Record<string, { actualValue: string; textResult: string }>>({});
   const [savingResults, setSavingResults] = useState(false);
 
@@ -118,14 +137,13 @@ export default function QcTestDetailPage() {
     fetch(`/api/qc/tests/${id}`)
       .then((r) => r.json())
       .then((d) => {
-        const t: LabTest = d.data;
-        setTest(t);
-        // Initialize edits from current values
+        const loadedTest: LabTest = d.data;
+        setTest(loadedTest);
         const edits: Record<string, { actualValue: string; textResult: string }> = {};
-        (t.results ?? []).forEach((r) => {
-          edits[r.id] = {
-            actualValue: r.actualValue != null ? String(r.actualValue) : "",
-            textResult: r.textResult ?? "",
+        (loadedTest.results ?? []).forEach((result) => {
+          edits[result.id] = {
+            actualValue: result.actualValue != null ? String(result.actualValue) : "",
+            textResult: result.textResult ?? "",
           };
         });
         setResultEdits(edits);
@@ -154,14 +172,33 @@ export default function QcTestDetailPage() {
     }
   }
 
+  async function handleReleaseDecision(decision: string) {
+    setReleaseLoading(true);
+    try {
+      const res = await fetch(`/api/qc/tests/${id}/release`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Failed to update release decision"); return; }
+      toast.success("Release decision updated");
+      loadData();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setReleaseLoading(false);
+    }
+  }
+
   async function handleSaveResults() {
     if (!test) return;
     setSavingResults(true);
     try {
-      const results = test.results.map((r) => ({
-        resultId: r.id,
-        actualValue: resultEdits[r.id]?.actualValue ? parseFloat(resultEdits[r.id].actualValue) : undefined,
-        textResult: resultEdits[r.id]?.textResult.trim() || undefined,
+      const results = test.results.map((result) => ({
+        resultId: result.id,
+        actualValue: resultEdits[result.id]?.actualValue ? parseFloat(resultEdits[result.id].actualValue) : undefined,
+        textResult: resultEdits[result.id]?.textResult.trim() || undefined,
       }));
       const res = await fetch(`/api/qc/tests/${id}/results`, {
         method: "PATCH",
@@ -184,12 +221,14 @@ export default function QcTestDetailPage() {
 
   const isInProgress = test.status === "IN_PROGRESS";
   const hasResults = test.status === "IN_PROGRESS" || test.status === "COMPLETED";
+  const overallResult = test.overallResult ?? test.result;
+  const ncrs = test.ncrs ?? test.nonConformances ?? [];
 
   return (
     <div>
       <PageHeader
         title={test.reference}
-        description={`Lab Test — ${test.testType.replace(/_/g, " ")}`}
+        description={`Lab Test - ${labelFor(BREWERY_TEST_TYPES, test.testType)}`}
         actions={
           <Button variant="outline" asChild>
             <Link href="/qc/tests">
@@ -200,7 +239,6 @@ export default function QcTestDetailPage() {
         }
       />
 
-      {/* Header card */}
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Test Info</CardTitle>
@@ -212,21 +250,39 @@ export default function QcTestDetailPage() {
         <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
             <p className="text-muted-foreground">Item</p>
-            <p className="font-medium mt-1">{test.item?.name ?? "—"}</p>
+            <p className="font-medium mt-1">{test.item?.name ?? "-"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Production Batch</p>
+            <p className="font-medium mt-1">
+              {test.productionBatch ? `${test.productionBatch.reference} (${test.productionBatch.productName})` : "-"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Brewing Stage</p>
+            <p className="mt-1">{labelFor(BREWERY_TEST_STAGES, test.testStage)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Sample Point</p>
+            <p className="mt-1">{labelFor(BREWERY_SAMPLE_POINTS, test.samplePoint)}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Standard</p>
             <p className="mt-1">
               {test.standard ? (
                 <Link href={`/qc/standards/${test.standard.id}`} className="hover:underline text-primary">
-                  {test.standard.code} — {test.standard.name}
+                  {test.standard.code} - {test.standard.name}
                 </Link>
-              ) : "—"}
+              ) : "-"}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground">Batch Number</p>
-            <p className="mt-1">{test.batchNumber ?? "—"}</p>
+            <p className="mt-1">{test.batchNumber ?? "-"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Release Decision</p>
+            <p className="mt-1">{releaseBadge(test.releaseDecision)}</p>
           </div>
           {(test.sampleQty != null || test.sampleUnit) && (
             <div>
@@ -256,7 +312,6 @@ export default function QcTestDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Action Buttons */}
       <PermissionGuard require="qc:test:update">
         <div className="flex gap-2 mb-6">
           {test.status === "PENDING" && (
@@ -279,7 +334,30 @@ export default function QcTestDetailPage() {
         </div>
       </PermissionGuard>
 
-      {/* Results */}
+      {test.status === "COMPLETED" && (
+        <PermissionGuard require="qc:test:complete">
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-base">Release Decision</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-2">
+              {RELEASE_DECISIONS.map((decision) => (
+                <Button
+                  key={decision.value}
+                  type="button"
+                  size="sm"
+                  variant={test.releaseDecision === decision.value ? "default" : "outline"}
+                  disabled={releaseLoading}
+                  onClick={() => handleReleaseDecision(decision.value)}
+                >
+                  {decision.label}
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        </PermissionGuard>
+      )}
+
       {hasResults && test.results.length > 0 && (
         <Card className="mb-6">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -309,29 +387,29 @@ export default function QcTestDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {test.results.map((r) => (
-                    <tr key={r.id} className="border-t hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{r.parameter.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.parameter.unit ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.parameter.minValue ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.parameter.targetValue ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.parameter.maxValue ?? "—"}</td>
+                  {test.results.map((result) => (
+                    <tr key={result.id} className="border-t hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{result.parameterName}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{result.unit ?? "-"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{result.minValue ?? "-"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{result.targetValue ?? "-"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{result.maxValue ?? "-"}</td>
                       <td className="px-4 py-3">
                         {isInProgress ? (
                           <Input
                             type="number"
                             step="any"
                             className="h-7 w-24"
-                            value={resultEdits[r.id]?.actualValue ?? ""}
+                            value={resultEdits[result.id]?.actualValue ?? ""}
                             onChange={(e) =>
                               setResultEdits((prev) => ({
                                 ...prev,
-                                [r.id]: { ...prev[r.id], actualValue: e.target.value },
+                                [result.id]: { ...prev[result.id], actualValue: e.target.value },
                               }))
                             }
                           />
                         ) : (
-                          <span>{r.actualValue ?? "—"}</span>
+                          <span>{result.actualValue ?? "-"}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -339,19 +417,19 @@ export default function QcTestDetailPage() {
                           <Input
                             type="text"
                             className="h-7 w-32"
-                            value={resultEdits[r.id]?.textResult ?? ""}
+                            value={resultEdits[result.id]?.textResult ?? ""}
                             onChange={(e) =>
                               setResultEdits((prev) => ({
                                 ...prev,
-                                [r.id]: { ...prev[r.id], textResult: e.target.value },
+                                [result.id]: { ...prev[result.id], textResult: e.target.value },
                               }))
                             }
                           />
                         ) : (
-                          <span className="text-muted-foreground">{r.textResult ?? "—"}</span>
+                          <span className="text-muted-foreground">{result.textResult ?? "-"}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">{passFailBadge(r.passed)}</td>
+                      <td className="px-4 py-3">{passFailBadge(result.isPassed)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -361,28 +439,26 @@ export default function QcTestDetailPage() {
         </Card>
       )}
 
-      {/* Overall Result */}
-      {test.status === "COMPLETED" && test.overallResult && (
+      {test.status === "COMPLETED" && overallResult && (
         <Card className="mb-6">
           <CardContent className="pt-6 flex items-center gap-4">
             <span className="text-sm font-medium text-muted-foreground">Overall Result:</span>
             <span className={`inline-flex items-center rounded-full px-4 py-1.5 text-sm font-bold ${
-              test.overallResult === "PASS"
+              overallResult === "PASS"
                 ? "bg-green-100 text-green-700"
-                : test.overallResult === "FAIL"
+                : overallResult === "FAIL"
                 ? "bg-red-100 text-red-700"
                 : "bg-amber-100 text-amber-700"
             }`}>
-              {test.overallResult}
+              {overallResult}
             </span>
           </CardContent>
         </Card>
       )}
 
-      {/* Linked NCRs */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Linked NCRs ({(test.ncrs ?? []).length})</CardTitle>
+          <CardTitle className="text-base">Linked NCRs ({ncrs.length})</CardTitle>
           <PermissionGuard require="qc:ncr:create">
             <Button size="sm" asChild>
               <Link href={`/qc/ncr/new?testId=${test.id}`}>
@@ -404,14 +480,14 @@ export default function QcTestDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {(test.ncrs ?? []).length === 0 ? (
+                {ncrs.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                       No NCRs linked to this test
                     </td>
                   </tr>
                 ) : (
-                  (test.ncrs ?? []).map((ncr) => (
+                  ncrs.map((ncr) => (
                     <tr key={ncr.id} className="border-t hover:bg-muted/30">
                       <td className="px-4 py-3">
                         <Link href={`/qc/ncr/${ncr.id}`} className="font-medium hover:underline">
