@@ -13,6 +13,60 @@ function assertNonNegativeFiniteNumber(value: number, field: string) {
   }
 }
 
+type SparePartTransactionRow = {
+  id: string;
+  referenceType: string | null;
+  referenceId: string | null;
+};
+
+type WorkOrderReferenceRow = {
+  id: string;
+  reference: string;
+  vehicle: {
+    id: string;
+    plateNumber: string;
+    make: string | null;
+    model: string | null;
+  } | null;
+};
+
+async function attachWorkOrders<T extends SparePartTransactionRow>(
+  companyId: string,
+  transactions: T[]
+) {
+  const workOrderIds = Array.from(
+    new Set(
+      transactions
+        .filter((tx) => tx.referenceType === "WORK_ORDER" && tx.referenceId)
+        .map((tx) => tx.referenceId as string)
+    )
+  );
+
+  if (!workOrderIds.length) return transactions;
+
+  const workOrders: WorkOrderReferenceRow[] = await db.workOrder.findMany({
+    where: { companyId, id: { in: workOrderIds } },
+    select: {
+      id: true,
+      reference: true,
+      vehicle: {
+        select: {
+          id: true,
+          plateNumber: true,
+          make: true,
+          model: true,
+        },
+      },
+    },
+  });
+  const byId = new Map(workOrders.map((wo: WorkOrderReferenceRow) => [wo.id, wo]));
+
+  return transactions.map((tx) => ({
+    ...tx,
+    workOrder: tx.referenceId ? byId.get(tx.referenceId) ?? null : null,
+  }));
+}
+
 export async function listReceipts(
   companyId: string,
   params: {
@@ -54,7 +108,7 @@ export async function listReceipts(
     db.sparePartTransaction.count({ where }),
   ]);
 
-  return { data: receipts, meta: { total, page, pageSize } };
+  return { data: await attachWorkOrders(companyId, receipts), meta: { total, page, pageSize } };
 }
 
 export async function listTransactions(
@@ -97,7 +151,7 @@ export async function listTransactions(
     db.sparePartTransaction.count({ where }),
   ]);
 
-  return { data: transactions, meta: { total, page, pageSize } };
+  return { data: await attachWorkOrders(companyId, transactions), meta: { total, page, pageSize } };
 }
 
 export async function getReceipt(companyId: string, id: string) {
@@ -165,7 +219,7 @@ export async function receiveStock(
         unitCost: data.unitCost ?? null,
         totalCost,
         referenceType: data.workOrderId ? "WORK_ORDER" : (data.reference ? "MANUAL" : null),
-        referenceId: data.workOrderId ?? null,
+        referenceId: data.workOrderId ?? data.reference ?? null,
         notes: data.notes ?? (data.reference ? `Ref: ${data.reference}` : null),
         createdById: userId,
       },
