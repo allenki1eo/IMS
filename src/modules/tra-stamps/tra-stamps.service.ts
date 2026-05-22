@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
@@ -13,18 +14,82 @@ export async function listStampBatches(
 ) {
   const { search, status, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
+  const filters: Record<string, unknown>[] = [];
+  if (status) filters.push({ status });
+  if (status === "ACTIVE") {
+    filters.push({ OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }] });
+  }
+  if (search) {
+    filters.push({ OR: [{ batchNumber: { contains: search } }, { stampType: { contains: search } }] });
+  }
   const where = {
     companyId,
-    ...(status ? { status } : {}),
-    ...(search
-      ? { OR: [{ batchNumber: { contains: search } }, { stampType: { contains: search } }] }
-      : {}),
+    ...(filters.length ? { AND: filters } : {}),
   };
   const [data, total] = await Promise.all([
     db.traStampBatch.findMany({ where, skip, take: pageSize, orderBy: { createdAt: "desc" } }),
     db.traStampBatch.count({ where }),
   ]);
   return { data, meta: { total, page, pageSize } };
+}
+
+type StampBatch = {
+  id: string;
+  companyId: string;
+  batchNumber: string;
+  stampType: string;
+  quantity: number;
+  used: number;
+  expiresAt: Date | null;
+  status: string;
+};
+
+type StampBatchInput = {
+  batchNumber?: unknown;
+  stampType?: unknown;
+  quantity?: unknown;
+  serialFrom?: unknown;
+  serialTo?: unknown;
+  receivedAt?: unknown;
+  expiresAt?: unknown;
+  notes?: unknown;
+};
+
+type StampActivationInput = {
+  batchId?: unknown;
+  productName?: unknown;
+  quantity?: unknown;
+  activatedAt?: unknown;
+  notes?: unknown;
+};
+
+function asTrimmedString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function optionalString(value: unknown): string | null {
+  const str = asTrimmedString(value);
+  return str || null;
+}
+
+function positiveInteger(value: unknown, label: string): number {
+  const num = Number(value);
+  if (!Number.isInteger(num) || num <= 0) throw new Error(`${label} must be a positive whole number`);
+  return num;
+}
+
+function optionalDate(value: unknown, label: string): Date | null {
+  if (!value) return null;
+  const date = new Date(value as string);
+  if (Number.isNaN(date.getTime())) throw new Error(`${label} is invalid`);
+  return date;
+}
+
+function assertBatchCanActivate(batch: StampBatch, qty: number, now = new Date()) {
+  if (batch.status !== "ACTIVE") throw new Error("Only active stamp batches can be activated");
+  if (batch.expiresAt && batch.expiresAt < now) throw new Error("Stamp batch has expired");
+  const balance = batch.quantity - batch.used;
+  if (qty > balance) throw new Error(`Insufficient stamps. Available: ${balance}`);
 }
 
 export async function getStampBatch(companyId: string, id: string) {
@@ -38,22 +103,30 @@ export async function getStampBatch(companyId: string, id: string) {
 
 export async function createStampBatch(
   companyId: string,
-  data: Record<string, unknown>,
+  data: StampBatchInput,
   userId: string,
   userName: string,
   ipAddress?: string
 ) {
+  const batchNumber = asTrimmedString(data.batchNumber);
+  if (!batchNumber) throw new Error("Batch number is required");
+
+  const quantity = positiveInteger(data.quantity, "Quantity");
+  const receivedAt = optionalDate(data.receivedAt, "Received date") ?? new Date();
+  const expiresAt = optionalDate(data.expiresAt, "Expiry date");
+  if (expiresAt && expiresAt < receivedAt) throw new Error("Expiry date cannot be before received date");
+
   const batch = await db.traStampBatch.create({
     data: {
       companyId,
-      batchNumber: data.batchNumber as string,
-      stampType: (data.stampType as string) ?? "BEER",
-      quantity: Number(data.quantity),
-      serialFrom: (data.serialFrom as string | undefined) ?? null,
-      serialTo: (data.serialTo as string | undefined) ?? null,
-      receivedAt: data.receivedAt ? new Date(data.receivedAt as string) : new Date(),
-      expiresAt: data.expiresAt ? new Date(data.expiresAt as string) : null,
-      notes: (data.notes as string | undefined) ?? null,
+      batchNumber,
+      stampType: asTrimmedString(data.stampType) || "BEER",
+      quantity,
+      serialFrom: optionalString(data.serialFrom),
+      serialTo: optionalString(data.serialTo),
+      receivedAt,
+      expiresAt,
+      notes: optionalString(data.notes),
       createdById: userId,
     },
   });
@@ -67,6 +140,7 @@ export async function createStampBatch(
     newValue: { batchNumber: batch.batchNumber },
     description: "Created TRA stamp batch",
     ipAddress,
+    companyId,
   });
   return batch;
 }
@@ -99,41 +173,59 @@ export async function listStampActivations(
 
 export async function createStampActivation(
   companyId: string,
-  data: Record<string, unknown>,
+  data: StampActivationInput,
   userId: string,
   userName: string,
   ipAddress?: string
 ) {
-  const batch = await db.traStampBatch.findUnique({ where: { id: data.batchId as string } });
+  const batchId = asTrimmedString(data.batchId);
+  const productName = asTrimmedString(data.productName);
+  const qty = positiveInteger(data.quantity, "Quantity");
+  const activatedAt = optionalDate(data.activatedAt, "Activation date") ?? new Date();
+
+  if (!batchId) throw new Error("Stamp batch is required");
+  if (!productName) throw new Error("Product name is required");
+
+  const batch = await db.traStampBatch.findUnique({ where: { id: batchId } }) as StampBatch | null;
   if (!batch || batch.companyId !== companyId) throw new Error("Stamp batch not found");
+  assertBatchCanActivate(batch, qty, activatedAt);
 
-  const balance = batch.quantity - batch.used;
-  const qty = Number(data.quantity);
-  if (qty > balance) throw new Error(`Insufficient stamps. Available: ${balance}`);
-
-  const newUsed = batch.used + qty;
-
-  const [activation] = await db.$transaction([
-    db.traStampActivation.create({
-      data: {
+  const activation = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.traStampBatch.updateMany({
+      where: {
+        id: batchId,
         companyId,
-        batchId: data.batchId as string,
-        reference: generateRef(),
-        productName: data.productName as string,
-        quantity: qty,
-        activatedAt: data.activatedAt ? new Date(data.activatedAt as string) : new Date(),
-        notes: (data.notes as string | undefined) ?? null,
-        createdById: userId,
+        status: "ACTIVE",
+        used: { lte: batch.quantity - qty },
       },
-    }),
-    db.traStampBatch.update({
-      where: { id: data.batchId as string },
       data: {
         used: { increment: qty },
-        status: newUsed >= batch.quantity ? "DEPLETED" : "ACTIVE",
       },
-    }),
-  ]);
+    });
+    if (updated.count === 0) throw new Error("Insufficient stamps. Please refresh and try again");
+
+    const updatedBatch = await tx.traStampBatch.findUnique({ where: { id: batchId } }) as StampBatch | null;
+    if (!updatedBatch) throw new Error("Stamp batch not found");
+    if (updatedBatch.used >= updatedBatch.quantity) {
+      await tx.traStampBatch.update({
+        where: { id: batchId },
+        data: { status: "DEPLETED" },
+      });
+    }
+
+    return tx.traStampActivation.create({
+      data: {
+        companyId,
+        batchId,
+        reference: generateRef(),
+        productName,
+        quantity: qty,
+        activatedAt,
+        notes: optionalString(data.notes),
+        createdById: userId,
+      },
+    });
+  });
 
   await createAuditLog({
     userId,
@@ -142,24 +234,29 @@ export async function createStampActivation(
     module: "tra-stamps",
     resource: "stamp-activation",
     recordId: activation.id,
-    newValue: { productName: data.productName, quantity: qty },
+    newValue: { productName, quantity: qty },
     description: "Activated TRA stamps",
     ipAddress,
+    companyId,
   });
   return activation;
 }
 
 export async function getStampSummary(companyId: string) {
-  const batches = await db.traStampBatch.findMany({ where: { companyId, status: "ACTIVE" } });
+  const batches = await db.traStampBatch.findMany({ where: { companyId } }) as StampBatch[];
+  const now = new Date();
   const totalReceived = batches.reduce((s, b) => s + b.quantity, 0);
   const totalUsed = batches.reduce((s, b) => s + b.used, 0);
-  const totalBalance = totalReceived - totalUsed;
+  const activeBatches = batches.filter((b) => b.status === "ACTIVE" && (!b.expiresAt || b.expiresAt >= now));
+  const totalBalance = activeBatches.reduce((s, b) => s + b.quantity - b.used, 0);
   const byType: Record<string, { received: number; used: number; balance: number }> = {};
   for (const b of batches) {
     if (!byType[b.stampType]) byType[b.stampType] = { received: 0, used: 0, balance: 0 };
     byType[b.stampType].received += b.quantity;
     byType[b.stampType].used += b.used;
-    byType[b.stampType].balance += b.quantity - b.used;
+    if (b.status === "ACTIVE" && (!b.expiresAt || b.expiresAt >= now)) {
+      byType[b.stampType].balance += b.quantity - b.used;
+    }
   }
-  return { totalReceived, totalUsed, totalBalance, activeBatches: batches.length, byType };
+  return { totalReceived, totalUsed, totalBalance, activeBatches: activeBatches.length, byType };
 }
