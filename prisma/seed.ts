@@ -207,6 +207,25 @@ const PERMISSIONS = [
   // Tally Integration
   { module: "finance", resource: "tally", action: "read", description: "View Tally sync data (vouchers, ledgers, logs)" },
   { module: "finance", resource: "tally", action: "manage", description: "Manage Tally API keys and configuration" },
+  // Cotton Trading
+  { module: "cotton", resource: "season", action: "read", description: "View cotton seasons" },
+  { module: "cotton", resource: "season", action: "create", description: "Create cotton seasons" },
+  { module: "cotton", resource: "season", action: "update", description: "Update cotton seasons" },
+  { module: "cotton", resource: "bale", action: "read", description: "View cotton bales" },
+  { module: "cotton", resource: "bale", action: "create", description: "Create cotton bales" },
+  { module: "cotton", resource: "bale", action: "update", description: "Update cotton bales" },
+  { module: "cotton", resource: "lot", action: "read", description: "View cotton lots" },
+  { module: "cotton", resource: "lot", action: "create", description: "Create cotton lots" },
+  { module: "cotton", resource: "lot", action: "update", description: "Update cotton lots" },
+  { module: "cotton", resource: "buyer", action: "read", description: "View cotton buyers" },
+  { module: "cotton", resource: "buyer", action: "create", description: "Create cotton buyers" },
+  { module: "cotton", resource: "buyer", action: "update", description: "Update cotton buyers" },
+  { module: "cotton", resource: "contract", action: "read", description: "View cotton contracts" },
+  { module: "cotton", resource: "contract", action: "create", description: "Create cotton contracts" },
+  { module: "cotton", resource: "contract", action: "update", description: "Update cotton contracts" },
+  { module: "cotton", resource: "invoice", action: "read", description: "View cotton invoices" },
+  { module: "cotton", resource: "invoice", action: "create", description: "Create cotton invoices" },
+  { module: "cotton", resource: "invoice", action: "update", description: "Update cotton invoices" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -285,6 +304,12 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "reports:report:read",
     "tra-stamps:stamp:read", "tra-stamps:stamp:create", "tra-stamps:stamp:activate",
     "finance:tally:read", "finance:tally:manage",
+    "cotton:season:read", "cotton:season:create", "cotton:season:update",
+    "cotton:bale:read", "cotton:bale:create", "cotton:bale:update",
+    "cotton:lot:read", "cotton:lot:create", "cotton:lot:update",
+    "cotton:buyer:read", "cotton:buyer:create", "cotton:buyer:update",
+    "cotton:contract:read", "cotton:contract:create", "cotton:contract:update",
+    "cotton:invoice:read", "cotton:invoice:create", "cotton:invoice:update",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -342,6 +367,12 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "analytics:dashboard:read", "analytics:operations:read",
     "reports:report:read",
     "tra-stamps:stamp:read", "tra-stamps:stamp:create", "tra-stamps:stamp:activate",
+    "cotton:season:read", "cotton:season:create", "cotton:season:update",
+    "cotton:bale:read", "cotton:bale:create", "cotton:bale:update",
+    "cotton:lot:read", "cotton:lot:create", "cotton:lot:update",
+    "cotton:buyer:read", "cotton:buyer:create", "cotton:buyer:update",
+    "cotton:contract:read", "cotton:contract:create", "cotton:contract:update",
+    "cotton:invoice:read", "cotton:invoice:create", "cotton:invoice:update",
   ],
   DEPT_HEAD: [
     "auth:session:create",
@@ -417,6 +448,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
     "reports:report:read",
     "tra-stamps:stamp:read",
+    "cotton:season:read", "cotton:bale:read", "cotton:lot:read",
+    "cotton:buyer:read", "cotton:contract:read", "cotton:invoice:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -447,6 +480,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "finance:report:read",
     "analytics:dashboard:read", "analytics:operations:read", "analytics:financial:read",
     "tra-stamps:stamp:read",
+    "cotton:season:read", "cotton:bale:read", "cotton:lot:read",
+    "cotton:buyer:read", "cotton:contract:read", "cotton:invoice:read",
   ],
 };
 
