@@ -62,7 +62,7 @@ export default function NewDispatchOrderPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/vehicles?pageSize=200").then((r) => r.json()),
-      fetch("/api/drivers?pageSize=200").then((r) => r.json()),
+      fetch("/api/drivers?status=ACTIVE&pageSize=200").then((r) => r.json()),
     ])
       .then(([vData, dData]) => {
         setVehicles(vData.data ?? []);

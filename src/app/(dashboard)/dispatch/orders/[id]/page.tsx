@@ -204,6 +204,7 @@ export default function DispatchOrderDetailPage() {
 
   const lines = order.lines ?? [];
   const totalValue = lines.reduce((sum, l) => sum + (l.totalPrice ?? 0), 0);
+  const totalQuantity = lines.reduce((sum, line) => sum + line.quantity, 0);
   const isDraft = order.status === "DRAFT";
   const isConfirmed = order.status === "CONFIRMED";
   const isDispatched = order.status === "DISPATCHED";
@@ -557,10 +558,14 @@ export default function DispatchOrderDetailPage() {
 
       {/* Totals Card */}
       <Card>
-        <CardContent className="pt-6 grid grid-cols-2 gap-4 text-sm">
+        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
             <p className="text-muted-foreground">Lines Count</p>
             <p className="text-2xl font-bold mt-1">{lines.length}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Total Quantity</p>
+            <p className="text-2xl font-bold mt-1">{totalQuantity.toLocaleString()}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Total Value</p>
