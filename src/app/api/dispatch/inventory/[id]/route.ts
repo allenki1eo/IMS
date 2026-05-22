@@ -58,7 +58,12 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Lot not found") return notFound(msg);
-    if (msg === "Warehouse not found") return badRequest(msg);
+    if (
+      msg === "Warehouse not found" ||
+      msg === "Unit cost cannot be negative" ||
+      msg === "Best before date is invalid" ||
+      msg === "Depleted lots cannot be marked available"
+    ) return badRequest(msg);
     return handleError(err);
   }
 }
@@ -79,6 +84,11 @@ export async function DELETE(
   try {
     const existing = await db.fGLot.findFirst({ where: { id, companyId } });
     if (!existing) return notFound("Lot not found");
+
+    if (existing.quantityOut > 0) return badRequest("Lots with dispatched quantity cannot be deleted");
+
+    const lineCount = await db.dispatchOrderLine.count({ where: { lotId: id } });
+    if (lineCount > 0) return badRequest("Lots linked to dispatch orders cannot be deleted");
 
     await db.fGLot.delete({ where: { id } });
 

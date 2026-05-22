@@ -28,9 +28,10 @@ interface VehicleOption {
 
 interface DriverOption {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string | null;
+  lastName?: string | null;
   licenseNumber?: string | null;
+  employee?: { fullName: string } | null;
 }
 
 interface FormData {
@@ -213,11 +214,14 @@ export default function NewDispatchOrderPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">No driver</SelectItem>
-                  {drivers.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.firstName} {d.lastName}{d.licenseNumber ? ` (${d.licenseNumber})` : ""}
-                    </SelectItem>
-                  ))}
+                  {drivers.map((d) => {
+                    const name = d.employee?.fullName ?? [d.firstName, d.lastName].filter(Boolean).join(" ") ?? "Unnamed driver";
+                    return (
+                      <SelectItem key={d.id} value={d.id}>
+                        {name}{d.licenseNumber ? ` (${d.licenseNumber})` : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

@@ -1,5 +1,10 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+
+type DispatchOrderListRow = {
+  _count: { lines: number };
+};
 
 function generateRef(): string {
   const d = new Date();
@@ -10,19 +15,27 @@ function generateRef(): string {
 export async function listOrders(
   companyId: string,
   params: {
-    customerName?: string;
+    search?: string;
     status?: string;
     page: number;
     pageSize: number;
   }
 ) {
-  const { customerName, status, page, pageSize } = params;
+  const { search, status, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
     companyId,
     ...(status ? { status } : {}),
-    ...(customerName ? { customerName: { contains: customerName } } : {}),
+    ...(search
+      ? {
+          OR: [
+            { reference: { contains: search } },
+            { customerName: { contains: search } },
+            { customerContact: { contains: search } },
+          ],
+        }
+      : {}),
   };
 
   const [orders, total] = await Promise.all([
@@ -39,7 +52,10 @@ export async function listOrders(
     db.dispatchOrder.count({ where }),
   ]);
 
-  return { data: orders, meta: { total, page, pageSize } };
+  return {
+    data: (orders as DispatchOrderListRow[]).map((order) => ({ ...order, lineCount: order._count.lines })),
+    meta: { total, page, pageSize },
+  };
 }
 
 export async function getOrder(companyId: string, id: string) {
@@ -55,12 +71,21 @@ export async function getOrder(companyId: string, id: string) {
               quantityIn: true,
               quantityOut: true,
               status: true,
+              product: { select: { id: true, code: true, name: true } },
             },
           },
         },
       },
       vehicle: { select: { id: true, plateNumber: true, make: true, model: true } },
-      driver: { select: { id: true, licenseNumber: true, employee: { select: { firstName: true, lastName: true } } } },
+      driver: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          licenseNumber: true,
+          employee: { select: { fullName: true } },
+        },
+      },
     },
   });
 
@@ -203,6 +228,8 @@ export async function confirmOrder(
   if (!existing) throw new Error("Dispatch order not found");
   if (existing.companyId !== companyId) throw new Error("Dispatch order not found");
   if (existing.status !== "DRAFT") throw new Error("Only DRAFT orders can be confirmed");
+  const lineCount = await db.dispatchOrderLine.count({ where: { orderId: id } });
+  if (lineCount === 0) throw new Error("At least one line is required before confirming");
 
   const updated = await db.dispatchOrder.update({
     where: { id },
@@ -258,7 +285,7 @@ export async function dispatchOrder(
 
   const now = new Date();
 
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const order = await tx.dispatchOrder.update({
       where: { id },
       data: { status: "DISPATCHED", dispatchedAt: now },
@@ -266,12 +293,26 @@ export async function dispatchOrder(
 
     for (const line of existing.lines) {
       if (line.lotId) {
-        const lot = await tx.fGLot.update({
-          where: { id: line.lotId },
+        const lot = await tx.fGLot.findUnique({ where: { id: line.lotId } });
+        if (!lot) throw new Error(`Lot not found for line: ${line.description}`);
+        const updatedLot = await tx.fGLot.updateMany({
+          where: {
+            id: line.lotId,
+            companyId,
+            status: "AVAILABLE",
+            quantityOut: { lte: lot.quantityIn - line.quantity },
+          },
           data: { quantityOut: { increment: line.quantity } },
         });
-        // If fully depleted, mark as DEPLETED
-        if (lot.quantityOut >= lot.quantityIn) {
+        if (updatedLot.count === 0) {
+          const available = lot.quantityIn - lot.quantityOut;
+          throw new Error(
+            `Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${line.quantity}`
+          );
+        }
+
+        const refreshed = await tx.fGLot.findUnique({ where: { id: line.lotId } });
+        if (refreshed && refreshed.quantityOut >= refreshed.quantityIn) {
           await tx.fGLot.update({
             where: { id: line.lotId },
             data: { status: "DEPLETED" },
@@ -355,7 +396,7 @@ export async function cancelOrder(
     throw new Error("Only DRAFT, CONFIRMED, or DISPATCHED orders can be cancelled");
   }
 
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const order = await tx.dispatchOrder.update({
       where: { id },
       data: { status: "CANCELLED" },
@@ -365,12 +406,14 @@ export async function cancelOrder(
     if (existing.status === "DISPATCHED") {
       for (const line of existing.lines) {
         if (line.lotId) {
-          const lot = await tx.fGLot.update({
-            where: { id: line.lotId },
+          const updatedLot = await tx.fGLot.updateMany({
+            where: { id: line.lotId, companyId, quantityOut: { gte: line.quantity } },
             data: { quantityOut: { decrement: line.quantity } },
           });
-          // Restore to AVAILABLE if it was DEPLETED
-          if (lot.quantityOut < lot.quantityIn && lot.status === "DEPLETED") {
+          if (updatedLot.count === 0) throw new Error("Unable to reverse dispatched lot quantity");
+
+          const lot = await tx.fGLot.findUnique({ where: { id: line.lotId } });
+          if (lot && lot.quantityOut < lot.quantityIn && lot.status === "DEPLETED") {
             await tx.fGLot.update({
               where: { id: line.lotId },
               data: { status: "AVAILABLE" },
@@ -417,18 +460,30 @@ export async function addLine(
   if (order.companyId !== companyId) throw new Error("Dispatch order not found");
   if (order.status !== "DRAFT") throw new Error("Lines can only be added to DRAFT orders");
 
-  if (data.quantity <= 0) throw new Error("Quantity must be greater than zero");
+  if (!Number.isFinite(data.quantity) || data.quantity <= 0) throw new Error("Quantity must be greater than zero");
+  if (data.unitPrice != null && (!Number.isFinite(data.unitPrice) || data.unitPrice < 0)) {
+    throw new Error("Unit price cannot be negative");
+  }
 
+  let productId = data.productId ?? null;
   if (data.lotId) {
     const lot = await db.fGLot.findUnique({ where: { id: data.lotId } });
     if (!lot) throw new Error("Lot not found");
     if (lot.companyId !== companyId) throw new Error("Lot not found");
+    if (lot.status !== "AVAILABLE") throw new Error("Lot is not available");
+    const available = lot.quantityIn - lot.quantityOut;
+    if (available < data.quantity) {
+      throw new Error(`Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${data.quantity}`);
+    }
+    if (productId && productId !== lot.productId) throw new Error("Selected product does not match the lot");
+    productId = lot.productId;
   }
 
-  if (data.productId) {
-    const product = await db.fGProduct.findUnique({ where: { id: data.productId } });
+  if (productId) {
+    const product = await db.fGProduct.findUnique({ where: { id: productId } });
     if (!product) throw new Error("Product not found");
     if (product.companyId !== companyId) throw new Error("Product not found");
+    if (!product.isActive) throw new Error("Product is inactive");
   }
 
   const totalPrice =
@@ -440,7 +495,7 @@ export async function addLine(
     data: {
       orderId,
       lotId: data.lotId ?? null,
-      productId: data.productId ?? null,
+      productId,
       description: data.description,
       quantity: data.quantity,
       uom: data.uom ?? "UNIT",

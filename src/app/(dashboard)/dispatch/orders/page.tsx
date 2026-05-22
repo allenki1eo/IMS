@@ -63,7 +63,7 @@ export default function DispatchOrdersPage() {
       mutate();
     } else {
       const d = await res.json().catch(() => ({}));
-      toast.error(d.message ?? "Failed to delete dispatch order");
+      toast.error(d.error ?? d.message ?? "Failed to delete dispatch order");
     }
   }
 
@@ -118,9 +118,13 @@ export default function DispatchOrdersPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href={`/dispatch/orders/${row.id}`}>View</Link>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {row.status === "DRAFT" && row.lineCount === 0 && (
+            <PermissionGuard require="dispatch:order:delete">
+              <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </PermissionGuard>
+          )}
         </div>
       ),
     },
