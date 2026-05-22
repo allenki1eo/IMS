@@ -46,6 +46,7 @@ export async function listOrders(
       orderBy: { createdAt: "desc" },
       include: {
         vehicle: { select: { id: true, plateNumber: true, make: true, model: true } },
+        lines: { select: { quantity: true } },
         _count: { select: { lines: true } },
       },
     }),
@@ -53,7 +54,11 @@ export async function listOrders(
   ]);
 
   return {
-    data: (orders as DispatchOrderListRow[]).map((order) => ({ ...order, lineCount: order._count.lines })),
+    data: (orders as Array<DispatchOrderListRow & { lines: { quantity: number }[] }>).map((order) => ({
+      ...order,
+      lineCount: order._count.lines,
+      totalQuantity: order.lines.reduce((sum, line) => sum + line.quantity, 0),
+    })),
     meta: { total, page, pageSize },
   };
 }

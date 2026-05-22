@@ -30,6 +30,7 @@ interface OrderRow {
   scheduledDate?: string | null;
   vehicle?: { plateNumber: string } | null;
   lineCount?: number;
+  totalQuantity?: number;
 }
 
 const STATUS_FILTERS = [
@@ -108,6 +109,13 @@ export default function DispatchOrdersPage() {
       header: "Lines",
       cell: (row: OrderRow) => (
         <span className="text-muted-foreground">{row.lineCount ?? 0}</span>
+      ),
+    },
+    {
+      key: "totalQuantity",
+      header: "Qty",
+      cell: (row: OrderRow) => (
+        <span className="font-medium">{(row.totalQuantity ?? 0).toLocaleString()}</span>
       ),
     },
     {
