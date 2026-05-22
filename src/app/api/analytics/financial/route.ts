@@ -12,11 +12,15 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const months = parseInt(searchParams.get("months") || "6", 10);
+  if (!Number.isFinite(months) || months < 1 || months > 24) {
+    return badRequest("months must be between 1 and 24");
+  }
 
   try {
     const trends = await getFinancialTrends(companyId, months);
     return success(trends);
-  } catch {
+  } catch (err) {
+    console.error("[Analytics financial]", err);
     return badRequest("Failed to load financial trends");
   }
 }
