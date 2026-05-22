@@ -10,6 +10,7 @@ import {
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
   TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag,
+  Leaf,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -160,6 +161,20 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Overview", href: "/tra-stamps", icon: <BarChart3 className="h-4 w-4" />, permission: "tra:stamp:read" },
           { label: "Stamp Batches", href: "/tra-stamps/batches", icon: <Package className="h-4 w-4" />, permission: "tra:stamp:read" },
           { label: "Activations", href: "/tra-stamps/activations", icon: <CheckCircle className="h-4 w-4" />, permission: "tra:stamp:read" },
+        ],
+      },
+      {
+        label: "Cotton",
+        icon: <Leaf className="h-4 w-4" />,
+        permission: "cotton:lot:read",
+        children: [
+          { label: "Overview", href: "/cotton", icon: <BarChart3 className="h-4 w-4" />, permission: "cotton:lot:read" },
+          { label: "Seasons", href: "/cotton/seasons", icon: <Tag className="h-4 w-4" />, permission: "cotton:season:read" },
+          { label: "Bales", href: "/cotton/bales", icon: <Package className="h-4 w-4" />, permission: "cotton:bale:read" },
+          { label: "Lots", href: "/cotton/lots", icon: <Layers className="h-4 w-4" />, permission: "cotton:lot:read" },
+          { label: "Buyers", href: "/cotton/buyers", icon: <Handshake className="h-4 w-4" />, permission: "cotton:buyer:read" },
+          { label: "Contracts", href: "/cotton/contracts", icon: <FileCheck className="h-4 w-4" />, permission: "cotton:contract:read" },
+          { label: "Invoices", href: "/cotton/invoices", icon: <Receipt className="h-4 w-4" />, permission: "cotton:invoice:read" },
         ],
       },
     ],
