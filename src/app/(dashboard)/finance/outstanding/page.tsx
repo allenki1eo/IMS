@@ -199,7 +199,7 @@ export default function OutstandingPage() {
                               </Button>
                               {isPayable && p.outstanding > 0 && (
                                 <Button size="sm" asChild className="h-7 text-xs">
-                                  <Link href={`/finance/payments/create?referenceId=${p.id}&amount=${p.outstanding}&counterparty=${encodeURIComponent(p.counterparty ?? "")}`}>
+                                  <Link href={`/finance/payments/new?referenceId=${p.id}&amount=${p.outstanding}&counterparty=${encodeURIComponent(p.counterparty ?? "")}`}>
                                     Pay Now
                                   </Link>
                                 </Button>

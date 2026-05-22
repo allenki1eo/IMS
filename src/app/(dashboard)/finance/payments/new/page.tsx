@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
@@ -21,6 +21,10 @@ const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "CHECK", "MOBILE_MONEY"];
 
 export default function NewPaymentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillAmount = searchParams.get("amount") ?? "";
+  const prefillCounterparty = searchParams.get("counterparty") ?? "";
+  const prefillReference = searchParams.get("referenceId") ?? "";
   const [loading, setLoading] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -29,13 +33,13 @@ export default function NewPaymentPage() {
   const CURRENCIES = ["TZS", "USD", "EUR", "GBP"];
   const [form, setForm] = useState({
     type: "PAYMENT",
-    partyName: "",
-    amount: "",
+    partyName: prefillCounterparty,
+    amount: prefillAmount,
     currency: "TZS",
     paymentDate: new Date().toISOString().split("T")[0],
     paymentMethod: "",
     bankAccountId: "",
-    reference: "",
+    reference: prefillReference,
     notes: "",
   });
 

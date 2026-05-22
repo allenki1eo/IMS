@@ -1,5 +1,18 @@
 import { db } from "@/lib/db";
 
+interface LedgerLineRow {
+  id: string;
+  debit?: number | null;
+  credit?: number | null;
+  description?: string | null;
+  journalEntry: {
+    entryDate: Date;
+    reference: string;
+    voucherType: string;
+    description: string;
+  };
+}
+
 export async function getLedger(
   companyId: string,
   accountId: string,
@@ -61,7 +74,9 @@ export async function getLedger(
       },
       select: { debit: true, credit: true },
     });
-    openingBalance = priorLines.reduce((sum, l) => sum + (l.debit || 0) - (l.credit || 0), 0);
+    openingBalance = priorLines.reduce((sum: number, line: { debit?: number | null; credit?: number | null }) => (
+      sum + (line.debit || 0) - (line.credit || 0)
+    ), 0);
   } else {
     const account = await db.account.findUnique({
       where: { id: accountId },
@@ -72,7 +87,7 @@ export async function getLedger(
 
   // Compute running balance
   let runningBalance = openingBalance;
-  const ledgerLines = lines.map((line) => {
+  const ledgerLines = (lines as LedgerLineRow[]).map((line) => {
     const change = (line.debit || 0) - (line.credit || 0);
     runningBalance += change;
     return {
