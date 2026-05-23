@@ -4,6 +4,7 @@ import { jwtVerify } from "jose";
 const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
+  "/change-password",
   "/api/settings", // public settings
   "/api/webhooks/", // webhook receivers use HMAC, not session auth
   "/_next",

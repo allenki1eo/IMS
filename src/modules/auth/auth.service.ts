@@ -127,6 +127,10 @@ export async function changePasswordService(params: {
   if (!valid) throw new Error("Current password is incorrect");
 
   if (newPassword.length < 8) throw new Error("Password must be at least 8 characters");
+  const sameAsCurrent = await verifyPassword(newPassword, user.passwordHash);
+  if (sameAsCurrent) {
+    throw new Error("New password must be different from your current password");
+  }
 
   const newHash = await hashPassword(newPassword);
   await db.user.update({
