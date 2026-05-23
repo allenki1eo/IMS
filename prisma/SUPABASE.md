@@ -28,6 +28,14 @@ prisma/supabase-schema.sql
 
 That file contains the complete database schema from the current Prisma models.
 
+To restore roles and permissions, run this file after the schema exists:
+
+```text
+prisma/supabase-roles-permissions.sql
+```
+
+It inserts every permission referenced by the app, creates module admin roles, grants all permissions to `SUPER_ADMIN` and `COMPANY_ADMIN`, and attaches the `admin` user to `SUPER_ADMIN` when that user exists.
+
 ## Option B: Run Prisma migrations
 
 Set `DATABASE_URL` and `DIRECT_URL`, then run:
