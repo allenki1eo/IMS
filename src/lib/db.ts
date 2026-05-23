@@ -15,22 +15,28 @@ if (!hasPostgresProtocol(process.env.DATABASE_URL) && hasPostgresProtocol(runtim
   process.env.DATABASE_URL = runtimeDatabaseUrl;
 }
 
+// Warn if using direct Supabase connection in production (bypasses pooler)
 if (
   process.env.NODE_ENV === "production" &&
   process.env.DATABASE_URL?.includes(".supabase.co:5432")
 ) {
   console.warn(
-    "DATABASE_URL is using the Supabase direct connection. Use the Transaction Pooler URL for production runtime and keep DIRECT_URL for migrations."
+    "DATABASE_URL is using the Supabase direct connection. Use the Transaction Pooler URL (port 6543) for production runtime and keep DIRECT_URL for migrations."
   );
 }
 
-const log: Prisma.LogLevel[] =
-  process.env.NODE_ENV === "development"
-    ? ["query", "error", "warn"]
-    : ["error"];
+// Only log errors in all environments — query logging adds significant overhead
+const log: Prisma.LogLevel[] = ["error"];
 
 function createPrismaClient(): PrismaClient {
-  return new PrismaClient({ log });
+  return new PrismaClient({
+    log,
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+  });
 }
 
 export const db = globalForPrisma.prisma || createPrismaClient();
