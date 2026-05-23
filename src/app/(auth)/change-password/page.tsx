@@ -35,7 +35,8 @@ export default function ChangePasswordPage() {
         return;
       }
       toast.success("Password changed successfully");
-      router.push("/");
+      router.replace("/");
+      router.refresh();
     } catch {
       toast.error("Network error. Please try again.");
     }
