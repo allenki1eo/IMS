@@ -119,8 +119,9 @@ export async function getAuthUser(userId: string): Promise<AuthUser | null> {
     }
   }
 
-  // Super admin gets all permissions
-  if (roles.includes("SUPER_ADMIN")) {
+  // System users and super admins get all permissions.
+  // This also keeps the seeded admin usable if role assignment data is repaired separately.
+  if (user.isSystemUser || roles.includes("SUPER_ADMIN")) {
     permissions.add("*");
   }
 
