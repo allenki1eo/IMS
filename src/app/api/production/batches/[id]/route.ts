@@ -1,7 +1,5 @@
 import { NextRequest } from "next/server";
-import { getProductionBatch } from "@/modules/production/batches.service";
-import { db } from "@/lib/db";
-import { createAuditLog } from "@/lib/audit";
+import { deleteProductionBatch, getProductionBatch } from "@/modules/production/batches.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
@@ -35,26 +33,12 @@ export async function DELETE(
   const { ipAddress } = getRequestMeta(request);
 
   try {
-    const existing = await db.productionBatch.findFirst({ where: { id, companyId } });
-    if (!existing) return notFound("Production batch not found");
-
-    await db.productionBatch.delete({ where: { id } });
-
-    await createAuditLog({
-      userId: auth.user.id,
-      userName: auth.user.fullName,
-      action: "PRODUCTION_BATCH_DELETE",
-      module: "production",
-      resource: "batch",
-      recordId: id,
-      oldValue: { reference: existing.reference, status: existing.status },
-      description: `Deleted production batch: ${existing.reference}`,
-      ipAddress,
-      companyId,
-    });
-
+    await deleteProductionBatch(companyId, id, auth.user.id, auth.user.fullName, ipAddress);
     return noContent();
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (msg.includes("not found")) return notFound(msg);
+    if (msg.includes("cannot be deleted")) return badRequest(msg);
     return handleError(err);
   }
 }

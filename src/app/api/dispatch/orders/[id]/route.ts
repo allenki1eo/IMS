@@ -94,6 +94,11 @@ export async function DELETE(
     const existing = await db.dispatchOrder.findFirst({ where: { id, companyId } });
     if (!existing) return notFound("Dispatch order not found");
 
+    if (existing.status !== "DRAFT") return badRequest("Only DRAFT dispatch orders can be deleted");
+
+    const lineCount = await db.dispatchOrderLine.count({ where: { orderId: id } });
+    if (lineCount > 0) return badRequest("Dispatch orders with lines cannot be deleted");
+
     await db.dispatchOrder.delete({ where: { id } });
 
     await createAuditLog({

@@ -42,6 +42,10 @@ export default function NewActivationPage() {
   });
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const batchId = params.get("batchId") ?? "";
+    if (batchId) setForm((f) => ({ ...f, batchId }));
+
     fetch("/api/tra-stamps/batches?status=ACTIVE&pageSize=200")
       .then((r) => r.json())
       .then((json) => {

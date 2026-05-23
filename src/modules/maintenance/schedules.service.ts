@@ -1,7 +1,29 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+function assertPositiveFiniteNumber(value: number, field: string) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${field} must be greater than 0`);
+  }
+}
+
+function assertNonNegativeFiniteNumber(value: number, field: string) {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${field} cannot be negative`);
+  }
+}
+
+function parseOptionalDate(value: string | null | undefined, field: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`${field} is invalid`);
+  }
+  return date;
+}
+
 export async function listSchedules(
+  companyId: string,
   params: {
     vehicleId?: string;
     maintenanceType?: string;
@@ -13,6 +35,7 @@ export async function listSchedules(
   const skip = (page - 1) * pageSize;
 
   const where = {
+    companyId,
     ...(vehicleId ? { vehicleId } : {}),
     ...(maintenanceType ? { maintenanceType } : {}),
   };
@@ -73,7 +96,7 @@ export async function getSchedule(companyId: string, id: string) {
     },
   });
 
-  if (!schedule) return null;
+  if (!schedule || schedule.companyId !== companyId) return null;
   return schedule;
 }
 
@@ -96,6 +119,14 @@ export async function createSchedule(
 ) {
   const vehicle = await db.vehicle.findUnique({ where: { id: data.vehicleId } });
   if (!vehicle) throw new Error("Vehicle not found");
+  if (vehicle.companyId !== companyId) throw new Error("Vehicle not found");
+
+  if (data.intervalKm != null) assertPositiveFiniteNumber(data.intervalKm, "intervalKm");
+  if (data.intervalDays != null) assertPositiveFiniteNumber(data.intervalDays, "intervalDays");
+  if (data.lastDoneOdometer != null) assertNonNegativeFiniteNumber(data.lastDoneOdometer, "lastDoneOdometer");
+  if (data.nextDueOdometer != null) assertNonNegativeFiniteNumber(data.nextDueOdometer, "nextDueOdometer");
+  const lastDoneAt = parseOptionalDate(data.lastDoneAt, "lastDoneAt");
+  const nextDueAt = parseOptionalDate(data.nextDueAt, "nextDueAt");
 
   const schedule = await db.maintenanceSchedule.create({
     data: {
@@ -105,9 +136,9 @@ export async function createSchedule(
       description: data.description ?? null,
       intervalKm: data.intervalKm ?? null,
       intervalDays: data.intervalDays ?? null,
-      lastDoneAt: data.lastDoneAt ? new Date(data.lastDoneAt) : null,
+      lastDoneAt,
       lastDoneOdometer: data.lastDoneOdometer ?? null,
-      nextDueAt: data.nextDueAt ? new Date(data.nextDueAt) : null,
+      nextDueAt,
       nextDueOdometer: data.nextDueOdometer ?? null,
       createdById,
     },
@@ -156,6 +187,14 @@ export async function updateSchedule(
   const existing = await db.maintenanceSchedule.findUnique({ where: { id } });
   if (!existing) throw new Error("Maintenance schedule not found");
   if (existing.companyId !== companyId) throw new Error("Maintenance schedule not found");
+  if (data.vehicleId) {
+    const vehicle = await db.vehicle.findUnique({ where: { id: data.vehicleId } });
+    if (!vehicle || vehicle.companyId !== companyId) throw new Error("Vehicle not found");
+  }
+  if (data.intervalKm != null) assertPositiveFiniteNumber(data.intervalKm, "intervalKm");
+  if (data.intervalDays != null) assertPositiveFiniteNumber(data.intervalDays, "intervalDays");
+  if (data.lastDoneOdometer != null) assertNonNegativeFiniteNumber(data.lastDoneOdometer, "lastDoneOdometer");
+  if (data.nextDueOdometer != null) assertNonNegativeFiniteNumber(data.nextDueOdometer, "nextDueOdometer");
 
   const updateData: Record<string, unknown> = {};
   if (data.vehicleId !== undefined) updateData.vehicleId = data.vehicleId;
@@ -164,10 +203,10 @@ export async function updateSchedule(
   if (data.intervalKm !== undefined) updateData.intervalKm = data.intervalKm;
   if (data.intervalDays !== undefined) updateData.intervalDays = data.intervalDays;
   if (data.lastDoneAt !== undefined)
-    updateData.lastDoneAt = data.lastDoneAt ? new Date(data.lastDoneAt) : null;
+    updateData.lastDoneAt = parseOptionalDate(data.lastDoneAt, "lastDoneAt");
   if (data.lastDoneOdometer !== undefined) updateData.lastDoneOdometer = data.lastDoneOdometer;
   if (data.nextDueAt !== undefined)
-    updateData.nextDueAt = data.nextDueAt ? new Date(data.nextDueAt) : null;
+    updateData.nextDueAt = parseOptionalDate(data.nextDueAt, "nextDueAt");
   if (data.nextDueOdometer !== undefined) updateData.nextDueOdometer = data.nextDueOdometer;
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
 

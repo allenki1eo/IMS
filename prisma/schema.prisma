@@ -1958,3 +1958,231 @@ model TraStampActivation {
   @@index([companyId])
   @@map("tra_stamp_activations")
 }
+
+// ─── Tally Integration ────────────────────────────────────────────────────────
+
+model TallySyncLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  syncedAt    DateTime @default(now())
+  status      String   @default("SUCCESS")
+  vouchersIn  Int      @default(0)
+  ledgersIn   Int      @default(0)
+  errorMsg    String?
+  triggeredBy String   @default("agent")
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@map("tally_sync_logs")
+}
+
+model TallyVoucher {
+  id            String   @id @default(cuid())
+  companyId     String
+  tallyId       String
+  voucherType   String
+  voucherNumber String
+  date          DateTime
+  narration     String?
+  amount        Float    @default(0)
+  currency      String   @default("TZS")
+  partyName     String?
+  ledgerEntries String
+  rawXml        String?
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@unique([companyId, tallyId])
+  @@index([companyId])
+  @@index([voucherType])
+  @@index([date])
+  @@map("tally_vouchers")
+}
+
+model TallyLedger {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  group      String?
+  openingBal Float    @default(0)
+  closingBal Float    @default(0)
+  currency   String   @default("TZS")
+  syncedAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("tally_ledgers")
+}
+
+model TallyApiKey {
+  id          String    @id @default(cuid())
+  companyId   String
+  keyHash     String    @unique
+  label       String
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  createdById String
+
+  @@index([companyId])
+  @@map("tally_api_keys")
+}
+
+// ─────────────────────────────────────────────
+// COTTON MODULE
+// ─────────────────────────────────────────────
+
+model CottonSeason {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String   // e.g. "2024/2025"
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  bales  CottonBale[]
+  lots   CottonLot[]
+
+  @@index([companyId])
+  @@map("cotton_seasons")
+}
+
+model CottonBale {
+  id          String   @id @default(cuid())
+  companyId   String
+  seasonId    String
+  baleNumber  String
+  weight      Float    // net weight in kg
+  grade       String   @default("A")
+  ginnery     String?
+  lotId       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  season CottonSeason @relation(fields: [seasonId], references: [id])
+  lot    CottonLot?   @relation(fields: [lotId], references: [id])
+
+  @@unique([companyId, baleNumber])
+  @@index([companyId])
+  @@index([seasonId])
+  @@index([lotId])
+  @@map("cotton_bales")
+}
+
+model CottonLot {
+  id          String   @id @default(cuid())
+  companyId   String
+  seasonId    String
+  lotNumber   String
+  description String?
+  status      String   @default("OPEN")
+  totalWeight Float    @default(0)
+  baleCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  season        CottonSeason        @relation(fields: [seasonId], references: [id])
+  bales         CottonBale[]
+  contractLines CottonContractLine[]
+
+  @@unique([companyId, lotNumber])
+  @@index([companyId])
+  @@index([seasonId])
+  @@index([status])
+  @@map("cotton_lots")
+}
+
+model CottonBuyer {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  country     String?
+  taxNumber   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  contracts CottonContract[]
+
+  @@index([companyId])
+  @@map("cotton_buyers")
+}
+
+model CottonContract {
+  id             String   @id @default(cuid())
+  companyId      String
+  contractNumber String
+  buyerId        String
+  pricePerKg     Float
+  currency       String   @default("USD")
+  totalWeight    Float    @default(0)
+  totalAmount    Float    @default(0)
+  status         String   @default("DRAFT")
+  notes          String?
+  contractDate   DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String
+
+  buyer    CottonBuyer          @relation(fields: [buyerId], references: [id])
+  lines    CottonContractLine[]
+  invoices CottonInvoice[]
+
+  @@unique([companyId, contractNumber])
+  @@index([companyId])
+  @@index([buyerId])
+  @@index([status])
+  @@map("cotton_contracts")
+}
+
+model CottonContractLine {
+  id         String @id @default(cuid())
+  contractId String
+  lotId      String
+  weight     Float  @default(0)
+  amount     Float  @default(0)
+
+  contract CottonContract @relation(fields: [contractId], references: [id])
+  lot      CottonLot      @relation(fields: [lotId], references: [id])
+
+  @@unique([contractId, lotId])
+  @@map("cotton_contract_lines")
+}
+
+model CottonInvoice {
+  id            String    @id @default(cuid())
+  companyId     String
+  invoiceNumber String
+  contractId    String
+  buyerId       String
+  totalWeight   Float     @default(0)
+  pricePerKg    Float
+  currency      String    @default("USD")
+  totalAmount   Float     @default(0)
+  status        String    @default("DRAFT")
+  issuedAt      DateTime?
+  dueDate       DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String
+
+  contract CottonContract @relation(fields: [contractId], references: [id])
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId])
+  @@index([contractId])
+  @@index([status])
+  @@map("cotton_invoices")
+}

@@ -65,7 +65,7 @@ export default function NewProductionLinePage() {
               <div className="space-y-1"><Label htmlFor="location">Location</Label><Input id="location" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} disabled={submitting} /></div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1"><Label htmlFor="capacityPerDay">Capacity / Day</Label><Input id="capacityPerDay" type="number" min="0" step="0.01" value={form.capacityPerDay} onChange={(e) => setForm((p) => ({ ...p, capacityPerDay: e.target.value }))} disabled={submitting} /></div>
+              <div className="space-y-1"><Label htmlFor="capacityPerDay">Capacity / Day</Label><Input id="capacityPerDay" type="number" min="0.01" step="0.01" value={form.capacityPerDay} onChange={(e) => setForm((p) => ({ ...p, capacityPerDay: e.target.value }))} disabled={submitting} /></div>
               <div className="space-y-1"><Label htmlFor="uom">UOM</Label><Input id="uom" value={form.uom} onChange={(e) => setForm((p) => ({ ...p, uom: e.target.value }))} disabled={submitting} /></div>
             </div>
             <div className="flex gap-2 pt-2">

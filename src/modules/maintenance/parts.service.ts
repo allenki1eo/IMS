@@ -1,9 +1,20 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
-export async function listCategories() {
+type SparePartStockRow = {
+  currentStock: number;
+  minStock: number;
+};
+
+function assertNonNegativeFiniteNumber(value: number, field: string) {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${field} cannot be negative`);
+  }
+}
+
+export async function listCategories(companyId: string) {
   return db.sparePartCategory.findMany({
-    where: {},
+    where: { companyId },
     orderBy: { name: "asc" },
     include: {
       _count: { select: { parts: true } },
@@ -90,6 +101,7 @@ export async function updateCategory(
 }
 
 export async function listParts(
+  companyId: string,
   params: {
     search?: string;
     categoryId?: string;
@@ -102,6 +114,7 @@ export async function listParts(
   const skip = (page - 1) * pageSize;
 
   const where: Record<string, unknown> = {
+    companyId,
     ...(categoryId ? { categoryId } : {}),
     ...(search
       ? {
@@ -129,7 +142,7 @@ export async function listParts(
       },
     });
 
-    const filtered = all.filter((p) => p.currentStock <= p.minStock);
+    const filtered = all.filter((p: SparePartStockRow) => p.currentStock <= p.minStock);
     const total = filtered.length;
     const data = filtered.slice(skip, skip + pageSize);
     return { data, meta: { total, page, pageSize } };
@@ -167,7 +180,7 @@ export async function getPart(companyId: string, id: string) {
     },
   });
 
-  if (!part) return null;
+  if (!part || part.companyId !== companyId) return null;
   return part;
 }
 
@@ -188,26 +201,51 @@ export async function createPart(
   userName: string,
   ipAddress?: string
 ) {
+  if (data.currentStock != null) assertNonNegativeFiniteNumber(data.currentStock, "currentStock");
+  if (data.minStock != null) assertNonNegativeFiniteNumber(data.minStock, "minStock");
+  if (data.unitCost != null) assertNonNegativeFiniteNumber(data.unitCost, "unitCost");
+
   if (data.categoryId) {
     const cat = await db.sparePartCategory.findUnique({ where: { id: data.categoryId } });
     if (!cat) throw new Error("Spare part category not found");
     if (cat.companyId !== companyId) throw new Error("Spare part category not found");
   }
 
-  const part = await db.sparePart.create({
-    data: {
-      companyId,
-      categoryId: data.categoryId ?? null,
-      code: data.code,
-      name: data.name,
-      description: data.description ?? null,
-      partNumber: data.partNumber ?? null,
-      uom: data.uom ?? "PCS",
-      currentStock: data.currentStock ?? 0,
-      minStock: data.minStock ?? 0,
-      unitCost: data.unitCost ?? null,
-      createdById,
-    },
+  const openingStock = data.currentStock ?? 0;
+  const part = await db.$transaction(async (tx: any) => {
+    const created = await tx.sparePart.create({
+      data: {
+        companyId,
+        categoryId: data.categoryId ?? null,
+        code: data.code,
+        name: data.name,
+        description: data.description ?? null,
+        partNumber: data.partNumber ?? null,
+        uom: data.uom ?? "PCS",
+        currentStock: openingStock,
+        minStock: data.minStock ?? 0,
+        unitCost: data.unitCost ?? null,
+        createdById,
+      },
+    });
+
+    if (openingStock > 0) {
+      await tx.sparePartTransaction.create({
+        data: {
+          companyId,
+          sparePartId: created.id,
+          transactionType: "OPENING",
+          quantity: openingStock,
+          unitCost: data.unitCost ?? null,
+          totalCost: data.unitCost != null ? openingStock * data.unitCost : null,
+          referenceType: "OPENING_BALANCE",
+          notes: "Opening stock balance",
+          createdById,
+        },
+      });
+    }
+
+    return created;
   });
 
   await createAuditLog({
@@ -247,6 +285,8 @@ export async function updatePart(
   const existing = await db.sparePart.findUnique({ where: { id } });
   if (!existing) throw new Error("Spare part not found");
   if (existing.companyId !== companyId) throw new Error("Spare part not found");
+  if (data.minStock != null) assertNonNegativeFiniteNumber(data.minStock, "minStock");
+  if (data.unitCost != null) assertNonNegativeFiniteNumber(data.unitCost, "unitCost");
 
   if (data.categoryId) {
     const cat = await db.sparePartCategory.findUnique({ where: { id: data.categoryId } });
@@ -282,4 +322,40 @@ export async function updatePart(
   });
 
   return updated;
+}
+
+export async function deletePart(
+  companyId: string,
+  id: string,
+  userId: string,
+  userName: string,
+  ipAddress?: string
+) {
+  const existing = await db.sparePart.findFirst({
+    where: { id, companyId },
+    include: {
+      _count: {
+        select: { transactions: true, workItems: true },
+      },
+    },
+  });
+  if (!existing) throw new Error("Spare part not found");
+  if (existing._count.transactions > 0 || existing._count.workItems > 0) {
+    throw new Error("Spare part has stock history or work orders and cannot be deleted");
+  }
+
+  await db.sparePart.delete({ where: { id } });
+
+  await createAuditLog({
+    userId,
+    userName,
+    action: "SPARE_PART_DELETE",
+    module: "maintenance",
+    resource: "spare_part",
+    recordId: id,
+    oldValue: { code: existing.code, name: existing.name },
+    description: `Deleted spare part: ${existing.name} (${existing.code})`,
+    ipAddress,
+    companyId,
+  });
 }

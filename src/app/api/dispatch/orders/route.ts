@@ -13,12 +13,12 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
-  const customerName = searchParams.get("customerName") ?? undefined;
+  const search = searchParams.get("search") ?? searchParams.get("customerName") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
   try {
     const { data, meta } = await listOrders(companyId, {
-      customerName,
+      search,
       status,
       page: pagination.page,
       pageSize: pagination.pageSize,
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     notes,
   } = body;
 
-  if (!customerName || typeof customerName !== "string")
+  if (!customerName || typeof customerName !== "string" || !customerName.trim())
     return badRequest("customerName is required");
 
   const { ipAddress } = getRequestMeta(request);

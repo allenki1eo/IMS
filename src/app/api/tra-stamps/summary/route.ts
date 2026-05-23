@@ -4,7 +4,7 @@ import { success, badRequest, handleError } from "@/lib/response";
 import { getStampSummary } from "@/modules/tra-stamps/tra-stamps.service";
 
 export async function GET(request: NextRequest) {
-  const auth = await requirePermission(request, "tra:stamp:read");
+  const auth = await requirePermission(request, "tra-stamps:stamp:read");
   if ("error" in auth) return auth.error;
 
   const companyId = await getCompanyId(request);

@@ -22,7 +22,10 @@ export async function POST(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Dispatch order not found") return notFound(msg);
-    if (msg === "Only DRAFT orders can be confirmed") return badRequest(msg);
+    if (
+      msg === "Only DRAFT orders can be confirmed" ||
+      msg === "At least one line is required before confirming"
+    ) return badRequest(msg);
     return handleError(err);
   }
 }

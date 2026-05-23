@@ -1538,6 +1538,191 @@ CREATE TABLE "tra_stamp_activations" (
     CONSTRAINT "tra_stamp_activations_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "tally_sync_logs" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "syncedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" TEXT NOT NULL DEFAULT 'SUCCESS',
+    "vouchersIn" INTEGER NOT NULL DEFAULT 0,
+    "ledgersIn" INTEGER NOT NULL DEFAULT 0,
+    "errorMsg" TEXT,
+    "triggeredBy" TEXT NOT NULL DEFAULT 'agent',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "tally_sync_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "tally_vouchers" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "tallyId" TEXT NOT NULL,
+    "voucherType" TEXT NOT NULL,
+    "voucherNumber" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "narration" TEXT,
+    "amount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "currency" TEXT NOT NULL DEFAULT 'TZS',
+    "partyName" TEXT,
+    "ledgerEntries" TEXT NOT NULL,
+    "rawXml" TEXT,
+    "importedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "tally_vouchers_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "tally_ledgers" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "group" TEXT,
+    "openingBal" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "closingBal" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "currency" TEXT NOT NULL DEFAULT 'TZS',
+    "syncedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "tally_ledgers_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "tally_api_keys" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "keyHash" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "lastUsedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "tally_api_keys_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cotton_seasons" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "cotton_seasons_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cotton_bales" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "seasonId" TEXT NOT NULL,
+    "baleNumber" TEXT NOT NULL,
+    "weight" DOUBLE PRECISION NOT NULL,
+    "grade" TEXT NOT NULL DEFAULT 'A',
+    "ginnery" TEXT,
+    "lotId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "cotton_bales_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cotton_lots" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "seasonId" TEXT NOT NULL,
+    "lotNumber" TEXT NOT NULL,
+    "description" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'OPEN',
+    "totalWeight" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "baleCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "cotton_lots_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cotton_buyers" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "contactName" TEXT,
+    "email" TEXT,
+    "phone" TEXT,
+    "address" TEXT,
+    "country" TEXT,
+    "taxNumber" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "cotton_buyers_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cotton_contracts" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "contractNumber" TEXT NOT NULL,
+    "buyerId" TEXT NOT NULL,
+    "pricePerKg" DOUBLE PRECISION NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "totalWeight" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "totalAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "status" TEXT NOT NULL DEFAULT 'DRAFT',
+    "notes" TEXT,
+    "contractDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "cotton_contracts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cotton_contract_lines" (
+    "id" TEXT NOT NULL,
+    "contractId" TEXT NOT NULL,
+    "lotId" TEXT NOT NULL,
+    "weight" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "amount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+
+    CONSTRAINT "cotton_contract_lines_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cotton_invoices" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "invoiceNumber" TEXT NOT NULL,
+    "contractId" TEXT NOT NULL,
+    "buyerId" TEXT NOT NULL,
+    "totalWeight" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "pricePerKg" DOUBLE PRECISION NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "totalAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "status" TEXT NOT NULL DEFAULT 'DRAFT',
+    "issuedAt" TIMESTAMP(3),
+    "dueDate" TIMESTAMP(3),
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "cotton_invoices_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "branches_code_key" ON "branches"("code");
 
@@ -2045,6 +2230,90 @@ CREATE UNIQUE INDEX "tra_stamp_activations_reference_key" ON "tra_stamp_activati
 -- CreateIndex
 CREATE INDEX "tra_stamp_activations_companyId_idx" ON "tra_stamp_activations"("companyId");
 
+-- CreateIndex
+CREATE INDEX "tally_sync_logs_companyId_idx" ON "tally_sync_logs"("companyId");
+
+-- CreateIndex
+CREATE INDEX "tally_vouchers_companyId_idx" ON "tally_vouchers"("companyId");
+
+-- CreateIndex
+CREATE INDEX "tally_vouchers_voucherType_idx" ON "tally_vouchers"("voucherType");
+
+-- CreateIndex
+CREATE INDEX "tally_vouchers_date_idx" ON "tally_vouchers"("date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "tally_vouchers_companyId_tallyId_key" ON "tally_vouchers"("companyId", "tallyId");
+
+-- CreateIndex
+CREATE INDEX "tally_ledgers_companyId_idx" ON "tally_ledgers"("companyId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "tally_ledgers_companyId_name_key" ON "tally_ledgers"("companyId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "tally_api_keys_keyHash_key" ON "tally_api_keys"("keyHash");
+
+-- CreateIndex
+CREATE INDEX "tally_api_keys_companyId_idx" ON "tally_api_keys"("companyId");
+
+-- CreateIndex
+CREATE INDEX "cotton_seasons_companyId_idx" ON "cotton_seasons"("companyId");
+
+-- CreateIndex
+CREATE INDEX "cotton_bales_companyId_idx" ON "cotton_bales"("companyId");
+
+-- CreateIndex
+CREATE INDEX "cotton_bales_seasonId_idx" ON "cotton_bales"("seasonId");
+
+-- CreateIndex
+CREATE INDEX "cotton_bales_lotId_idx" ON "cotton_bales"("lotId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cotton_bales_companyId_baleNumber_key" ON "cotton_bales"("companyId", "baleNumber");
+
+-- CreateIndex
+CREATE INDEX "cotton_lots_companyId_idx" ON "cotton_lots"("companyId");
+
+-- CreateIndex
+CREATE INDEX "cotton_lots_seasonId_idx" ON "cotton_lots"("seasonId");
+
+-- CreateIndex
+CREATE INDEX "cotton_lots_status_idx" ON "cotton_lots"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cotton_lots_companyId_lotNumber_key" ON "cotton_lots"("companyId", "lotNumber");
+
+-- CreateIndex
+CREATE INDEX "cotton_buyers_companyId_idx" ON "cotton_buyers"("companyId");
+
+-- CreateIndex
+CREATE INDEX "cotton_contracts_companyId_idx" ON "cotton_contracts"("companyId");
+
+-- CreateIndex
+CREATE INDEX "cotton_contracts_buyerId_idx" ON "cotton_contracts"("buyerId");
+
+-- CreateIndex
+CREATE INDEX "cotton_contracts_status_idx" ON "cotton_contracts"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cotton_contracts_companyId_contractNumber_key" ON "cotton_contracts"("companyId", "contractNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cotton_contract_lines_contractId_lotId_key" ON "cotton_contract_lines"("contractId", "lotId");
+
+-- CreateIndex
+CREATE INDEX "cotton_invoices_companyId_idx" ON "cotton_invoices"("companyId");
+
+-- CreateIndex
+CREATE INDEX "cotton_invoices_contractId_idx" ON "cotton_invoices"("contractId");
+
+-- CreateIndex
+CREATE INDEX "cotton_invoices_status_idx" ON "cotton_invoices"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cotton_invoices_companyId_invoiceNumber_key" ON "cotton_invoices"("companyId", "invoiceNumber");
+
 -- AddForeignKey
 ALTER TABLE "branches" ADD CONSTRAINT "branches_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -2356,4 +2625,25 @@ ALTER TABLE "daily_truck_movement_entries" ADD CONSTRAINT "daily_truck_movement_
 
 -- AddForeignKey
 ALTER TABLE "tra_stamp_activations" ADD CONSTRAINT "tra_stamp_activations_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "tra_stamp_batches"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cotton_bales" ADD CONSTRAINT "cotton_bales_seasonId_fkey" FOREIGN KEY ("seasonId") REFERENCES "cotton_seasons"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cotton_bales" ADD CONSTRAINT "cotton_bales_lotId_fkey" FOREIGN KEY ("lotId") REFERENCES "cotton_lots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cotton_lots" ADD CONSTRAINT "cotton_lots_seasonId_fkey" FOREIGN KEY ("seasonId") REFERENCES "cotton_seasons"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cotton_contracts" ADD CONSTRAINT "cotton_contracts_buyerId_fkey" FOREIGN KEY ("buyerId") REFERENCES "cotton_buyers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cotton_contract_lines" ADD CONSTRAINT "cotton_contract_lines_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "cotton_contracts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cotton_contract_lines" ADD CONSTRAINT "cotton_contract_lines_lotId_fkey" FOREIGN KEY ("lotId") REFERENCES "cotton_lots"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cotton_invoices" ADD CONSTRAINT "cotton_invoices_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "cotton_contracts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 

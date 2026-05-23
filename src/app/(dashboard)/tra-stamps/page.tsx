@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Tag, Package, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -41,12 +42,16 @@ export default function TraStampsOverviewPage() {
         description="Tanzania Revenue Authority tax stamp management"
         actions={
           <div className="flex gap-2">
-            <Button asChild>
-              <Link href="/tra-stamps/batches/new">Receive Stamps</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/tra-stamps/activations/new">Record Activation</Link>
-            </Button>
+            <PermissionGuard require="tra-stamps:stamp:create">
+              <Button asChild>
+                <Link href="/tra-stamps/batches/new">Receive Stamps</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard require="tra-stamps:stamp:activate">
+              <Button variant="outline" asChild>
+                <Link href="/tra-stamps/activations/new">Record Activation</Link>
+              </Button>
+            </PermissionGuard>
           </div>
         }
       />

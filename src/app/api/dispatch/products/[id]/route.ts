@@ -58,7 +58,12 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Product not found") return notFound(msg);
-    if (msg === "A product with this code already exists") return badRequest(msg);
+    if (
+      msg === "A product with this code already exists" ||
+      msg === "Product code is required" ||
+      msg === "Product name is required" ||
+      msg === "Unit price cannot be negative"
+    ) return badRequest(msg);
     return handleError(err);
   }
 }
@@ -79,6 +84,12 @@ export async function DELETE(
   try {
     const existing = await db.fGProduct.findFirst({ where: { id, companyId } });
     if (!existing) return notFound("Product not found");
+
+    const lotCount = await db.fGLot.count({ where: { productId: id } });
+    if (lotCount > 0) return badRequest("Products with inventory lots cannot be deleted");
+
+    const lineCount = await db.dispatchOrderLine.count({ where: { productId: id } });
+    if (lineCount > 0) return badRequest("Products linked to dispatch orders cannot be deleted");
 
     await db.fGProduct.delete({ where: { id } });
 

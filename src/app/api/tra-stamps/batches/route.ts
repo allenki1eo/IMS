@@ -5,7 +5,7 @@ import { parsePagination, buildMeta } from "@/lib/pagination";
 import { listStampBatches, createStampBatch } from "@/modules/tra-stamps/tra-stamps.service";
 
 export async function GET(request: NextRequest) {
-  const auth = await requirePermission(request, "tra:stamp:read");
+  const auth = await requirePermission(request, "tra-stamps:stamp:read");
   if ("error" in auth) return auth.error;
 
   const companyId = await getCompanyId(request);
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requirePermission(request, "tra:stamp:create");
+  const auth = await requirePermission(request, "tra-stamps:stamp:create");
   if ("error" in auth) return auth.error;
 
   const companyId = await getCompanyId(request);
@@ -45,6 +45,17 @@ export async function POST(request: NextRequest) {
     const batch = await createStampBatch(companyId, body, auth.user.id, auth.user.fullName, ipAddress);
     return created(batch);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (
+      msg.includes("required") ||
+      msg.includes("positive whole number") ||
+      msg.includes("invalid") ||
+      msg.includes("Expiry date") ||
+      msg.includes("Unique constraint") ||
+      msg.includes("unique")
+    ) {
+      return badRequest(msg.includes("Unique constraint") || msg.includes("unique") ? "Batch number already exists" : msg);
+    }
     return handleError(err);
   }
 }
