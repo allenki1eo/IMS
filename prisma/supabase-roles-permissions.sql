@@ -17,7 +17,7 @@ WITH role_seed(code, name, description, is_system_role) AS (
     ('APPROVALS_ADMIN', 'Approvals Admin', 'All Approvals module permissions', true),
     ('AUDIT_ADMIN', 'Audit Admin', 'All Audit module permissions', true),
     ('AUTH_ADMIN', 'Auth Admin', 'All Auth module permissions', true),
-    ('COMPANY_MODULE_ADMIN', 'Company Admin', 'All Company module permissions', true),
+    ('COMPANY_MODULE_ADMIN', 'Company Module Admin', 'All Company module permissions', true),
     ('COTTON_ADMIN', 'Cotton Admin', 'All Cotton module permissions', true),
     ('DISPATCH_ADMIN', 'Dispatch Admin', 'All Dispatch module permissions', true),
     ('EMPLOYEES_ADMIN', 'Employees Admin', 'All Employees module permissions', true),
