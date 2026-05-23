@@ -13,7 +13,7 @@ A standalone Node.js script that syncs vouchers and ledger balances from Tally a
 ### 1. Enable Tally XML HTTP Server
 
 In Tally, go to:
-**F12 (Configure) > Advanced Configuration > Enable ODBC Server**: Yes  
+**F12 (Configure) > Advanced Configuration > Enable ODBC Server**: Yes
 **Port**: 9000
 
 Or via Gateway of Tally > F12 > Product & Features > Enable TallyPrime Server.
