@@ -16,6 +16,8 @@ DATABASE_URL="postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pool
 DIRECT_URL="postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres"
 ```
 
+Do not use the `db.<project-ref>.supabase.co:5432` direct URL as `DATABASE_URL` on Vercel. That URL is intended for migrations/admin access and may fail from serverless runtime networking. Put the Transaction Pooler URL in `DATABASE_URL` and the direct URL in `DIRECT_URL`.
+
 ## Option A: Run SQL in Supabase
 
 Open the Supabase SQL editor and run:
