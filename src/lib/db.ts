@@ -3,12 +3,15 @@ import { PrismaClient, type Prisma } from "@prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 const runtimeDatabaseUrl =
-  process.env.DATABASE_URL ||
   process.env.SUPABASE_DATABASE_URL ||
   process.env.POSTGRES_PRISMA_URL ||
-  process.env.POSTGRES_URL;
+  process.env.POSTGRES_URL ||
+  process.env.DIRECT_URL;
 
-if (!process.env.DATABASE_URL && runtimeDatabaseUrl) {
+const hasPostgresProtocol = (value?: string) =>
+  Boolean(value && /^postgres(?:ql)?:\/\//i.test(value));
+
+if (!hasPostgresProtocol(process.env.DATABASE_URL) && hasPostgresProtocol(runtimeDatabaseUrl)) {
   process.env.DATABASE_URL = runtimeDatabaseUrl;
 }
 

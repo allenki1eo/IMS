@@ -88,6 +88,21 @@ export function handleError(err: unknown): NextResponse<ApiResponse> {
   if (err instanceof Error) {
     const msg = err.message;
 
+    const invalidDatabaseUrl =
+      /error validating datasource/i.test(msg) &&
+      /url must start with the protocol `postgresql:\/\/` or `postgres:\/\/`/i.test(msg);
+    if (invalidDatabaseUrl) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "DATABASE_URL is not a valid Supabase Postgres URL. Set it to the Supabase Transaction Pooler URL starting with postgresql://, and set DIRECT_URL to the direct db.<project-ref>.supabase.co:5432 URL.",
+          code: "DATABASE_URL_INVALID",
+        },
+        { status: 500 }
+      );
+    }
+
     // Business logic errors — surface directly
     const isDbError = /prisma|postgres|sqlite|libsql|econnrefused|enotfound|can't reach database|socket hang/i.test(msg);
     if (!isDbError && msg.length < 300) {
