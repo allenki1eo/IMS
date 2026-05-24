@@ -41,12 +41,42 @@ Edit `config.json`:
 - **apiKey**: API key generated from IMS Finance > Tally Sync > API Keys tab
 - **companyId**: Your company ID from IMS (shown in Finance > Tally Sync > Overview)
 - **syncIntervalDays**: How many days back to fetch vouchers (default: 7)
+- **masterFile**: *(optional)* Path to a Tally "All Masters" XML export file — used to seed ledger/group data when the live API is unavailable or as a one-time import
 
 ### 3. Run Manually
 
 ```bash
 node index.js
 ```
+
+#### Run with a Master XML file
+
+To import ledgers and groups from a Tally "All Masters" export alongside the live sync:
+
+```bash
+node index.js --master-file /path/to/Master.xml
+```
+
+To import from the master file **only** (no live Tally API needed — useful for one-time imports or when Tally is offline):
+
+```bash
+node index.js --master-file /path/to/Master.xml --master-only
+```
+
+You can also set the path permanently in `config.json`:
+
+```json
+{
+  "masterFile": "C:\\Tally\\Exports\\Master.xml"
+}
+```
+
+**How to export the Master file from Tally:**
+1. Open Tally → Gateway of Tally
+2. Go to **Display > List of Accounts**
+3. Press **Alt+E** (Export)
+4. Format: **XML**
+5. Save the file and point `masterFile` at it
 
 Output:
 ```
@@ -100,7 +130,8 @@ node C:\path\to\tally-sync-agent\index.js >> C:\logs\tally-sync.log 2>&1
 | Data | Tally Source | Sync Behaviour |
 |------|-------------|----------------|
 | Vouchers (Journal, Payment, Receipt, Purchase) | Voucher Register (last N days) | Upsert by Tally GUID |
-| Ledger balances | List of Accounts | Upsert by ledger name |
+| Ledger balances | List of Accounts (live API) | Upsert by ledger name |
+| Ledgers + Groups | All Masters XML file (`masterFile`) | Upsert by name; live API takes precedence if both present |
 
 The sync is **one-way: Tally → IMS**. No data is written back to Tally.
 
@@ -120,3 +151,6 @@ In IMS, navigate to **Finance > Tally Sync** to view:
 | `401 Unauthorized` from IMS | Check that `apiKey` in config.json matches the key shown in IMS |
 | No vouchers parsed | Tally may use a different XML structure; check the raw response by adding a `console.log(res.body)` after `httpPost` |
 | `Company not configured` | Check that `companyId` in config.json is the correct ID from IMS |
+| `Master file not found` | Check the path in `masterFile` config or `--master-file` flag |
+| Master file parsed 0 ledgers | The file may have no `<LEDGER>` blocks — confirm it is an "All Masters" export, not a vouchers-only export |
+| Garbled characters in master parse | The file encoding was not detected correctly; try re-exporting from Tally with UTF-8 encoding selected |
