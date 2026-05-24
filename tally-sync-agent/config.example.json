@@ -4,5 +4,13 @@
   "apiKey": "YOUR_API_KEY_FROM_IMS",
   "companyId": "YOUR_COMPANY_ID",
   "syncIntervalDays": 7,
+  "currency": "TZS",
+  "voucherReportName": "DayBook",
+  "ledgerReportName": "List of Accounts",
+  "syncVouchers": true,
+  "syncLedgers": true,
+  "includeRawXml": false,
+  "dumpTallyXml": false,
+  "requestTimeoutMs": 60000,
   "masterFile": ""
 }
