@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, Monitor, Smartphone, Trash2 } from "lucide-react";
+import { changePasswordRequestSchema } from "@/modules/auth/auth.validation";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { Button } from "@/components/ui/button";
@@ -45,16 +46,13 @@ export default function SecurityPage() {
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
-    if (!currentPassword || !newPassword) {
-      toast.error("Current and new passwords are required");
-      return;
-    }
     if (newPassword !== confirmPassword) {
       toast.error("New passwords do not match");
       return;
     }
-    if (newPassword.length < 8) {
-      toast.error("New password must be at least 8 characters");
+    const parsed = changePasswordRequestSchema.safeParse({ currentPassword, newPassword });
+    if (!parsed.success) {
+      toast.error(parsed.error.errors[0].message);
       return;
     }
     setChangingPw(true);
@@ -62,7 +60,7 @@ export default function SecurityPage() {
       const res = await fetch("/api/auth/change-password", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify(parsed.data),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to change password"); return; }
