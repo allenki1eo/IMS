@@ -11,5 +11,6 @@
   "syncLedgers": true,
   "includeRawXml": false,
   "dumpTallyXml": false,
-  "requestTimeoutMs": 60000
+  "requestTimeoutMs": 60000,
+  "masterFile": ""
 }

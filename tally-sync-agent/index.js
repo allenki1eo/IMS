@@ -5,6 +5,19 @@
  * One-way bridge from a local TallyPrime XML HTTP server to IMS.
  * The agent reads Tally reports over http://localhost:9000 and pushes the
  * parsed data to /api/tally/sync in IMS. It never writes data back to Tally.
+ *
+ * Optionally reads master data (ledgers, groups, stock items, etc.) from a
+ * Tally "All Masters" XML export file when Tally's live API is unavailable
+ * or as a supplement to the live sync.
+ *
+ * Usage:
+ *   node index.js
+ *   node index.js --config /path/to/config.json
+ *   node index.js --master-file /path/to/Master.xml
+ *   node index.js --master-file /path/to/Master.xml --master-only
+ *   node index.js --test
+ *   node index.js --dry-run
+ *   node index.js --from 20240101 --to 20240131
  */
 
 const fs = require("fs");
@@ -49,8 +62,17 @@ const dumpTallyXml = Boolean(config.dumpTallyXml || hasFlag("--dump-xml"));
 const dryRun = Boolean(hasFlag("--dry-run"));
 const testOnly = Boolean(hasFlag("--test"));
 
-if (!testOnly && (!imsUrl || !apiKey || !companyId)) {
+const masterFileArg = readFlag("--master-file");
+const masterOnly = hasFlag("--master-only");
+const masterFilePath = masterFileArg || config.masterFile || null;
+
+if (!testOnly && !masterOnly && (!imsUrl || !apiKey || !companyId)) {
   console.error("[tally-sync] Missing required config: imsUrl, apiKey, companyId");
+  process.exit(1);
+}
+
+if (masterOnly && !masterFilePath) {
+  console.error("[tally-sync] --master-only requires --master-file or masterFile in config");
   process.exit(1);
 }
 
@@ -87,6 +109,8 @@ function parseInputDate(value) {
 }
 
 const { fromDate: FROM_DATE, toDate: TO_DATE } = getDateRange();
+
+// ─── HTTP Helpers ─────────────────────────────────────────────────────────────
 
 function httpRequest(url, body, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -170,6 +194,8 @@ function imsPost(endpoint, payload) {
   });
 }
 
+// ─── XML Builders ─────────────────────────────────────────────────────────────
+
 function exportDataXml(reportName, variables = {}) {
   const staticVariables = Object.entries(variables)
     .filter(([, value]) => value !== undefined && value !== null && value !== "")
@@ -217,6 +243,8 @@ function decodeXml(value) {
 function tagPattern(tag) {
   return tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+
+// ─── XML Parsing Helpers ──────────────────────────────────────────────────────
 
 function extractAll(xml, tag) {
   const regex = new RegExp(`<${tagPattern(tag)}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tagPattern(tag)}>`, "gi");
@@ -270,6 +298,8 @@ function parseAmount(value) {
   const amount = Number.parseFloat(numeric || "0");
   return isNegative ? -amount : amount;
 }
+
+// ─── Live Tally Parsers ───────────────────────────────────────────────────────
 
 function normalizeVoucherType(value) {
   return value || "Journal";
@@ -366,6 +396,187 @@ function parseLedgers(xml) {
   return ledgers;
 }
 
+// ─── Master File Reader ───────────────────────────────────────────────────────
+
+/**
+ * Read a Tally master XML file with automatic encoding detection.
+ * Tally exports can be UTF-16 LE, UTF-16 BE, or UTF-8.
+ */
+function readMasterFile(filePath) {
+  const buf = fs.readFileSync(filePath);
+
+  // UTF-16 LE BOM: 0xFF 0xFE
+  if (buf[0] === 0xff && buf[1] === 0xfe) {
+    return buf.toString("utf16le");
+  }
+  // UTF-16 BE BOM: 0xFE 0xFF — swap bytes then decode
+  if (buf[0] === 0xfe && buf[1] === 0xff) {
+    const swapped = Buffer.alloc(buf.length);
+    for (let i = 0; i < buf.length - 1; i += 2) {
+      swapped[i] = buf[i + 1];
+      swapped[i + 1] = buf[i];
+    }
+    return swapped.toString("utf16le");
+  }
+
+  // No BOM — try UTF-8; if it looks like spaced-out UTF-16 treat as UTF-16 LE
+  const utf8 = buf.toString("utf8");
+  if (utf8.match(/<\s[A-Z]\s[A-Z]/)) {
+    return buf.toString("utf16le");
+  }
+
+  return utf8;
+}
+
+// ─── Code Generator ───────────────────────────────────────────────────────────
+
+/** Generate a short uppercase code from a name, e.g. "Raw Material" → "RAW_MATERIAL" */
+function toCode(name, maxLen = 30) {
+  return name
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, maxLen);
+}
+
+// ─── Master File Parsers ──────────────────────────────────────────────────────
+
+function parseMasterLedgers(xml) {
+  const ledgers = [];
+  const seen = new Set();
+
+  for (const block of extractBlocks(xml, "LEDGER")) {
+    const name = extractAttribute(block, "LEDGER", "NAME") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+
+    const parent = extractFirst(block, "PARENT");
+    const openingBal = parseAmount(extractFirst(block, "OPENINGBALANCE"));
+    const closingBal = parseAmount(extractFirst(block, "CLOSINGBALANCE"));
+
+    ledgers.push({
+      name,
+      group: parent || undefined,
+      openingBal: Math.abs(openingBal),
+      closingBal: Math.abs(closingBal),
+      currency,
+    });
+  }
+
+  return ledgers;
+}
+
+function parseMasterGroups(xml) {
+  const groups = [];
+  const seen = new Set();
+
+  for (const block of extractBlocks(xml, "GROUP")) {
+    const name = extractAttribute(block, "GROUP", "NAME") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+
+    const parent = extractFirst(block, "PARENT");
+
+    groups.push({
+      name,
+      group: parent || undefined,
+      openingBal: 0,
+      closingBal: 0,
+      currency,
+    });
+  }
+
+  return groups;
+}
+
+function parseMasterGodowns(xml) {
+  const results = [];
+  const seen = new Set();
+
+  for (const block of extractBlocks(xml, "GODOWN")) {
+    const name = extractAttribute(block, "GODOWN", "NAME") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    results.push({ name, code: toCode(name) });
+  }
+
+  return results;
+}
+
+function parseMasterUnits(xml) {
+  const results = [];
+  const seen = new Set();
+
+  for (const block of extractBlocks(xml, "UNIT")) {
+    const name = extractAttribute(block, "UNIT", "NAME") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    results.push({ name, code: toCode(name, 20), symbol: name });
+  }
+
+  return results;
+}
+
+function parseMasterStockGroups(xml) {
+  const results = [];
+  const seen = new Set();
+
+  for (const block of extractBlocks(xml, "STOCKGROUP")) {
+    const name = extractAttribute(block, "STOCKGROUP", "NAME") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    const parent = extractFirst(block, "PARENT");
+    results.push({ name, code: toCode(name, 30), parentName: parent || undefined });
+  }
+
+  return results;
+}
+
+function itemTypeFromGroup(groupName) {
+  if (!groupName) return "RAW_MATERIAL";
+  const g = groupName.toLowerCase();
+  if (g.includes("finished") || g.includes("9 -")) return "FINISHED_GOODS";
+  if (g.includes("spare") || g.includes("8 -")) return "SPARE_PART";
+  if (g.includes("store")) return "CONSUMABLE";
+  return "RAW_MATERIAL";
+}
+
+function parseMasterStockItems(xml) {
+  const results = [];
+  const seen = new Set();
+
+  for (const block of extractBlocks(xml, "STOCKITEM")) {
+    const name = extractAttribute(block, "STOCKITEM", "NAME") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+
+    const groupName = extractFirst(block, "PARENT");
+    const uomName = extractFirst(block, "BASEUNITS");
+
+    results.push({
+      name,
+      code: toCode(name, 30),
+      groupName: groupName || undefined,
+      uomName: uomName || undefined,
+      itemType: itemTypeFromGroup(groupName),
+    });
+  }
+
+  return results;
+}
+
+// ─── Merge Helpers ────────────────────────────────────────────────────────────
+
+/** Merge ledgers from master file and live API; live API takes precedence. */
+function mergeLedgers(liveLedgers, masterLedgers) {
+  const map = new Map();
+  for (const l of masterLedgers) map.set(l.name, l);
+  for (const l of liveLedgers) map.set(l.name, l);
+  return Array.from(map.values());
+}
+
+// ─── Tally Connection Helpers ─────────────────────────────────────────────────
+
 function writeDump(name, xml) {
   if (!dumpTallyXml) return;
   const outDir = path.join(__dirname, "logs");
@@ -381,7 +592,9 @@ async function fetchTallyReport(name, xml) {
     throw new Error(`Tally returned HTTP ${res.statusCode}`);
   }
   if (!res.body || !res.body.includes("<ENVELOPE")) {
-    throw new Error("Tally response did not look like XML. Check that TallyPrime is running as server and a company is loaded.");
+    throw new Error(
+      "Tally response did not look like XML. Check that TallyPrime is running as server and a company is loaded."
+    );
   }
   writeDump(name, res.body);
   return res.body;
@@ -389,81 +602,187 @@ async function fetchTallyReport(name, xml) {
 
 async function testTallyConnection() {
   console.log(`[tally-sync] Testing Tally XML server: ${tallyUrl}`);
-  const trialBalanceXml = exportDataXml("Trial Balance");
-  const xml = await fetchTallyReport("trial-balance-test", trialBalanceXml);
+  const xml = await fetchTallyReport("trial-balance-test", exportDataXml("Trial Balance"));
   console.log(`[tally-sync] Tally responded with ${xml.length} characters of XML.`);
   console.log("[tally-sync] Local Tally connection test passed.");
 }
 
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
 async function main() {
   console.log(`[tally-sync] Starting at ${new Date().toISOString()}`);
-  console.log(`[tally-sync] Tally URL: ${tallyUrl}`);
-  console.log(`[tally-sync] Date range: ${FROM_DATE} -> ${TO_DATE}`);
+  if (!masterOnly) {
+    console.log(`[tally-sync] Tally URL: ${tallyUrl}`);
+    console.log(`[tally-sync] Date range: ${FROM_DATE} -> ${TO_DATE}`);
+  }
+  if (masterFilePath) {
+    console.log(`[tally-sync] Master file: ${masterFilePath}`);
+  }
+  if (masterOnly) {
+    console.log("[tally-sync] Mode: master-file only (skipping live Tally API)");
+  }
 
   if (testOnly) {
     await testTallyConnection();
     return;
   }
 
-  const vouchers = [];
-  const ledgers = [];
+  const liveVouchers = [];
+  const liveLedgers = [];
+  let masterLedgers = [];
+  let masterWarehouses = [];
+  let masterUnits = [];
+  let masterCategories = [];
+  let masterStockItems = [];
   const errors = [];
 
-  if (syncVouchers) {
-    console.log(`[tally-sync] Exporting ${voucherReportName} from Tally...`);
+  // ── Read Master File ────────────────────────────────────────────────────────
+  if (masterFilePath) {
+    if (!fs.existsSync(masterFilePath)) {
+      console.error(`[tally-sync] Master file not found: ${masterFilePath}`);
+      process.exit(1);
+    }
     try {
-      const xml = await fetchTallyReport(
-        "vouchers",
-        exportDataXml(voucherReportName, {
-          SVFROMDATE: FROM_DATE,
-          SVTODATE: TO_DATE,
-        })
+      console.log("[tally-sync] Reading master file...");
+      const xml = readMasterFile(masterFilePath);
+
+      const ledgers    = parseMasterLedgers(xml);
+      const groups     = parseMasterGroups(xml);
+      const godowns    = parseMasterGodowns(xml);
+      const units      = parseMasterUnits(xml);
+      const stockGrps  = parseMasterStockGroups(xml);
+      const stockItems = parseMasterStockItems(xml);
+
+      masterLedgers    = [...ledgers, ...groups];
+      masterWarehouses = godowns;
+      masterUnits      = units;
+      masterCategories = stockGrps;
+      masterStockItems = stockItems;
+
+      console.log(
+        `[tally-sync] Master file parsed:` +
+        `\n  Ledgers:     ${ledgers.length}` +
+        `\n  Groups:      ${groups.length}` +
+        `\n  Warehouses:  ${godowns.length}` +
+        `\n  Units:       ${units.length}` +
+        `\n  Categories:  ${stockGrps.length}` +
+        `\n  Stock items: ${stockItems.length}`
       );
-      vouchers.push(...parseVouchers(xml));
-      console.log(`[tally-sync] Parsed ${vouchers.length} vouchers`);
     } catch (err) {
-      errors.push(`vouchers: ${err.message}`);
-      console.error(`[tally-sync] Voucher export failed: ${err.message}`);
+      console.error(`[tally-sync] Failed to read master file: ${err.message}`);
+      if (masterOnly) process.exit(1);
+      errors.push(`master-file: ${err.message}`);
     }
   }
 
-  if (syncLedgers) {
-    console.log(`[tally-sync] Exporting ${ledgerReportName} from Tally...`);
-    try {
-      const xml = await fetchTallyReport("ledgers", exportDataXml(ledgerReportName));
-      ledgers.push(...parseLedgers(xml));
-      console.log(`[tally-sync] Parsed ${ledgers.length} ledgers`);
-    } catch (err) {
-      errors.push(`ledgers: ${err.message}`);
-      console.error(`[tally-sync] Ledger export failed: ${err.message}`);
+  // ── Fetch from Live Tally API ───────────────────────────────────────────────
+  if (!masterOnly) {
+    if (syncVouchers) {
+      console.log(`[tally-sync] Exporting ${voucherReportName} from Tally...`);
+      try {
+        const xml = await fetchTallyReport(
+          "vouchers",
+          exportDataXml(voucherReportName, {
+            SVFROMDATE: FROM_DATE,
+            SVTODATE: TO_DATE,
+          })
+        );
+        liveVouchers.push(...parseVouchers(xml));
+        console.log(`[tally-sync] Parsed ${liveVouchers.length} vouchers`);
+      } catch (err) {
+        errors.push(`vouchers: ${err.message}`);
+        console.error(`[tally-sync] Voucher export failed: ${err.message}`);
+      }
     }
+
+    if (syncLedgers) {
+      console.log(`[tally-sync] Exporting ${ledgerReportName} from Tally...`);
+      try {
+        const xml = await fetchTallyReport("ledgers", exportDataXml(ledgerReportName));
+        liveLedgers.push(...parseLedgers(xml));
+        console.log(`[tally-sync] Parsed ${liveLedgers.length} ledgers from live API`);
+      } catch (err) {
+        errors.push(`ledgers: ${err.message}`);
+        console.error(`[tally-sync] Ledger export failed: ${err.message}`);
+      }
+    }
+  }
+
+  // ── Merge ledgers (live API takes precedence over master file) ───────────────
+  const ledgers = mergeLedgers(liveLedgers, masterLedgers);
+  if (ledgers.length > 0) {
+    console.log(`[tally-sync] Total ledgers to sync: ${ledgers.length}`);
+  }
+
+  const hasAnything =
+    liveVouchers.length > 0 ||
+    ledgers.length > 0 ||
+    masterWarehouses.length > 0 ||
+    masterUnits.length > 0 ||
+    masterCategories.length > 0 ||
+    masterStockItems.length > 0;
+
+  if (!hasAnything) {
+    throw new Error(`Nothing to sync. ${errors.join("; ") || "No Tally records were returned."}`);
   }
 
   if (dryRun) {
     console.log("[tally-sync] Dry run enabled. Nothing will be sent to IMS.");
-    console.log(JSON.stringify({ vouchers: vouchers.length, ledgers: ledgers.length, errors }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          vouchers: liveVouchers.length,
+          ledgers: ledgers.length,
+          warehouses: masterWarehouses.length,
+          units: masterUnits.length,
+          categories: masterCategories.length,
+          stockItems: masterStockItems.length,
+          errors,
+        },
+        null,
+        2
+      )
+    );
     return;
   }
 
-  if (vouchers.length === 0 && ledgers.length === 0) {
-    throw new Error(`Nothing to sync. ${errors.join("; ") || "No Tally records were returned."}`);
-  }
-
-  console.log(`[tally-sync] Pushing ${vouchers.length} vouchers and ${ledgers.length} ledgers to IMS...`);
+  // ── Push to IMS ─────────────────────────────────────────────────────────────
+  console.log("[tally-sync] Pushing data to IMS...");
   const res = await imsPost("/api/tally/sync", {
     companyId,
-    vouchers,
+    vouchers: liveVouchers,
     ledgers,
+    warehouses:  masterWarehouses,
+    units:       masterUnits,
+    categories:  masterCategories,
+    stockItems:  masterStockItems,
     triggeredBy: "agent",
   });
 
   if (res.statusCode !== 200 && res.statusCode !== 201) {
-    const errorBody = typeof res.body === "object" ? res.body?.error || JSON.stringify(res.body) : res.body;
+    const errorBody =
+      typeof res.body === "object" ? res.body?.error || JSON.stringify(res.body) : res.body;
     throw new Error(`IMS returned HTTP ${res.statusCode}: ${errorBody}`);
   }
 
-  const { vouchersIn = 0, ledgersIn = 0 } = res.body?.data || {};
-  console.log(`[tally-sync] Sync complete. Vouchers: ${vouchersIn}, Ledgers: ${ledgersIn}`);
+  const {
+    vouchersIn   = 0,
+    ledgersIn    = 0,
+    warehousesIn = 0,
+    unitsIn      = 0,
+    categoriesIn = 0,
+    stockItemsIn = 0,
+  } = res.body?.data || {};
+
+  console.log(
+    `[tally-sync] Sync complete:` +
+    `\n  Vouchers:    ${vouchersIn}` +
+    `\n  Ledgers:     ${ledgersIn}` +
+    (warehousesIn ? `\n  Warehouses:  ${warehousesIn}` : "") +
+    (unitsIn      ? `\n  Units:       ${unitsIn}`       : "") +
+    (categoriesIn ? `\n  Categories:  ${categoriesIn}`  : "") +
+    (stockItemsIn ? `\n  Stock items: ${stockItemsIn}`  : "")
+  );
 
   if (errors.length > 0) {
     console.warn(`[tally-sync] Completed with warnings: ${errors.join("; ")}`);

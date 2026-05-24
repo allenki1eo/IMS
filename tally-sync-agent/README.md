@@ -16,6 +16,11 @@ The agent reads data from Tally through the TallyPrime XML HTTP API. It does not
 | --- | --- | --- |
 | Vouchers | Voucher/day book XML | `DayBook` |
 | Ledger balances | Ledger/account XML | `List of Accounts` |
+| Ledgers + Groups | All Masters XML file (`masterFile`) | — |
+| Warehouses (Godowns) | All Masters XML file | — |
+| Units of Measure | All Masters XML file | — |
+| Stock Groups (Categories) | All Masters XML file | — |
+| Stock Items | All Masters XML file | — |
 
 The agent follows the same XML API shape documented in `NoumaanAhamed/tally-prime-api-docs`: POST XML to `http://localhost:9000`, use `Content-Type: text/xml`, export reports with `TALLYREQUEST` set to `Export Data`, and pass dates as `YYYYMMDD`.
 
@@ -110,7 +115,8 @@ Example `config.json`:
   "syncLedgers": true,
   "includeRawXml": false,
   "dumpTallyXml": false,
-  "requestTimeoutMs": 60000
+  "requestTimeoutMs": 60000,
+  "masterFile": ""
 }
 ```
 
@@ -131,6 +137,39 @@ Configuration notes:
 | `includeRawXml` | Stores voucher raw XML in IMS. Use only if needed. |
 | `dumpTallyXml` | Writes raw Tally responses to local `logs/` for debugging. |
 | `requestTimeoutMs` | Timeout for Tally and IMS HTTP requests. |
+| `masterFile` | Path to a Tally "All Masters" XML export for seeding master data (optional). |
+
+## Step 4b: Import Master Data From Tally (Optional)
+
+The `masterFile` option lets you import your full company master data — ledgers, groups, warehouses (godowns), units of measure, stock groups, and stock items — from a Tally "All Masters" XML export.
+
+**How to export the Master file from Tally:**
+
+1. Open Tally → Gateway of Tally
+2. Go to **Display > List of Accounts** (or **Alt+F1** to expand)
+3. Press **Alt+E** (Export)
+4. Format: **XML**
+5. Save the file, e.g. `C:\IMS\Master.xml`
+
+Set the path in `config.json`:
+
+```json
+{
+  "masterFile": "C:\\IMS\\Master.xml"
+}
+```
+
+Or pass it on the command line:
+
+```powershell
+node index.js --master-file C:\IMS\Master.xml
+```
+
+To import from the master file **only** (no live Tally connection needed — useful for offline or one-time imports):
+
+```powershell
+node index.js --master-file C:\IMS\Master.xml --master-only
+```
 
 ## Step 5: Test The Agent Against Tally
 
@@ -193,18 +232,34 @@ When the dry run looks correct:
 node index.js
 ```
 
-Expected output:
+Expected output (with master file):
 
 ```text
 [tally-sync] Starting at ...
 [tally-sync] Tally URL: http://localhost:9000
 [tally-sync] Date range: 20260516 -> 20260523
+[tally-sync] Master file: C:\IMS\Master.xml
+[tally-sync] Reading master file...
+[tally-sync] Master file parsed:
+  Ledgers:     713
+  Groups:      45
+  Warehouses:  7
+  Units:       10
+  Categories:  13
+  Stock items: 518
 [tally-sync] Exporting DayBook from Tally...
 [tally-sync] Parsed 42 vouchers
 [tally-sync] Exporting List of Accounts from Tally...
-[tally-sync] Parsed 156 ledgers
-[tally-sync] Pushing 42 vouchers and 156 ledgers to IMS...
-[tally-sync] Sync complete. Vouchers: 42, Ledgers: 156
+[tally-sync] Parsed 156 ledgers from live API
+[tally-sync] Total ledgers to sync: 758
+[tally-sync] Pushing data to IMS...
+[tally-sync] Sync complete:
+  Vouchers:    42
+  Ledgers:     758
+  Warehouses:  7
+  Units:       10
+  Categories:  13
+  Stock items: 518
 ```
 
 In IMS, open:
@@ -267,6 +322,9 @@ C:\IMS\run-tally-sync.bat
 | `Invalid or inactive API key` | IMS rejected the key. | Generate a new key in IMS and update `config.json`. |
 | `API key does not belong to this company` | `companyId` does not match the key. | Copy the correct company ID from IMS. |
 | `IMS returned HTTP 500` | IMS accepted the request but failed while saving. | Check IMS deployment logs and Supabase schema. |
+| `Master file not found` | Path in `masterFile` or `--master-file` flag is wrong. | Check the path and use an absolute path. |
+| `Master file parsed 0 ledgers` | File is not an "All Masters" export. | Re-export from Tally: Display > List of Accounts > Alt+E > XML. |
+| `Garbled characters in master parse` | Encoding was not detected correctly. | Re-export from Tally with UTF-8 encoding selected. |
 | Some vouchers missing | The selected Tally report may not expose them. | Try widening the date range or changing `voucherReportName`. |
 
 ## Useful Commands
@@ -287,6 +345,12 @@ Sync a specific range:
 
 ```powershell
 node index.js --from 2026-05-01 --to 2026-05-23
+```
+
+Import master data only (no live Tally needed):
+
+```powershell
+node index.js --master-file C:\IMS\Master.xml --master-only
 ```
 
 Use another config file:
