@@ -283,6 +283,113 @@ function readMasterFile(filePath) {
   return utf8;
 }
 
+// ─── Code Generator ──────────────────────────────────────────────────────────
+
+/**
+ * Generate a short uppercase code from a name.
+ * e.g. "Raw Material (Victoria)" → "RAW_MATERIAL_VICTORIA"
+ */
+function toCode(name, maxLen = 30) {
+  return name
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, maxLen);
+}
+
+// ─── Parse Godowns (Warehouses) ───────────────────────────────────────────────
+
+function parseMasterGodowns(xml) {
+  const seen = new Set();
+  const results = [];
+  const blocks = extractBlocks(xml, "GODOWN");
+
+  for (const block of blocks) {
+    const openTag = block.match(/^<GODOWN([^>]*)>/i);
+    const name = (openTag ? extractNameAttr(openTag[0]) : "") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    results.push({ name, code: toCode(name) });
+  }
+  return results;
+}
+
+// ─── Parse Units of Measure ───────────────────────────────────────────────────
+
+function parseMasterUnits(xml) {
+  const seen = new Set();
+  const results = [];
+  const blocks = extractBlocks(xml, "UNIT");
+
+  for (const block of blocks) {
+    const openTag = block.match(/^<UNIT([^>]*)>/i);
+    const name = (openTag ? extractNameAttr(openTag[0]) : "") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    // Use the name itself as symbol (e.g. "KG", "Ltr", "PCS")
+    results.push({ name, code: toCode(name, 20), symbol: name });
+  }
+  return results;
+}
+
+// ─── Parse Stock Groups (Item Categories) ────────────────────────────────────
+
+function parseMasterStockGroups(xml) {
+  const seen = new Set();
+  const results = [];
+  const blocks = extractBlocks(xml, "STOCKGROUP");
+
+  for (const block of blocks) {
+    const openTag = block.match(/^<STOCKGROUP([^>]*)>/i);
+    const name = (openTag ? extractNameAttr(openTag[0]) : "") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    const parent = extractFirst(block, "PARENT");
+    results.push({ name, code: toCode(name, 30), parentName: parent || undefined });
+  }
+  return results;
+}
+
+// ─── Parse Stock Items ────────────────────────────────────────────────────────
+
+/**
+ * Determine IMS itemType from Tally stock group name.
+ */
+function itemTypeFromGroup(groupName) {
+  if (!groupName) return "RAW_MATERIAL";
+  const g = groupName.toLowerCase();
+  if (g.includes("finished") || g.includes("9 -")) return "FINISHED_GOODS";
+  if (g.includes("spare") || g.includes("8 -")) return "SPARE_PART";
+  if (g.includes("store")) return "CONSUMABLE";
+  return "RAW_MATERIAL";
+}
+
+function parseMasterStockItems(xml) {
+  const seen = new Set();
+  const results = [];
+  const blocks = extractBlocks(xml, "STOCKITEM");
+
+  for (const block of blocks) {
+    const openTag = block.match(/^<STOCKITEM([^>]*)>/i);
+    const name = (openTag ? extractNameAttr(openTag[0]) : "") || extractFirst(block, "NAME");
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+
+    const groupName = extractFirst(block, "PARENT");
+    const uomName = extractFirst(block, "BASEUNITS");
+    const code = toCode(name, 30);
+
+    results.push({
+      name,
+      code,
+      groupName: groupName || undefined,
+      uomName: uomName || undefined,
+      itemType: itemTypeFromGroup(groupName),
+    });
+  }
+  return results;
+}
+
 // ─── Parse Ledgers from Master XML ───────────────────────────────────────────
 
 /**
@@ -471,6 +578,10 @@ async function main() {
   let vouchers = [];
   let liveLedgers = [];
   let masterLedgers = [];
+  let masterWarehouses = [];
+  let masterUnits = [];
+  let masterCategories = [];
+  let masterStockItems = [];
   let voucherError = null;
   let ledgerError = null;
 
@@ -483,11 +594,28 @@ async function main() {
     try {
       console.log("[tally-sync] Reading master file...");
       const xml = readMasterFile(masterFilePath);
-      const ledgers = parseMasterLedgers(xml);
-      const groups = parseMasterGroups(xml);
-      masterLedgers = [...ledgers, ...groups];
+
+      const ledgers    = parseMasterLedgers(xml);
+      const groups     = parseMasterGroups(xml);
+      const godowns    = parseMasterGodowns(xml);
+      const units      = parseMasterUnits(xml);
+      const stockGrps  = parseMasterStockGroups(xml);
+      const stockItems = parseMasterStockItems(xml);
+
+      masterLedgers    = [...ledgers, ...groups];
+      masterWarehouses = godowns;
+      masterUnits      = units;
+      masterCategories = stockGrps;
+      masterStockItems = stockItems;
+
       console.log(
-        `[tally-sync] Master file parsed: ${ledgers.length} ledgers, ${groups.length} groups`
+        `[tally-sync] Master file parsed:` +
+        `\n  Ledgers:     ${ledgers.length}` +
+        `\n  Groups:      ${groups.length}` +
+        `\n  Warehouses:  ${godowns.length}` +
+        `\n  Units:       ${units.length}` +
+        `\n  Categories:  ${stockGrps.length}` +
+        `\n  Stock items: ${stockItems.length}`
       );
     } catch (err) {
       console.error(`[tally-sync] Failed to read master file: ${err.message}`);
@@ -524,7 +652,15 @@ async function main() {
   const ledgers = mergeLedgers(liveLedgers, masterLedgers);
   console.log(`[tally-sync] Total ledgers to sync: ${ledgers.length}`);
 
-  if (vouchers.length === 0 && ledgers.length === 0) {
+  const hasAnything =
+    vouchers.length > 0 ||
+    ledgers.length > 0 ||
+    masterWarehouses.length > 0 ||
+    masterUnits.length > 0 ||
+    masterCategories.length > 0 ||
+    masterStockItems.length > 0;
+
+  if (!hasAnything) {
     const errorMsg = [voucherError, ledgerError].filter(Boolean).join("; ");
     console.error(`[tally-sync] Nothing to sync. ${errorMsg ? "Errors: " + errorMsg : "No data found."}`);
 
@@ -543,13 +679,30 @@ async function main() {
       companyId,
       vouchers,
       ledgers,
+      warehouses:  masterWarehouses,
+      units:       masterUnits,
+      categories:  masterCategories,
+      stockItems:  masterStockItems,
       triggeredBy: "agent",
     });
 
     if (res.statusCode === 200 || res.statusCode === 201) {
-      const { vouchersIn = 0, ledgersIn = 0 } = res.body?.data ?? {};
+      const {
+        vouchersIn   = 0,
+        ledgersIn    = 0,
+        warehousesIn = 0,
+        unitsIn      = 0,
+        categoriesIn = 0,
+        stockItemsIn = 0,
+      } = res.body?.data ?? {};
       console.log(
-        `[tally-sync] Sync complete. Vouchers: ${vouchersIn}, Ledgers: ${ledgersIn}`
+        `[tally-sync] Sync complete:` +
+        `\n  Vouchers:    ${vouchersIn}` +
+        `\n  Ledgers:     ${ledgersIn}` +
+        `\n  Warehouses:  ${warehousesIn}` +
+        `\n  Units:       ${unitsIn}` +
+        `\n  Categories:  ${categoriesIn}` +
+        `\n  Stock items: ${stockItemsIn}`
       );
     } else {
       const errMsg =
