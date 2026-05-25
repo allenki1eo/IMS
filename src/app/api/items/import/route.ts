@@ -45,9 +45,6 @@ export async function POST(request: NextRequest) {
     const safetyStockStr = row["safetyStock"]?.trim();
     const safetyStock = safetyStockStr ? parseFloat(safetyStockStr) : null;
 
-    const unitCostStr = row["unitCost"]?.trim();
-    const unitCost = unitCostStr ? parseFloat(unitCostStr) : null;
-
     const uomId = row["uomId"]?.trim();
     if (!uomId) {
       errors.push(`Row ${rowNum}: uomId is required`);

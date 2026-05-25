@@ -21,20 +21,25 @@ export interface LoginResult {
 
 export async function loginService(params: LoginParams): Promise<LoginResult> {
   const { username, password, rememberMe = false, ipAddress, userAgent } = params;
+  const loginIdentifier = username.trim();
 
   const user = await db.user.findFirst({
     where: {
-      OR: [{ username }, { email: username }],
+      OR: [
+        { username: { equals: loginIdentifier, mode: "insensitive" } },
+        { email: { equals: loginIdentifier, mode: "insensitive" } },
+      ],
     },
   });
 
   if (!user) {
+    console.warn("[auth/login] User not found", { username: loginIdentifier });
     await createAuditLog({
-      userName: username,
+      userName: loginIdentifier,
       action: "LOGIN_FAILED",
       module: "auth",
       resource: "session",
-      description: `Failed login attempt for username: ${username}`,
+      description: `Failed login attempt for username: ${loginIdentifier}`,
       ipAddress,
       userAgent,
     });
@@ -57,6 +62,7 @@ export async function loginService(params: LoginParams): Promise<LoginResult> {
 
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
+    console.warn("[auth/login] Invalid password", { userId: user.id, username: user.username });
     await createAuditLog({
       userId: user.id,
       userName: user.fullName,
@@ -121,6 +127,10 @@ export async function changePasswordService(params: {
   if (!valid) throw new Error("Current password is incorrect");
 
   if (newPassword.length < 8) throw new Error("Password must be at least 8 characters");
+  const sameAsCurrent = await verifyPassword(newPassword, user.passwordHash);
+  if (sameAsCurrent) {
+    throw new Error("New password must be different from your current password");
+  }
 
   const newHash = await hashPassword(newPassword);
   await db.user.update({

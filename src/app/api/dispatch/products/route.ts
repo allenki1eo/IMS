@@ -58,7 +58,12 @@ export async function POST(request: NextRequest) {
     return created(product);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    if (msg === "A product with this code already exists") return badRequest(msg);
+    if (
+      msg === "A product with this code already exists" ||
+      msg === "Product code is required" ||
+      msg === "Product name is required" ||
+      msg === "Unit price cannot be negative"
+    ) return badRequest(msg);
     return handleError(err);
   }
 }

@@ -1,18 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Package } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingSpinner } from "@/components/shared/LoadingState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface ItemOption {
+  id: string;
+  code: string;
+  name: string;
+  uom?: { symbol: string } | null;
+  stockBalances?: { quantity: number }[];
+}
 
 interface MaterialForm {
+  itemId: string;
   description: string;
   itemCode: string;
   quantity: string;
@@ -20,20 +36,51 @@ interface MaterialForm {
   wastagePct: string;
 }
 
-const EMPTY_MATERIAL: MaterialForm = { description: "", itemCode: "", quantity: "1", uom: "KG", wastagePct: "0" };
+const EMPTY_MATERIAL: MaterialForm = { itemId: "", description: "", itemCode: "", quantity: "1", uom: "KG", wastagePct: "0" };
 
 export default function NewProductionRecipePage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [items, setItems] = useState<ItemOption[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
   const [form, setForm] = useState({ code: "", name: "", productCode: "", productName: "", batchSize: "", uom: "L", version: "1", notes: "" });
   const [materials, setMaterials] = useState<MaterialForm[]>([{ ...EMPTY_MATERIAL }]);
+
+  useEffect(() => {
+    fetch("/api/items?pageSize=500")
+      .then((r) => r.json())
+      .then((d) => setItems(d.data ?? []))
+      .catch(() => toast.error("Failed to load items"))
+      .finally(() => setItemsLoading(false));
+  }, []);
 
   function updateMaterial(index: number, patch: Partial<MaterialForm>) {
     setMaterials((prev) => prev.map((line, i) => i === index ? { ...line, ...patch } : line));
   }
 
+  function selectItem(index: number, itemId: string) {
+    if (!itemId) {
+      updateMaterial(index, { itemId: "", itemCode: "" });
+      return;
+    }
+    const item = items.find((it) => it.id === itemId);
+    if (!item) return;
+    updateMaterial(index, {
+      itemId: item.id,
+      description: item.name,
+      itemCode: item.code,
+      uom: item.uom?.symbol ?? "KG",
+    });
+  }
+
   function removeMaterial(index: number) {
     setMaterials((prev) => prev.length === 1 ? prev : prev.filter((_, i) => i !== index));
+  }
+
+  function currentStock(itemId: string): number {
+    const item = items.find((it) => it.id === itemId);
+    if (!item) return 0;
+    return (item.stockBalances ?? []).reduce((sum, b) => sum + (b.quantity || 0), 0);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -58,8 +105,9 @@ export default function NewProductionRecipePage() {
           productCode: form.productCode || undefined,
           notes: form.notes || undefined,
           materials: validMaterials.map((line) => ({
-            description: line.description,
+            itemId: line.itemId || undefined,
             itemCode: line.itemCode || undefined,
+            description: line.description,
             quantity: Number(line.quantity),
             uom: line.uom || "KG",
             wastagePct: line.wastagePct ? Number(line.wastagePct) : 0,
@@ -90,37 +138,92 @@ export default function NewProductionRecipePage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1"><Label>Product Code</Label><Input value={form.productCode} onChange={(e) => setForm((p) => ({ ...p, productCode: e.target.value }))} disabled={submitting} /></div>
-              <div className="space-y-1"><Label>Product Name</Label><Input value={form.productName} onChange={(e) => setForm((p) => ({ ...p, productName: e.target.value }))} disabled={submitting} /></div>
+              <div className="space-y-1"><Label>Product Name <span className="text-destructive">*</span></Label><Input value={form.productName} onChange={(e) => setForm((p) => ({ ...p, productName: e.target.value }))} disabled={submitting} /></div>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1"><Label>Batch Size</Label><Input type="number" min="0" step="0.01" value={form.batchSize} onChange={(e) => setForm((p) => ({ ...p, batchSize: e.target.value }))} disabled={submitting} /></div>
+              <div className="space-y-1"><Label>Batch Size</Label><Input type="number" min="0.01" step="0.01" value={form.batchSize} onChange={(e) => setForm((p) => ({ ...p, batchSize: e.target.value }))} disabled={submitting} /></div>
               <div className="space-y-1"><Label>UOM</Label><Input value={form.uom} onChange={(e) => setForm((p) => ({ ...p, uom: e.target.value }))} disabled={submitting} /></div>
               <div className="space-y-1"><Label>Version</Label><Input value={form.version} onChange={(e) => setForm((p) => ({ ...p, version: e.target.value }))} disabled={submitting} /></div>
             </div>
             <div className="space-y-1">
               <Label>Notes</Label>
-              <textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={3} disabled={submitting} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 resize-none" />
+              <Input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} disabled={submitting} />
             </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-base">Materials</CardTitle><Button type="button" size="sm" onClick={() => setMaterials((prev) => [...prev, { ...EMPTY_MATERIAL }])} disabled={submitting}><Plus className="h-4 w-4 mr-1" />Add Material</Button></CardHeader>
-          <CardContent className="space-y-3">
-            {materials.map((line, index) => (
-              <div key={index} className="grid gap-3 rounded-md border p-3 lg:grid-cols-[1fr_140px_120px_100px_120px_40px]">
-                <div className="space-y-1"><Label className="text-xs">Description</Label><Input value={line.description} onChange={(e) => updateMaterial(index, { description: e.target.value })} disabled={submitting} /></div>
-                <div className="space-y-1"><Label className="text-xs">Item Code</Label><Input value={line.itemCode} onChange={(e) => updateMaterial(index, { itemCode: e.target.value })} disabled={submitting} /></div>
-                <div className="space-y-1"><Label className="text-xs">Quantity</Label><Input type="number" min="0" step="0.01" value={line.quantity} onChange={(e) => updateMaterial(index, { quantity: e.target.value })} disabled={submitting} /></div>
-                <div className="space-y-1"><Label className="text-xs">UOM</Label><Input value={line.uom} onChange={(e) => updateMaterial(index, { uom: e.target.value })} disabled={submitting} /></div>
-                <div className="space-y-1"><Label className="text-xs">Wastage %</Label><Input type="number" min="0" step="0.01" value={line.wastagePct} onChange={(e) => updateMaterial(index, { wastagePct: e.target.value })} disabled={submitting} /></div>
-                <div className="flex items-end"><Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-destructive hover:text-destructive" onClick={() => removeMaterial(index)} disabled={submitting || materials.length === 1}><Trash2 className="h-4 w-4" /></Button></div>
-              </div>
-            ))}
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Materials</CardTitle>
+            <Button type="button" size="sm" variant="outline" onClick={() => setMaterials((prev) => [...prev, { ...EMPTY_MATERIAL }])} disabled={submitting}>
+              <Plus className="h-4 w-4 mr-1" /> Add Material
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {materials.map((line, idx) => {
+              const stock = currentStock(line.itemId);
+              return (
+                <div key={idx} className="grid gap-3 sm:grid-cols-12 items-end border rounded-md p-3">
+                  <div className="sm:col-span-4 space-y-1">
+                    <Label>Item <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={line.itemId || "__none"}
+                      onValueChange={(v) => selectItem(idx, v === "__none" ? "" : v)}
+                      disabled={itemsLoading || submitting}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">None (manual entry)</SelectItem>
+                        {items.map((it) => (
+                          <SelectItem key={it.id} value={it.id}>
+                            {it.code} — {it.name} (Stock: {(it.stockBalances ?? []).reduce((s, b) => s + (b.quantity || 0), 0)})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-3 space-y-1">
+                    <Label>Description</Label>
+                    <Input value={line.description} onChange={(e) => updateMaterial(idx, { description: e.target.value })} disabled={submitting} />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1">
+                    <Label>Qty</Label>
+                    <Input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => updateMaterial(idx, { quantity: e.target.value })} disabled={submitting} />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1">
+                    <Label>UOM</Label>
+                    <Input value={line.uom} onChange={(e) => updateMaterial(idx, { uom: e.target.value })} disabled={submitting} />
+                  </div>
+                  <div className="sm:col-span-1 space-y-1">
+                    <Label>Wastage %</Label>
+                    <Input type="number" min="0" max="100" value={line.wastagePct} onChange={(e) => updateMaterial(idx, { wastagePct: e.target.value })} disabled={submitting} />
+                  </div>
+                  <div className="sm:col-span-12 flex items-center justify-between">
+                    {line.itemId && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        Current stock: <span className={stock <= 0 ? "text-red-500 font-medium" : "text-green-600 font-medium"}>{stock.toLocaleString()}</span>
+                      </span>
+                    )}
+                    {materials.length > 1 && (
+                      <Button type="button" variant="ghost" size="sm" className="text-destructive ml-auto" onClick={() => removeMaterial(idx)} disabled={submitting}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
-        <div className="flex gap-2"><Button type="submit" disabled={submitting}>{submitting && <LoadingSpinner className="mr-2" />}Create Recipe</Button><Button type="button" variant="outline" asChild><Link href="/production/recipes">Cancel</Link></Button></div>
+
+        <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+          {submitting && <LoadingSpinner className="mr-2" />}
+          Plan Recipe
+        </Button>
       </form>
     </div>
   );
 }
-

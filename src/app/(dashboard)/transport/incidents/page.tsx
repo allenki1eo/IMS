@@ -30,7 +30,7 @@ interface IncidentRow {
   location: string | null;
   status: string;
   vehicle?: { plateNumber: string } | null;
-  trip?: { reference: string } | null;
+  trip?: { id: string; reference: string } | null;
 }
 
 const PAGE_SIZE = 20;
@@ -85,7 +85,7 @@ export default function IncidentsPage() {
       header: "Trip",
       cell: (row: IncidentRow) => (
         row.trip ? (
-          <Link href={`/transport/trips/${row.trip}`} className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded hover:underline">
+          <Link href={`/transport/trips/${row.trip.id}`} className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded hover:underline">
             {row.trip.reference}
           </Link>
         ) : (

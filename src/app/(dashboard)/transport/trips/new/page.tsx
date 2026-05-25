@@ -121,7 +121,7 @@ export default function NewTripPage() {
           cargoDescription: form.cargoDescription.trim() || undefined,
           cargoWeight: form.cargoWeight ? Number(form.cargoWeight) : undefined,
           notes: form.notes.trim() || undefined,
-          cargoLines: validLines.length > 0
+          cargo: validLines.length > 0
             ? validLines.map((l) => ({
                 description: l.description.trim(),
                 quantity: l.quantity ? Number(l.quantity) : undefined,

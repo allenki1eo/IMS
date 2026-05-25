@@ -120,6 +120,7 @@ export async function createVehicle(params: {
   odometer?: number;
   insuranceExpiry?: Date | null;
   roadWorthyExpiry?: Date | null;
+  nextServiceDate?: Date | null;
   notes?: string | null;
   createdById: string;
   userName: string;
@@ -146,6 +147,7 @@ export async function createVehicle(params: {
       odometer: data.odometer ?? 0,
       insuranceExpiry: data.insuranceExpiry ?? null,
       roadWorthyExpiry: data.roadWorthyExpiry ?? null,
+      nextServiceDate: data.nextServiceDate ?? null,
       notes: data.notes ?? null,
       createdById,
     },

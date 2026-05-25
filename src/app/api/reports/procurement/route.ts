@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
   try {
     const report = await getProcurementReport(companyId, fromDate, toDate);
     return success(report);
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && (err.message === "Invalid date range" || err.message === "From date must be before to date")) {
+      return badRequest(err.message);
+    }
     return badRequest("Failed to generate procurement report");
   }
 }

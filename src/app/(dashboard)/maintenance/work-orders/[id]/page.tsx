@@ -32,8 +32,8 @@ interface WorkOrder {
   description?: string | null;
   estimatedCost?: number | null;
   actualCost?: number | null;
-  completionNotes?: string | null;
-  odometerAtService?: number | null;
+  notes?: string | null;
+  odometerAtWork?: number | null;
   startedAt?: string | null;
   completedAt?: string | null;
   createdAt: string;
@@ -48,8 +48,8 @@ interface WorkOrderItem {
   description: string;
   sparePart?: { id: string; code: string; name: string } | null;
   quantity: number;
-  unitCost: number;
-  totalCost: number;
+  unitCost?: number | null;
+  totalCost?: number | null;
 }
 
 interface SparePartOption {
@@ -209,7 +209,7 @@ export default function WorkOrderDetailPage() {
   if (loading) return <LoadingState />;
   if (!workOrder) return <div className="text-muted-foreground">Work order not found.</div>;
 
-  const totalItemsCost = items.reduce((sum, i) => sum + i.totalCost, 0);
+  const totalItemsCost = items.reduce((sum, i) => sum + (i.totalCost ?? 0), 0);
 
   return (
     <div>
@@ -269,20 +269,20 @@ export default function WorkOrderDetailPage() {
                 <p className="mt-1">{format(new Date(workOrder.completedAt), "dd MMM yyyy HH:mm")}</p>
               </div>
             )}
-            {workOrder.odometerAtService != null && (
+            {workOrder.odometerAtWork != null && (
               <div>
                 <p className="text-muted-foreground">Odometer at Service</p>
-                <p className="mt-1">{workOrder.odometerAtService.toLocaleString()} km</p>
+                <p className="mt-1">{workOrder.odometerAtWork.toLocaleString()} km</p>
               </div>
             )}
             <div className="col-span-2">
               <p className="text-muted-foreground">Description</p>
               <p className="mt-1">{workOrder.description ?? "—"}</p>
             </div>
-            {workOrder.completionNotes && (
+            {workOrder.notes && (
               <div className="col-span-2">
                 <p className="text-muted-foreground">Completion Notes</p>
-                <p className="mt-1">{workOrder.completionNotes}</p>
+                <p className="mt-1">{workOrder.notes}</p>
               </div>
             )}
           </CardContent>
@@ -492,7 +492,7 @@ export default function WorkOrderDetailPage() {
                     <Input
                       className="h-8"
                       type="number"
-                      min="0"
+                      min="0.01"
                       step="0.01"
                       value={itemForm.quantity}
                       onChange={(e) => setItemForm((p) => ({ ...p, quantity: e.target.value }))}
@@ -575,10 +575,10 @@ export default function WorkOrderDetailPage() {
                       </td>
                       <td className="px-4 py-3">{item.quantity.toLocaleString()}</td>
                       <td className="px-4 py-3">
-                        {currency} {item.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currency} {(item.unitCost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        {currency} {item.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currency} {(item.totalCost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       {workOrder.status !== "COMPLETED" && workOrder.status !== "CANCELLED" && (
                         <td className="px-4 py-3">

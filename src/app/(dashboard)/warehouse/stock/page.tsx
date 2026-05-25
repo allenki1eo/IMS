@@ -19,15 +19,17 @@ import { usePagedData } from "@/hooks/usePagedData";
 
 interface StockRow {
   id: string;
-  itemCode: string;
-  itemName: string;
-  categoryName: string | null;
-  warehouseName: string;
-  locationName: string | null;
+  item: {
+    code: string;
+    name: string;
+    category?: { name: string } | null;
+    uom?: { symbol: string } | null;
+    minStock: number | null;
+    reorderPoint: number | null;
+  } | null;
+  warehouse: { name: string } | null;
+  location: { name: string } | null;
   quantity: number;
-  uomSymbol: string;
-  minStock: number | null;
-  reorderPoint: number | null;
 }
 
 interface Warehouse { id: string; name: string; }
@@ -35,8 +37,8 @@ interface Warehouse { id: string; name: string; }
 const PAGE_SIZE = 20;
 
 function stockStatus(row: StockRow): "CRITICAL" | "LOW" | "OK" {
-  if (row.reorderPoint != null && row.quantity <= row.reorderPoint) return "CRITICAL";
-  if (row.minStock != null && row.quantity <= row.minStock) return "LOW";
+  if (row.item?.reorderPoint != null && row.quantity <= row.item.reorderPoint) return "CRITICAL";
+  if (row.item?.minStock != null && row.quantity <= row.item.minStock) return "LOW";
   return "OK";
 }
 
@@ -68,33 +70,33 @@ export default function StockPage() {
       key: "itemCode",
       header: "Code",
       cell: (row: StockRow) => (
-        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.itemCode}</code>
+        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.item?.code ?? "—"}</code>
       ),
     },
     {
       key: "itemName",
       header: "Item",
-      cell: (row: StockRow) => <span className="font-medium">{row.itemName}</span>,
+      cell: (row: StockRow) => <span className="font-medium">{row.item?.name ?? "—"}</span>,
     },
     {
       key: "categoryName",
       header: "Category",
       cell: (row: StockRow) => (
-        <span className="text-muted-foreground text-sm">{row.categoryName ?? "—"}</span>
+        <span className="text-muted-foreground text-sm">{row.item?.category?.name ?? "—"}</span>
       ),
     },
     {
       key: "warehouseName",
       header: "Warehouse",
       cell: (row: StockRow) => (
-        <span className="text-sm">{row.warehouseName}</span>
+        <span className="text-sm">{row.warehouse?.name ?? "—"}</span>
       ),
     },
     {
       key: "locationName",
       header: "Location",
       cell: (row: StockRow) => (
-        <span className="text-muted-foreground text-sm">{row.locationName ?? "—"}</span>
+        <span className="text-muted-foreground text-sm">{row.location?.name ?? "—"}</span>
       ),
     },
     {
@@ -110,7 +112,7 @@ export default function StockPage() {
             : "text-foreground";
         return (
           <span className={colorClass}>
-            {row.quantity} {row.uomSymbol}
+            {row.quantity} {row.item?.uom?.symbol ?? ""}
           </span>
         );
       },
@@ -120,7 +122,7 @@ export default function StockPage() {
       header: "Min Stock",
       cell: (row: StockRow) => (
         <span className="text-muted-foreground text-sm">
-          {row.minStock != null ? `${row.minStock} ${row.uomSymbol}` : "—"}
+          {row.item?.minStock != null ? `${row.item.minStock} ${row.item?.uom?.symbol ?? ""}` : "—"}
         </span>
       ),
     },

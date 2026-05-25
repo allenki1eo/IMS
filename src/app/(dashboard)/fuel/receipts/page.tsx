@@ -28,7 +28,7 @@ interface ReceiptRow {
   reference: string;
   tank?: { id: string; name: string } | null;
   supplierName: string | null;
-  quantity: number;
+  quantityLiters: number;
   pricePerLiter: number | null;
   totalCost: number | null;
   status: string;
@@ -110,7 +110,7 @@ export default function ReceiptsPage() {
     {
       key: "quantity",
       header: "Qty (L)",
-      cell: (row: ReceiptRow) => <span>{row.quantity.toLocaleString()}</span>,
+      cell: (row: ReceiptRow) => <span>{row.quantityLiters.toLocaleString()}</span>,
     },
     {
       key: "pricePerLiter",

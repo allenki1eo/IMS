@@ -141,7 +141,7 @@ export default function NewIssuePage() {
           tankId: form.tankId,
           vehicleId: form.vehicleId,
           driverId: form.driverId || undefined,
-          tripRef: form.tripRef || undefined,
+          tripId: form.tripRef || undefined,
           quantityLiters: qty,
           pricePerLiter: price || undefined,
           totalCost: totalCost || undefined,

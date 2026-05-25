@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const { data, meta } = await listDrivers({
+      companyId,
       search,
       status,
       isAvailable,

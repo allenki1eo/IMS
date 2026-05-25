@@ -68,7 +68,7 @@ interface Trip {
     lastName?: string | null;
     employee?: { fullName: string } | null;
   } | null;
-  cargoLines?: CargoLine[];
+  cargo?: CargoLine[];
   logs?: LogEntry[];
 }
 
@@ -97,6 +97,7 @@ export default function TripDetailPage() {
 
   // Cancel dialog
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
 
   // Add log dialog
@@ -171,6 +172,7 @@ export default function TripDetailPage() {
       const res = await fetch(`/api/trips/${id}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReason.trim() || undefined }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to cancel trip"); return; }
@@ -415,7 +417,7 @@ export default function TripDetailPage() {
         </div>
 
         {/* Cargo Lines */}
-        {(trip.cargoLines ?? []).length > 0 && (
+        {(trip.cargo ?? []).length > 0 && (
           <div>
             <h2 className="text-base font-semibold mb-3">Cargo Lines</h2>
             <div className="rounded-md border overflow-hidden">
@@ -428,7 +430,7 @@ export default function TripDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(trip.cargoLines ?? []).map((line) => (
+                  {(trip.cargo ?? []).map((line) => (
                     <tr key={line.id} className="border-t">
                       <td className="px-4 py-2">{line.description}</td>
                       <td className="px-4 py-2 text-muted-foreground">{line.quantity ?? "—"}</td>
@@ -541,6 +543,16 @@ export default function TripDetailPage() {
           <p className="text-sm text-muted-foreground">
             This will cancel trip <strong>{trip.reference}</strong>. This action cannot be undone.
           </p>
+          <div className="space-y-2">
+            <Label htmlFor="cancel-reason">Reason (optional)</Label>
+            <Input
+              id="cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Enter cancellation reason"
+              disabled={cancelling}
+            />
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCancelOpen(false)} disabled={cancelling}>Back</Button>
             <Button variant="destructive" onClick={handleCancel} disabled={cancelling}>

@@ -155,6 +155,161 @@ export async function upsertLedgers(
   return count;
 }
 
+// ─── Master Data Upserts ──────────────────────────────────────────────────────
+
+export interface TallyWarehouseInput {
+  name: string;
+  code: string;
+}
+
+export interface TallyUnitInput {
+  name: string;
+  code: string;
+  symbol: string;
+}
+
+export interface TallyCategoryInput {
+  name: string;
+  code: string;
+  parentName?: string;
+}
+
+export interface TallyStockItemInput {
+  name: string;
+  code: string;
+  groupName?: string;
+  uomName?: string;
+  itemType?: string;
+}
+
+/** Upsert Tally godowns → Warehouse table */
+export async function upsertWarehouses(
+  companyId: string,
+  items: TallyWarehouseInput[]
+): Promise<number> {
+  let count = 0;
+  for (const w of items) {
+    await db.warehouse.upsert({
+      where: { companyId_code: { companyId, code: w.code } },
+      create: {
+        companyId,
+        name: w.name,
+        code: w.code,
+        warehouseType: "MAIN",
+        isActive: true,
+        createdById: "tally-sync",
+      },
+      update: { name: w.name },
+    });
+    count++;
+  }
+  return count;
+}
+
+/** Upsert Tally units → UnitOfMeasure table */
+export async function upsertUnits(
+  companyId: string,
+  items: TallyUnitInput[]
+): Promise<number> {
+  let count = 0;
+  for (const u of items) {
+    await db.unitOfMeasure.upsert({
+      where: { companyId_code: { companyId, code: u.code } },
+      create: {
+        companyId,
+        name: u.name,
+        code: u.code,
+        symbol: u.symbol,
+        isBase: false,
+        isActive: true,
+      },
+      update: { name: u.name, symbol: u.symbol },
+    });
+    count++;
+  }
+  return count;
+}
+
+/** Upsert Tally stock groups → ItemCategory table */
+export async function upsertCategories(
+  companyId: string,
+  items: TallyCategoryInput[]
+): Promise<number> {
+  let count = 0;
+  for (const c of items) {
+    await db.itemCategory.upsert({
+      where: { companyId_code: { companyId, code: c.code } },
+      create: {
+        companyId,
+        name: c.name,
+        code: c.code,
+        isActive: true,
+      },
+      update: { name: c.name },
+    });
+    count++;
+  }
+  return count;
+}
+
+/** Upsert Tally stock items → Item table */
+export async function upsertStockItems(
+  companyId: string,
+  items: TallyStockItemInput[]
+): Promise<number> {
+  // Build lookup maps so we avoid per-item DB queries
+  const [uoms, categories] = await Promise.all([
+    db.unitOfMeasure.findMany({ where: { companyId }, select: { id: true, name: true, code: true } }),
+    db.itemCategory.findMany({ where: { companyId }, select: { id: true, name: true, code: true } }),
+  ]);
+
+  const uomByName = new Map(uoms.map((u) => [u.name.toLowerCase(), u.id]));
+  const uomByCode = new Map(uoms.map((u) => [u.code.toLowerCase(), u.id]));
+  const catByName = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
+
+  // Fallback UOM — use first available or create "PCS"
+  let fallbackUomId = uoms[0]?.id ?? null;
+  if (!fallbackUomId) {
+    const pcs = await db.unitOfMeasure.create({
+      data: { companyId, name: "Pieces", code: "PCS", symbol: "PCS", isBase: true, isActive: true },
+    });
+    fallbackUomId = pcs.id;
+  }
+
+  let count = 0;
+  for (const item of items) {
+    const uomId =
+      (item.uomName && (uomByName.get(item.uomName.toLowerCase()) ?? uomByCode.get(item.uomName.toLowerCase()))) ||
+      fallbackUomId;
+
+    const categoryId = item.groupName
+      ? catByName.get(item.groupName.toLowerCase()) ?? null
+      : null;
+
+    await db.item.upsert({
+      where: { companyId_code: { companyId, code: item.code } },
+      create: {
+        companyId,
+        code: item.code,
+        name: item.name,
+        uomId: uomId!,
+        categoryId,
+        itemType: item.itemType ?? "RAW_MATERIAL",
+        isActive: true,
+        createdById: "tally-sync",
+      },
+      update: {
+        name: item.name,
+        uomId: uomId!,
+        categoryId,
+        itemType: item.itemType ?? "RAW_MATERIAL",
+      },
+    });
+    count++;
+  }
+  return count;
+}
+
 // ─── Sync Log ──────────────────────────────────────────────────────────────────
 
 export async function createSyncLog(

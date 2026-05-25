@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider  = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─────────────────────────────────────────────
@@ -65,6 +66,7 @@ model Branch {
   userRoles   UserRole[]
   warehouses  Warehouse[]
 
+  @@index([companyId])
   @@map("branches")
 }
 
@@ -89,6 +91,7 @@ model Department {
   employees  Employee[]
 
   @@index([companyId])
+  @@index([branchId])
   @@map("departments")
 }
 
@@ -118,6 +121,7 @@ model User {
   sessions Session[]
   employee Employee? @relation(fields: [employeeId], references: [id])
 
+  @@index([isActive])
   @@map("users")
 }
 
@@ -202,6 +206,7 @@ model Session {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([isActive, expiresAt])
   @@map("sessions")
 }
 
@@ -241,6 +246,8 @@ model Employee {
 
   @@index([companyId])
   @@index([status])
+  @@index([branchId])
+  @@index([departmentId])
   @@map("employees")
 }
 
@@ -499,6 +506,8 @@ model Item {
 
   @@unique([companyId, code])
   @@index([companyId])
+  @@index([categoryId])
+  @@index([isActive])
   @@map("items")
 }
 
@@ -516,6 +525,7 @@ model StockBalance {
 
   @@unique([itemId, warehouseId, locationId])
   @@index([warehouseId])
+  @@index([itemId])
   @@map("stock_balances")
 }
 
@@ -565,6 +575,8 @@ model GoodsReceivedNote {
 
   @@index([companyId])
   @@index([status])
+  @@index([warehouseId])
+  @@index([companyId, createdAt])
   @@map("goods_received_notes")
 }
 
@@ -605,6 +617,8 @@ model StockTransfer {
 
   @@index([companyId])
   @@index([status])
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
   @@map("stock_transfers")
 }
 
@@ -644,6 +658,7 @@ model StockAdjustment {
 
   @@index([companyId])
   @@index([status])
+  @@index([warehouseId])
   @@map("stock_adjustments")
 }
 
@@ -757,6 +772,8 @@ model Driver {
   dailyMovementEntries DailyTruckMovementEntry[]
 
   @@index([companyId])
+  @@index([status])
+  @@index([isAvailable])
   @@map("drivers")
 }
 
@@ -813,6 +830,9 @@ model TripOrder {
 
   @@index([companyId])
   @@index([status])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([companyId, createdAt])
   @@map("trip_orders")
 }
 
@@ -867,6 +887,7 @@ model VehicleIncident {
   vehicle Vehicle    @relation(fields: [vehicleId], references: [id])
   trip    TripOrder? @relation(fields: [tripId], references: [id])
 
+  @@index([companyId])
   @@index([vehicleId])
   @@index([status])
   @@map("vehicle_incidents")
@@ -954,6 +975,8 @@ model FuelIssue {
   @@index([companyId])
   @@index([vehicleId])
   @@index([issuedAt])
+  @@index([tankId])
+  @@index([driverId])
   @@map("fuel_issues")
 }
 
@@ -1325,10 +1348,13 @@ model ProductionBatch {
   line      ProductionLine?   @relation(fields: [lineId], references: [id])
   recipe    ProductionRecipe? @relation(fields: [recipeId], references: [id])
   materials BatchMaterial[]
+  qualityTests QualityTest[]
 
   @@index([companyId])
   @@index([status])
   @@index([lineId])
+  @@index([recipeId])
+  @@index([companyId, createdAt])
   @@map("production_batches")
 }
 
@@ -1394,10 +1420,16 @@ model QualityTest {
   reference     String    @unique
   standardId    String?
   itemId        String?
+  productionBatchId String?
   batchNumber   String?
   testType      String
+  testStage     String?
+  samplePoint   String?
   status        String    @default("PENDING")
   result        String?
+  releaseDecision String?
+  releasedAt    DateTime?
+  releasedById  String?
   requestedById String
   testedById    String?
   sampleQty     Float?
@@ -1409,13 +1441,16 @@ model QualityTest {
 
   standard        QualityStandard?     @relation(fields: [standardId], references: [id])
   item            Item?                @relation(fields: [itemId], references: [id])
+  productionBatch ProductionBatch?      @relation(fields: [productionBatchId], references: [id])
   results         QualityTestResult[]
   nonConformances NonConformance[]
 
   @@index([companyId])
   @@index([standardId])
   @@index([itemId])
+  @@index([productionBatchId])
   @@index([status])
+  @@index([testStage])
   @@map("quality_tests")
 }
 
@@ -1537,6 +1572,9 @@ model DispatchOrder {
 
   @@index([companyId])
   @@index([status])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([companyId, createdAt])
   @@map("dispatch_orders")
 }
 
@@ -1612,6 +1650,8 @@ model JournalEntry {
   @@index([companyId])
   @@index([status])
   @@index([entryDate])
+  @@index([companyId, entryDate])
+  @@index([companyId, status])
   @@map("journal_entries")
 }
 
@@ -1702,6 +1742,7 @@ model Payment {
   @@index([companyId])
   @@index([status])
   @@index([paymentDate])
+  @@index([companyId, paymentDate])
   @@map("payments")
 }
 
@@ -1903,6 +1944,8 @@ model DailyTruckMovementEntry {
   trip    TripOrder?         @relation(fields: [tripId], references: [id])
 
   @@unique([reportId, vehicleId])
+  @@index([vehicleId])
+  @@index([driverId])
   @@map("daily_truck_movement_entries")
 }
 

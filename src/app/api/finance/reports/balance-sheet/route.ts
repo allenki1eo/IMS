@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
   try {
     const report = await getBalanceSheet(companyId, asOfDate || undefined);
     return success(report);
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("date")) {
+      return badRequest(err.message);
+    }
     return badRequest("Failed to generate balance sheet");
   }
 }

@@ -54,7 +54,7 @@ interface Driver {
     email: string | null;
     phone: string | null;
   } | null;
-  currentAssignment?: AssignmentRow | null;
+  assignments?: AssignmentRow[];
   trips?: TripRow[];
 }
 
@@ -271,27 +271,31 @@ export default function DriverDetailPage() {
         </Card>
 
         {/* Current Assignment */}
-        {driver.currentAssignment && (
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardHeader>
-              <CardTitle className="text-base text-blue-700">Current Assignment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-semibold">
-                    {driver.currentAssignment.vehicle?.plateNumber} —{" "}
-                    {driver.currentAssignment.vehicle?.make} {driver.currentAssignment.vehicle?.model}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Since {format(new Date(driver.currentAssignment.assignedAt), "dd MMM yyyy HH:mm")}
-                  </p>
+        {(() => {
+          const currentAssignment = driver.assignments?.find((a) => a.status === "ACTIVE");
+          if (!currentAssignment) return null;
+          return (
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardHeader>
+                <CardTitle className="text-base text-blue-700">Current Assignment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-semibold">
+                      {currentAssignment.vehicle?.plateNumber} —{" "}
+                      {currentAssignment.vehicle?.make} {currentAssignment.vehicle?.model}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Since {format(new Date(currentAssignment.assignedAt), "dd MMM yyyy HH:mm")}
+                    </p>
+                  </div>
+                  <StatusBadge status={currentAssignment.status} />
                 </div>
-                <StatusBadge status={driver.currentAssignment.status} />
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* License & Medical */}
         <Card>

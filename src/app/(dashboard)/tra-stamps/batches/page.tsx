@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { usePagedData } from "@/hooks/usePagedData";
 
@@ -101,9 +102,11 @@ export default function StampBatchesPage() {
         title="Stamp Batches"
         description="TRA stamp batch inventory"
         actions={
-          <Button asChild>
-            <Link href="/tra-stamps/batches/new">Receive New Batch</Link>
-          </Button>
+          <PermissionGuard require="tra-stamps:stamp:create">
+            <Button asChild>
+              <Link href="/tra-stamps/batches/new">Receive New Batch</Link>
+            </Button>
+          </PermissionGuard>
         }
       />
       <DataTable

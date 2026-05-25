@@ -41,7 +41,7 @@ interface FgLot {
   warehouse?: { name: string } | null;
   status: string;
   notes?: string | null;
-  receivedAt: string;
+  createdAt: string;
   dispatchLines?: DispatchLine[];
 }
 
@@ -69,6 +69,11 @@ export default function FgLotDetailPage() {
     fetch(`/api/dispatch/inventory/${id}`)
       .then((r) => r.json())
       .then((d) => {
+        if (!d.success || !d.data) {
+          toast.error(d.error ?? "Failed to load lot");
+          setLot(null);
+          return;
+        }
         const l: FgLot = d.data;
         setLot(l);
         setEditForm({
@@ -284,7 +289,7 @@ export default function FgLotDetailPage() {
               </div>
               <div>
                 <p className="text-muted-foreground">Received At</p>
-                <p className="mt-1">{format(new Date(lot.receivedAt), "dd MMM yyyy")}</p>
+                <p className="mt-1">{format(new Date(lot.createdAt), "dd MMM yyyy")}</p>
               </div>
               {lot.notes && (
                 <div className="col-span-2 md:col-span-3">

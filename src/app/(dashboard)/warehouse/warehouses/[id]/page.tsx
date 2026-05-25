@@ -35,7 +35,7 @@ interface Warehouse {
   name: string;
   code: string;
   address: string | null;
-  status: string;
+  isActive: boolean;
   warehouseType: string;
   branch?: { id: string; name: string } | null;
 }
@@ -46,7 +46,7 @@ interface Location {
   id: string;
   name: string;
   code: string;
-  type: string;
+  locationType: string;
   capacity: number | null;
   parent?: { id: string; name: string } | null;
 }
@@ -56,7 +56,7 @@ const LOCATION_TYPES = ["AREA", "ZONE", "RACK", "BIN", "SHELF"];
 const DEFAULT_LOC_FORM = {
   name: "",
   code: "",
-  type: "RACK",
+  locationType: "RACK",
   parentId: "",
   capacity: "",
 };
@@ -141,18 +141,18 @@ export default function WarehouseDetailPage() {
 
   async function toggleStatus() {
     if (!warehouse) return;
-    const newStatus = warehouse.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const newActive = !warehouse.isActive;
     setTogglingStatus(true);
     try {
-      const res = await fetch(`/api/warehouses/${id}`, {
+      const res = await fetch(`/api/warehouses/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ isActive: newActive }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to update status"); return; }
-      setWarehouse((w) => w ? { ...w, status: newStatus } : w);
-      toast.success(`Warehouse ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+      setWarehouse((w) => w ? { ...w, isActive: newActive } : w);
+      toast.success(`Warehouse ${newActive ? "activated" : "deactivated"}`);
     } catch {
       toast.error("Network error");
     } finally {
@@ -174,7 +174,7 @@ export default function WarehouseDetailPage() {
         body: JSON.stringify({
           name: locForm.name,
           code: locForm.code.toUpperCase(),
-          type: locForm.type,
+          locationType: locForm.locationType,
           parentId: locForm.parentId || undefined,
           capacity: locForm.capacity ? Number(locForm.capacity) : undefined,
         }),
@@ -287,7 +287,7 @@ export default function WarehouseDetailPage() {
               <CardTitle className="text-base">Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <StatusBadge status={warehouse.status} />
+              <StatusBadge status={warehouse.isActive} />
               <p className="text-sm text-muted-foreground">
                 Type: <span className="text-foreground font-medium">{warehouse.warehouseType.replace(/_/g, " ")}</span>
               </p>
@@ -302,13 +302,13 @@ export default function WarehouseDetailPage() {
               <PermissionGuard require="warehouse:warehouse:update">
                 <Button
                   size="sm"
-                  variant={warehouse.status === "ACTIVE" ? "outline" : "default"}
+                  variant={warehouse.isActive ? "outline" : "default"}
                   onClick={toggleStatus}
                   disabled={togglingStatus}
                   className="w-full"
                 >
                   {togglingStatus && <LoadingSpinner className="mr-2" />}
-                  {warehouse.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                  {warehouse.isActive ? "Deactivate" : "Activate"}
                 </Button>
               </PermissionGuard>
             </CardContent>
@@ -350,7 +350,7 @@ export default function WarehouseDetailPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">{loc.name}</td>
                     <td className="px-4 py-3">
-                      <Badge variant="secondary">{loc.type}</Badge>
+                      <Badge variant="secondary">{loc.locationType}</Badge>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{loc.parent?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">
@@ -401,8 +401,8 @@ export default function WarehouseDetailPage() {
             <div className="space-y-1">
               <Label>Type</Label>
               <Select
-                value={locForm.type}
-                onValueChange={(v) => setLocForm((p) => ({ ...p, type: v }))}
+                value={locForm.locationType}
+                onValueChange={(v) => setLocForm((p) => ({ ...p, locationType: v }))}
                 disabled={addingLoc}
               >
                 <SelectTrigger>

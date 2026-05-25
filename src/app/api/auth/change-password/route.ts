@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { changePasswordService } from "@/modules/auth/auth.service";
-import { changePasswordSchema } from "@/modules/auth/auth.validation";
+import { changePasswordRequestSchema } from "@/modules/auth/auth.validation";
 import { requireAuth, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, serverError, handleError } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 
 export async function PUT(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
     return badRequest("Invalid request body");
   }
 
-  const parsed = changePasswordSchema.safeParse(body);
+  const parsed = changePasswordRequestSchema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.errors[0].message);
 
   const { ipAddress, userAgent } = getRequestMeta(request);
@@ -29,16 +29,22 @@ export async function PUT(request: NextRequest) {
       ipAddress,
       userAgent,
     });
+
     return success({ message: "Password changed successfully" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-    // Known validation errors → 400
-    const knownErrors = ["Current password is incorrect", "Password must be at least", "User not found"];
-    if (knownErrors.some((e) => message.startsWith(e))) {
+    const knownErrors = [
+      "Current password is incorrect",
+      "New password must be different from your current password",
+      "Password must be at least",
+      "User not found",
+    ];
+
+    if (knownErrors.some((error) => message.startsWith(error))) {
       return badRequest(message);
     }
-    // Database / connection errors → 500
+
     console.error("[change-password]", err);
-    return serverError("Database error. Please check server configuration.");
+    return handleError(err);
   }
 }

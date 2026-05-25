@@ -31,7 +31,7 @@ interface TankRow {
   capacity: number;
   currentLevel: number;
   minLevel: number;
-  status: string;
+  isActive: boolean;
 }
 
 const FUEL_TYPE_FILTERS = [
@@ -147,7 +147,7 @@ export default function TanksPage() {
     {
       key: "status",
       header: "Status",
-      cell: (row: TankRow) => <StatusBadge status={row.status} />,
+      cell: (row: TankRow) => <StatusBadge status={row.isActive} />,
     },
     {
       key: "actions",

@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
 import { success, badRequest , handleError } from "@/lib/response";
 
+interface DayBookEntry {
+  totalDebit?: number | null;
+  totalCredit?: number | null;
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "finance:journal:read");
   if ("error" in auth) return auth.error;
@@ -17,14 +22,19 @@ export async function GET(request: NextRequest) {
 
   if (!fromDate || !toDate) return badRequest("fromDate and toDate are required");
 
+  const from = new Date(`${fromDate}T00:00:00`);
+  const to = new Date(`${toDate}T23:59:59`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return badRequest("Invalid date range");
+  if (from > to) return badRequest("From date must be before to date");
+
   try {
     const entries = await db.journalEntry.findMany({
       where: {
         companyId,
         status: "POSTED",
         entryDate: {
-          gte: new Date(fromDate),
-          lte: new Date(new Date(toDate).setHours(23, 59, 59, 999)),
+          gte: from,
+          lte: to,
         },
         ...(voucherType ? { voucherType } : {}),
       },
@@ -39,8 +49,8 @@ export async function GET(request: NextRequest) {
       orderBy: [{ entryDate: "asc" }, { createdAt: "asc" }],
     });
 
-    const totalDebit = entries.reduce((sum, e) => sum + (e.totalDebit ?? 0), 0);
-    const totalCredit = entries.reduce((sum, e) => sum + (e.totalCredit ?? 0), 0);
+    const totalDebit = (entries as DayBookEntry[]).reduce((sum, entry) => sum + (entry.totalDebit ?? 0), 0);
+    const totalCredit = (entries as DayBookEntry[]).reduce((sum, entry) => sum + (entry.totalCredit ?? 0), 0);
 
     return success({ entries, totalDebit, totalCredit, count: entries.length });
   } catch (err) {

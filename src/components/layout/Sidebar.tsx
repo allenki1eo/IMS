@@ -66,6 +66,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Adjustments", href: "/warehouse/adjustments", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:adjustment:read" },
           { label: "Categories", href: "/warehouse/categories", icon: <Layers className="h-4 w-4" />, permission: "warehouse:category:read" },
           { label: "UOM", href: "/warehouse/uom", icon: <Layers className="h-4 w-4" />, permission: "warehouse:uom:read" },
+          { label: "Reports", href: "/warehouse/reports", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:stock:read" },
         ],
       },
       {
@@ -156,11 +157,11 @@ const NAV_GROUPS: NavGroup[] = [
       {
         label: "TRA Stamps",
         icon: <Tag className="h-4 w-4" />,
-        permission: "tra:stamp:read",
+        permission: "tra-stamps:stamp:read",
         children: [
-          { label: "Overview", href: "/tra-stamps", icon: <BarChart3 className="h-4 w-4" />, permission: "tra:stamp:read" },
-          { label: "Stamp Batches", href: "/tra-stamps/batches", icon: <Package className="h-4 w-4" />, permission: "tra:stamp:read" },
-          { label: "Activations", href: "/tra-stamps/activations", icon: <CheckCircle className="h-4 w-4" />, permission: "tra:stamp:read" },
+          { label: "Overview", href: "/tra-stamps", icon: <BarChart3 className="h-4 w-4" />, permission: "tra-stamps:stamp:read" },
+          { label: "Stamp Batches", href: "/tra-stamps/batches", icon: <Package className="h-4 w-4" />, permission: "tra-stamps:stamp:read" },
+          { label: "Activations", href: "/tra-stamps/activations", icon: <CheckCircle className="h-4 w-4" />, permission: "tra-stamps:stamp:read" },
         ],
       },
       {

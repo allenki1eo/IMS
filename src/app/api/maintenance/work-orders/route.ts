@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:workorder:read");
   if ("error" in auth) return auth.error;
 
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
   const vehicleId = searchParams.get("vehicleId") ?? undefined;
@@ -17,7 +20,7 @@ export async function GET(request: NextRequest) {
   const toStr = searchParams.get("to");
 
   try {
-    const { data, meta } = await listWorkOrders({
+    const { data, meta } = await listWorkOrders(companyId, {
       vehicleId,
       status,
       priority,
@@ -79,8 +82,9 @@ export async function POST(request: NextRequest) {
     return created(workOrder);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    if (msg === "Vehicle not found" || msg === "Maintenance schedule not found")
+    if (msg === "Vehicle not found" || msg === "Maintenance schedule not found" || msg.includes("selected vehicle"))
       return badRequest(msg);
+    if (msg.includes("cannot be negative")) return badRequest(msg);
     return handleError(err);
   }
 }

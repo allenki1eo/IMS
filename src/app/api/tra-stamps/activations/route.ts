@@ -5,7 +5,7 @@ import { parsePagination, buildMeta } from "@/lib/pagination";
 import { listStampActivations, createStampActivation } from "@/modules/tra-stamps/tra-stamps.service";
 
 export async function GET(request: NextRequest) {
-  const auth = await requirePermission(request, "tra:stamp:read");
+  const auth = await requirePermission(request, "tra-stamps:stamp:read");
   if ("error" in auth) return auth.error;
 
   const companyId = await getCompanyId(request);
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requirePermission(request, "tra:stamp:activate");
+  const auth = await requirePermission(request, "tra-stamps:stamp:activate");
   if ("error" in auth) return auth.error;
 
   const companyId = await getCompanyId(request);
@@ -45,6 +45,18 @@ export async function POST(request: NextRequest) {
     const activation = await createStampActivation(companyId, body, auth.user.id, auth.user.fullName, ipAddress);
     return created(activation);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (
+      msg.includes("required") ||
+      msg.includes("positive whole number") ||
+      msg.includes("invalid") ||
+      msg.includes("not found") ||
+      msg.includes("active") ||
+      msg.includes("expired") ||
+      msg.includes("Insufficient")
+    ) {
+      return badRequest(msg);
+    }
     return handleError(err);
   }
 }

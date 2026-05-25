@@ -75,6 +75,8 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Maintenance schedule not found") return notFound(msg);
+    if (msg === "Vehicle not found") return badRequest(msg);
+    if (msg.includes("must be greater") || msg.includes("cannot be negative") || msg.includes("invalid")) return badRequest(msg);
     return handleError(err);
   }
 }

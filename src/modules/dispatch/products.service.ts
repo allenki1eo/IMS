@@ -1,6 +1,12 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+type ProductLot = {
+  status: string;
+  quantityIn: number;
+  quantityOut: number;
+};
+
 export async function listProducts(
   companyId: string,
   params: {
@@ -65,9 +71,9 @@ export async function getProduct(companyId: string, id: string) {
   if (!product) return null;
   if (product.companyId !== companyId) return null;
 
-  const availableQty = product.lots
-    .filter((l) => l.status === "AVAILABLE")
-    .reduce((sum, l) => sum + (l.quantityIn - l.quantityOut), 0);
+  const availableQty = (product.lots as ProductLot[])
+    .filter((lot) => lot.status === "AVAILABLE")
+    .reduce((sum, lot) => sum + (lot.quantityIn - lot.quantityOut), 0);
 
   return { ...product, availableQty };
 }
@@ -85,18 +91,26 @@ export async function createProduct(
   userName: string,
   ipAddress?: string
 ) {
+  const code = data.code.trim().toUpperCase();
+  const name = data.name.trim();
+  if (!code) throw new Error("Product code is required");
+  if (!name) throw new Error("Product name is required");
+  if (data.unitPrice != null && (!Number.isFinite(data.unitPrice) || data.unitPrice < 0)) {
+    throw new Error("Unit price cannot be negative");
+  }
+
   const existing = await db.fGProduct.findFirst({
-    where: { companyId, code: data.code },
+    where: { companyId, code },
   });
   if (existing) throw new Error("A product with this code already exists");
 
   const product = await db.fGProduct.create({
     data: {
       companyId,
-      code: data.code,
-      name: data.name,
-      description: data.description ?? null,
-      uom: data.uom ?? "UNIT",
+      code,
+      name,
+      description: data.description?.trim() || null,
+      uom: data.uom?.trim() || "UNIT",
       unitPrice: data.unitPrice ?? null,
       isActive: true,
       createdById: userId,
@@ -110,8 +124,8 @@ export async function createProduct(
     module: "dispatch",
     resource: "product",
     recordId: product.id,
-    newValue: { code: data.code, name: data.name },
-    description: `Created FG product: ${data.code} - ${data.name}`,
+    newValue: { code, name },
+    description: `Created FG product: ${code} - ${name}`,
     ipAddress,
     companyId,
   });
@@ -138,18 +152,26 @@ export async function updateProduct(
   if (!existing) throw new Error("Product not found");
   if (existing.companyId !== companyId) throw new Error("Product not found");
 
-  if (data.code && data.code !== existing.code) {
+  const code = data.code?.trim().toUpperCase();
+  const name = data.name?.trim();
+  if (data.code !== undefined && !code) throw new Error("Product code is required");
+  if (data.name !== undefined && !name) throw new Error("Product name is required");
+  if (data.unitPrice != null && (!Number.isFinite(data.unitPrice) || data.unitPrice < 0)) {
+    throw new Error("Unit price cannot be negative");
+  }
+
+  if (code && code !== existing.code) {
     const duplicate = await db.fGProduct.findFirst({
-      where: { companyId, code: data.code, NOT: { id } },
+      where: { companyId, code, NOT: { id } },
     });
     if (duplicate) throw new Error("A product with this code already exists");
   }
 
   const updateData: Record<string, unknown> = {};
-  if (data.code !== undefined) updateData.code = data.code;
-  if (data.name !== undefined) updateData.name = data.name;
-  if (data.description !== undefined) updateData.description = data.description;
-  if (data.uom !== undefined) updateData.uom = data.uom;
+  if (data.code !== undefined) updateData.code = code;
+  if (data.name !== undefined) updateData.name = name;
+  if (data.description !== undefined) updateData.description = data.description?.trim() || null;
+  if (data.uom !== undefined) updateData.uom = data.uom?.trim() || "UNIT";
   if (data.unitPrice !== undefined) updateData.unitPrice = data.unitPrice;
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
 

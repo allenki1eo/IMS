@@ -7,7 +7,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requirePermission(request, "tra:stamp:read");
+  const auth = await requirePermission(request, "tra-stamps:stamp:read");
   if ("error" in auth) return auth.error;
 
   const companyId = await getCompanyId(request);

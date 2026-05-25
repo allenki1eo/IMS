@@ -1,5 +1,34 @@
 import { db } from "@/lib/db";
 
+interface TrialBalanceRow {
+  id: string;
+  code: string;
+  name: string;
+  accountType: string;
+  openingBalance: number;
+  currentBalance: number;
+}
+
+interface ReportLineRow {
+  accountId: string;
+  debit?: number | null;
+  credit?: number | null;
+  account?: {
+    id: string;
+    code: string;
+    name: string;
+    accountType: string;
+  };
+}
+
+type BalanceAccountRow = TrialBalanceRow;
+
+function parseDate(value: string, label: string, endOfDay = false) {
+  const date = new Date(endOfDay ? `${value}T23:59:59` : `${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) throw new Error(`${label} is invalid`);
+  return date;
+}
+
 export async function getTrialBalance(companyId: string) {
   const accounts = await db.account.findMany({
     where: { companyId, isActive: true },
@@ -28,13 +57,13 @@ export async function getTrialBalance(companyId: string) {
   });
 
   const accountTotals: Record<string, { debit: number; credit: number }> = {};
-  for (const line of lines) {
+  for (const line of lines as ReportLineRow[]) {
     if (!accountTotals[line.accountId]) accountTotals[line.accountId] = { debit: 0, credit: 0 };
     accountTotals[line.accountId].debit += line.debit || 0;
     accountTotals[line.accountId].credit += line.credit || 0;
   }
 
-  const data = accounts.map((acc) => {
+  const data = (accounts as TrialBalanceRow[]).map((acc) => {
     const totals = accountTotals[acc.id] || { debit: 0, credit: 0 };
     return {
       ...acc,
@@ -44,8 +73,8 @@ export async function getTrialBalance(companyId: string) {
     };
   });
 
-  const totalDebit = data.reduce((sum, d) => sum + d.totalDebit, 0);
-  const totalCredit = data.reduce((sum, d) => sum + d.totalCredit, 0);
+  const totalDebit = data.reduce((sum, row) => sum + row.totalDebit, 0);
+  const totalCredit = data.reduce((sum, row) => sum + row.totalCredit, 0);
 
   return { data, totalDebit, totalCredit, isBalanced: Math.abs(totalDebit - totalCredit) < 0.001 };
 }
@@ -54,8 +83,9 @@ export async function getIncomeStatement(
   companyId: string,
   params: { fromDate: string; toDate: string }
 ) {
-  const fromDate = new Date(params.fromDate);
-  const toDate = new Date(params.toDate);
+  const fromDate = parseDate(params.fromDate, "From date");
+  const toDate = parseDate(params.toDate, "To date", true);
+  if (fromDate > toDate) throw new Error("From date must be before to date");
 
   const lines = await db.journalEntryLine.findMany({
     where: {
@@ -76,8 +106,9 @@ export async function getIncomeStatement(
   let totalRevenue = 0;
   let totalExpenses = 0;
 
-  for (const line of lines) {
+  for (const line of lines as ReportLineRow[]) {
     const acc = line.account;
+    if (!acc) continue;
     const net = (line.credit || 0) - (line.debit || 0);
 
     if (acc.accountType === "REVENUE") {
@@ -103,7 +134,7 @@ export async function getIncomeStatement(
 }
 
 export async function getBalanceSheet(companyId: string, asOfDate?: string) {
-  const dateFilter = asOfDate ? new Date(asOfDate) : new Date();
+  const dateFilter = asOfDate ? parseDate(asOfDate, "As of date", true) : new Date();
 
   const accounts = await db.account.findMany({
     where: { companyId, isActive: true, accountType: { in: ["ASSET", "LIABILITY", "EQUITY"] } },
@@ -135,23 +166,25 @@ export async function getBalanceSheet(companyId: string, asOfDate?: string) {
   });
 
   const accountChanges: Record<string, { debit: number; credit: number }> = {};
-  for (const line of lines) {
+  for (const line of lines as ReportLineRow[]) {
     if (!accountChanges[line.accountId]) accountChanges[line.accountId] = { debit: 0, credit: 0 };
     accountChanges[line.accountId].debit += line.debit || 0;
     accountChanges[line.accountId].credit += line.credit || 0;
   }
 
-  const assets: any[] = [];
-  const liabilities: any[] = [];
-  const equity: any[] = [];
+  const assets: Array<BalanceAccountRow & { balance: number }> = [];
+  const liabilities: Array<BalanceAccountRow & { balance: number }> = [];
+  const equity: Array<BalanceAccountRow & { balance: number }> = [];
 
   let totalAssets = 0;
   let totalLiabilities = 0;
   let totalEquity = 0;
 
-  for (const acc of accounts) {
+  for (const acc of accounts as BalanceAccountRow[]) {
     const changes = accountChanges[acc.id] || { debit: 0, credit: 0 };
-    const balance = acc.openingBalance + changes.debit - changes.credit;
+    const balance = acc.accountType === "ASSET"
+      ? acc.openingBalance + changes.debit - changes.credit
+      : acc.openingBalance + changes.credit - changes.debit;
 
     const item = { ...acc, balance };
 
