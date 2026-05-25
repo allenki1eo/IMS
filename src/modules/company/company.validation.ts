@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+export const createCompanySchema = z.object({
+  name: z.string().min(2).max(200),
+  legalName: z.string().optional().nullable(),
+  registrationNumber: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable().or(z.literal("")),
+  website: z.string().url().optional().nullable().or(z.literal("")),
+  currency: z.string().length(3).optional(),
+  dateFormat: z.string().optional(),
+  fiscalYearStart: z.number().min(1).max(12).optional(),
+});
+
 export const updateCompanySchema = z.object({
   name: z.string().min(2).max(200).optional(),
   legalName: z.string().optional().nullable(),
@@ -9,7 +25,7 @@ export const updateCompanySchema = z.object({
   city: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable(),
+  email: z.string().email().optional().nullable().or(z.literal("")),
   website: z.string().url().optional().nullable().or(z.literal("")),
   currency: z.string().length(3).optional(),
   dateFormat: z.string().optional(),

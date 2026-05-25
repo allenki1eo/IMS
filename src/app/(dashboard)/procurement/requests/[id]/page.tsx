@@ -10,6 +10,7 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { ApprovalPanel } from "@/components/shared/ApprovalPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatMoney, formatNumber, priorityClass } from "../../_components/procurement-ui";
@@ -141,6 +142,17 @@ export default function PurchaseRequestDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Approval history */}
+      <Card className="mb-6">
+        <CardHeader><CardTitle className="text-base">Approval History</CardTitle></CardHeader>
+        <ApprovalPanel
+          module="procurement"
+          resource="purchase_request"
+          recordId={request.id}
+          onAction={loadRequest}
+        />
+      </Card>
 
       <Card className="mb-6">
         <CardHeader><CardTitle className="text-base">Request Lines</CardTitle></CardHeader>

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface FuelIssue {
   id: string;
@@ -22,7 +23,7 @@ interface FuelIssue {
   notes: string | null;
   createdAt: string;
   tank: { id: string; name: string; code: string; fuelType: string };
-  vehicle: { id: string; plateNumber: string; make: string | null; model: string | null };
+  vehicle: { id: string; plateNumber: string; make: string | null; model: string | null; usageType?: string; nextRefuelAt?: string | null };
   driver: { id: string; employee: { fullName: string } } | null;
 }
 
@@ -30,12 +31,14 @@ export default function FuelIssueDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [issue, setIssue] = useState<FuelIssue | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useCurrentUser();
+  const currency = user?.companies?.[0]?.currency ?? "TZS";
 
   const fetchIssue = useCallback(async () => {
     try {
       const res = await fetch(`/api/fuel-issues/${id}`);
       if (!res.ok) throw new Error();
-      setIssue(await res.json());
+      setIssue((await res.json()).data);
     } catch { toast.error("Failed to load fuel issue"); }
     finally { setLoading(false); }
   }, [id]);
@@ -77,14 +80,14 @@ export default function FuelIssueDetailPage() {
             {issue.pricePerLiter != null && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Price / L</span>
-                <span>${issue.pricePerLiter.toFixed(3)}</span>
+                <span>{currency} {issue.pricePerLiter.toFixed(3)}</span>
               </div>
             )}
             {issue.totalCost != null && (
               <div className="flex justify-between border-t pt-3">
                 <span className="font-semibold">Total Cost</span>
                 <span className="font-semibold text-lg">
-                  ${issue.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currency} {issue.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             )}
@@ -109,6 +112,12 @@ export default function FuelIssueDetailPage() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Odometer</span>
                 <span>{issue.odometerReading.toLocaleString()} km</span>
+              </div>
+            )}
+            {issue.vehicle.usageType === "PRIVATE" && issue.vehicle.nextRefuelAt && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Next Refuel</span>
+                <span className="text-amber-600 font-medium">{format(new Date(issue.vehicle.nextRefuelAt), "dd MMM yyyy")}</span>
               </div>
             )}
             <div className="flex justify-between">

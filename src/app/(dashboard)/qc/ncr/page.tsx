@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface NcrRow {
   id: string;
@@ -59,34 +61,33 @@ function severityBadge(severity: string) {
   );
 }
 
+const PAGE_SIZE = 20;
+
 export default function NcrPage() {
-  const [ncrs, setNcrs] = useState<NcrRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [severity, setSeverity] = useState("ALL");
   const [status, setStatus] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  const PAGE_SIZE = 20;
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (severity !== "ALL") params.set("severity", severity);
+  if (status !== "ALL") params.set("status", status);
+  const { data: ncrs, total, loading, mutate } = usePagedData<NcrRow>(`/api/qc/ncr?${params}`);
 
-  useEffect(() => { setPage(1); }, [debounced, severity, status]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (severity !== "ALL") params.set("severity", severity);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/qc/ncr?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setNcrs(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load NCRs"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, severity, status]);
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/qc/ncr/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("NCR deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete NCR");
+    }
+  }
 
   const columns = [
     {
@@ -144,9 +145,14 @@ export default function NcrPage() {
       key: "actions",
       header: "Actions",
       cell: (row: NcrRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/qc/ncr/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/qc/ncr/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -168,15 +174,15 @@ export default function NcrPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={(v) => { setSearch(v); setPage(1); }}
           placeholder="Search by reference or title..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
-        <Select value={severity} onValueChange={setSeverity}>
-          <SelectTrigger className="w-[160px]">
+        <Select value={severity} onValueChange={(v) => { setSeverity(v); setPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -185,8 +191,8 @@ export default function NcrPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[160px]">
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -208,6 +214,7 @@ export default function NcrPage() {
         emptyTitle="No NCRs found"
         emptyDescription="Create your first non-conformance report to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

@@ -142,7 +142,7 @@ export default function NewEmployeePage() {
               <Input id="employeeNumber" name="employeeNumber" value={form.employeeNumber} onChange={handleChange} placeholder="e.g. EMP001" disabled={submitting} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="firstName">
                   First Name <span className="text-destructive">*</span>
@@ -157,7 +157,7 @@ export default function NewEmployeePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} disabled={submitting} />
@@ -173,7 +173,7 @@ export default function NewEmployeePage() {
               <Input id="position" name="position" value={form.position} onChange={handleChange} placeholder="e.g. Software Engineer" disabled={submitting} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Branch</Label>
                 <Select value={form.branchId || "__none"} onValueChange={(v) => handleSelect("branchId", v)} disabled={submitting}>
@@ -196,7 +196,7 @@ export default function NewEmployeePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Employment Type</Label>
                 <Select value={form.employmentType} onValueChange={(v) => handleSelect("employmentType", v)} disabled={submitting}>

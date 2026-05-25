@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { listWorkOrders, createWorkOrder } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:workorder:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
@@ -19,24 +19,29 @@ export async function GET(request: NextRequest) {
   const fromStr = searchParams.get("from");
   const toStr = searchParams.get("to");
 
-  const { data, meta } = await listWorkOrders(companyId, {
-    vehicleId,
-    status,
-    priority,
-    completedFrom: fromStr ? new Date(fromStr) : undefined,
-    completedTo: toStr ? new Date(toStr) : undefined,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listWorkOrders(companyId, {
+      vehicleId,
+      status,
+      priority,
+      completedFrom: fromStr ? new Date(fromStr) : undefined,
+      completedTo: toStr ? new Date(toStr) : undefined,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "maintenance:workorder:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -77,8 +82,9 @@ export async function POST(request: NextRequest) {
     return created(workOrder);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    if (msg === "Vehicle not found" || msg === "Maintenance schedule not found")
+    if (msg === "Vehicle not found" || msg === "Maintenance schedule not found" || msg.includes("selected vehicle"))
       return badRequest(msg);
-    return serverError();
+    if (msg.includes("cannot be negative")) return badRequest(msg);
+    return handleError(err);
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateParameter, removeParameter } from "@/modules/qc/standards.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, noContent, badRequest, notFound, serverError } from "@/lib/response";
+import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function PATCH(
   request: NextRequest,
@@ -10,7 +10,7 @@ export async function PATCH(
   const auth = await requirePermission(request, "qc:standard:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id, paramId } = await params;
@@ -31,7 +31,7 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Quality standard not found" || msg === "Parameter not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }
 
@@ -42,7 +42,7 @@ export async function DELETE(
   const auth = await requirePermission(request, "qc:standard:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id, paramId } = await params;
@@ -53,6 +53,6 @@ export async function DELETE(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Quality standard not found" || msg === "Parameter not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { listTransfers, createTransfer } from "@/modules/warehouse/transfers.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:transfer:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
@@ -16,21 +16,26 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { transfers, total } = await listTransfers(companyId, {
-    search,
-    status,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { transfers, total } = await listTransfers(companyId, {
+      search,
+      status,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(transfers, buildMeta(total, paginationParams));
+    return paginated(transfers, buildMeta(total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:transfer:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -69,6 +74,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("Insufficient stock")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

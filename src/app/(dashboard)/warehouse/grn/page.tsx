@@ -142,7 +142,7 @@ export default function GRNListPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -161,7 +161,7 @@ export default function GRNListPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full sm:w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

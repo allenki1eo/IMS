@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { getWorkOrder, updateWorkOrder } from "@/modules/maintenance/workorders.service";
+import { deleteWorkOrder, getWorkOrder, updateWorkOrder } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +10,7 @@ export async function GET(
   const auth = await requirePermission(request, "maintenance:workorder:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -27,7 +27,7 @@ export async function PATCH(
   const auth = await requirePermission(request, "maintenance:workorder:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -66,6 +66,31 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Work order not found") return notFound(msg);
     if (msg.includes("Only PENDING")) return badRequest(msg);
-    return serverError();
+    if (msg.includes("cannot be negative")) return badRequest(msg);
+    return handleError(err);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermission(request, "maintenance:workorder:delete");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { id } = await params;
+  const { ipAddress } = getRequestMeta(request);
+
+  try {
+    await deleteWorkOrder(companyId, id, auth.user.id, auth.user.fullName, ipAddress);
+    return noContent();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (msg === "Work order not found") return notFound(msg);
+    if (msg.includes("cannot be deleted")) return badRequest(msg);
+    return handleError(err);
   }
 }

@@ -41,9 +41,9 @@ interface HistoryEntry {
   date: string;
   type: "RECEIPT" | "ISSUE";
   reference: string;
-  quantity: number;
-  runningBalance: number;
-  notes: string | null;
+  quantityLiters: number;
+  balanceAfter: number;
+  description: string | null;
 }
 
 const FUEL_TYPES = [
@@ -87,8 +87,9 @@ export default function TankDetailPage() {
   const loadTank = useCallback(() => {
     setLoading(true);
     fetch(`/api/fuel-tanks/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) { toast.error(d.error ?? "Failed to load tank"); return; }
         const t: Tank = d.data;
         setTank(t);
         if (t) {
@@ -114,7 +115,7 @@ export default function TankDetailPage() {
       setHistoryLoading(true);
       fetch(`/api/fuel/tank-history/${id}`)
         .then((r) => r.json())
-        .then((d) => setHistory(d.data ?? []))
+        .then((d) => setHistory(d.data?.history ?? []))
         .catch(() => toast.error("Failed to load history"))
         .finally(() => setHistoryLoading(false));
     }
@@ -134,7 +135,7 @@ export default function TankDetailPage() {
     setSaving(true);
     try {
       const res = await fetch(`/api/fuel-tanks/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
@@ -240,7 +241,7 @@ export default function TankDetailPage() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="name">Name <span className="text-destructive">*</span></Label>
                       <Input id="name" name="name" value={form.name} onChange={handleChange} disabled={saving} />
@@ -263,7 +264,7 @@ export default function TankDetailPage() {
                     </Select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="capacity">Capacity (L) <span className="text-destructive">*</span></Label>
                       <Input id="capacity" name="capacity" type="number" min="0" step="0.01" value={form.capacity} onChange={handleChange} disabled={saving} />
@@ -353,11 +354,11 @@ export default function TankDetailPage() {
                           </td>
                           <td className="px-4 py-3">
                             <span className={entry.type === "RECEIPT" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                              {entry.type === "RECEIPT" ? "+" : "-"}{entry.quantity.toLocaleString()}
+                              {entry.type === "RECEIPT" ? "+" : "-"}{entry.quantityLiters.toLocaleString()}
                             </span>
                           </td>
-                          <td className="px-4 py-3 font-medium">{entry.runningBalance.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{entry.notes ?? "—"}</td>
+                          <td className="px-4 py-3 font-medium">{entry.balanceAfter.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{entry.description ?? "—"}</td>
                         </tr>
                       ))
                     )}

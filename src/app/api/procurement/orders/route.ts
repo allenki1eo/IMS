@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listPurchaseOrders, createPurchaseOrder } from "@/modules/procurement/orders.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 type OrderLineBody = {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "procurement:order:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
@@ -26,28 +26,33 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") ?? undefined;
   const supplierId = searchParams.get("supplierId") ?? undefined;
 
-  const { data, meta } = await listPurchaseOrders(companyId, {
-    search,
-    status,
-    supplierId,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listPurchaseOrders(companyId, {
+      search,
+      status,
+      supplierId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "procurement:order:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
   const { supplierId, requestId, expectedDelivery, taxAmount, currency, notes, lines } = body;
   if (!supplierId || typeof supplierId !== "string") return badRequest("supplierId is required");
-  if (!Array.isArray(lines) || lines.length === 0) return badRequest("At least one line is required");
+  if (!requestId && (!Array.isArray(lines) || lines.length === 0)) return badRequest("At least one line is required");
 
   const { ipAddress } = getRequestMeta(request);
 
@@ -59,16 +64,18 @@ export async function POST(request: NextRequest) {
         requestId: requestId ?? null,
         expectedDelivery: expectedDelivery ?? null,
         taxAmount: taxAmount == null || taxAmount === "" ? 0 : Number(taxAmount),
-        currency: currency ?? "USD",
+        currency: currency ?? "TZS",
+        exchangeRate: body.exchangeRate ?? null,
+        baseCurrencyAmount: body.baseCurrencyAmount ?? null,
         notes: notes ?? null,
-        lines: lines.map((line: OrderLineBody) => ({
+        lines: Array.isArray(lines) ? lines.map((line: OrderLineBody) => ({
           itemId: line.itemId ?? null,
           itemCode: line.itemCode ?? null,
           description: line.description,
           quantity: Number(line.quantity),
           uom: line.uom ?? "PCS",
           unitCost: Number(line.unitCost),
-        })),
+        })) : undefined,
       },
       auth.user.id,
       auth.user.fullName,
@@ -86,6 +93,6 @@ export async function POST(request: NextRequest) {
     ) {
       return badRequest(msg);
     }
-    return serverError();
+    return handleError(err);
   }
 }

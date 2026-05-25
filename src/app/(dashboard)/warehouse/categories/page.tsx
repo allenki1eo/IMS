@@ -89,7 +89,7 @@ export default function CategoriesPage() {
     setSubmitting(true);
     try {
       const url = editing ? `/api/item-categories/${editing.id}` : "/api/item-categories";
-      const method = editing ? "PUT" : "POST";
+      const method = editing ? "PATCH" : "POST";
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -173,7 +173,7 @@ export default function CategoriesPage() {
             <DialogTitle>{editing ? "Edit Category" : "New Category"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="cat-name">
                   Name <span className="text-destructive">*</span>

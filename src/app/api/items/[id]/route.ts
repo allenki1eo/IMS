@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { getItemById, updateItem } from "@/modules/warehouse/items.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
+import { db } from "@/lib/db";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +12,7 @@ export async function GET(
   const auth = await requirePermission(request, "warehouse:item:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -56,6 +58,43 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Item not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermission(request, "warehouse:item:delete");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { id } = await params;
+  const item = await getItemById(id);
+  if (!item) return notFound("Item not found");
+  if (item.companyId !== companyId) return notFound("Item not found");
+
+  const { ipAddress, userAgent } = getRequestMeta(request);
+
+  try {
+    await db.item.delete({ where: { id } });
+    await createAuditLog({
+      userId: auth.user.id,
+      userName: auth.user.fullName,
+      action: "ITEM_DELETE",
+      module: "warehouse",
+      resource: "item",
+      recordId: id,
+      description: `Deleted item record`,
+      ipAddress,
+      userAgent,
+      companyId,
+    });
+    return success({ deleted: true });
+  } catch (err) {
+    return handleError(err);
   }
 }

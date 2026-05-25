@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface ReceiptRow {
   id: string;
@@ -24,6 +25,7 @@ interface ReceiptRow {
 }
 
 export default function PartsReceiptsPage() {
+  const currency = useCurrency();
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -91,7 +93,7 @@ export default function PartsReceiptsPage() {
       cell: (row: ReceiptRow) => (
         <span>
           {row.unitCost != null
-            ? `$${row.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ? `${currency} ${row.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             : "—"}
         </span>
       ),
@@ -104,7 +106,7 @@ export default function PartsReceiptsPage() {
         return (
           <span className="font-medium">
             {total != null
-              ? `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              ? `${currency} ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
               : "—"}
           </span>
         );
@@ -152,12 +154,12 @@ export default function PartsReceiptsPage() {
         description="View all incoming spare parts stock transactions"
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap items-end">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap items-end">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search by part or reference..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">From</Label>

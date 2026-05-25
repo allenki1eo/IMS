@@ -35,15 +35,18 @@ interface Warehouse {
   name: string;
   code: string;
   address: string | null;
-  status: string;
+  isActive: boolean;
+  warehouseType: string;
   branch?: { id: string; name: string } | null;
 }
+
+const WAREHOUSE_TYPES = ["MAIN", "DAYSTORE", "COLD_STORAGE", "PRODUCTION_FLOOR"];
 
 interface Location {
   id: string;
   name: string;
   code: string;
-  type: string;
+  locationType: string;
   capacity: number | null;
   parent?: { id: string; name: string } | null;
 }
@@ -53,7 +56,7 @@ const LOCATION_TYPES = ["AREA", "ZONE", "RACK", "BIN", "SHELF"];
 const DEFAULT_LOC_FORM = {
   name: "",
   code: "",
-  type: "RACK",
+  locationType: "RACK",
   parentId: "",
   capacity: "",
 };
@@ -73,6 +76,7 @@ export default function WarehouseDetailPage() {
     name: "",
     code: "",
     address: "",
+    warehouseType: "MAIN",
   });
 
   const fetchWarehouse = useCallback(async () => {
@@ -85,6 +89,7 @@ export default function WarehouseDetailPage() {
         name: w.name ?? "",
         code: w.code ?? "",
         address: w.address ?? "",
+        warehouseType: w.warehouseType ?? "MAIN",
       });
     } catch {
       toast.error("Failed to load warehouse");
@@ -114,12 +119,13 @@ export default function WarehouseDetailPage() {
     setSaving(true);
     try {
       const res = await fetch(`/api/warehouses/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editForm.name,
           code: editForm.code,
           address: editForm.address || undefined,
+          warehouseType: editForm.warehouseType,
         }),
       });
       const json = await res.json();
@@ -135,18 +141,18 @@ export default function WarehouseDetailPage() {
 
   async function toggleStatus() {
     if (!warehouse) return;
-    const newStatus = warehouse.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const newActive = !warehouse.isActive;
     setTogglingStatus(true);
     try {
-      const res = await fetch(`/api/warehouses/${id}`, {
+      const res = await fetch(`/api/warehouses/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ isActive: newActive }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to update status"); return; }
-      setWarehouse((w) => w ? { ...w, status: newStatus } : w);
-      toast.success(`Warehouse ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+      setWarehouse((w) => w ? { ...w, isActive: newActive } : w);
+      toast.success(`Warehouse ${newActive ? "activated" : "deactivated"}`);
     } catch {
       toast.error("Network error");
     } finally {
@@ -168,7 +174,7 @@ export default function WarehouseDetailPage() {
         body: JSON.stringify({
           name: locForm.name,
           code: locForm.code.toUpperCase(),
-          type: locForm.type,
+          locationType: locForm.locationType,
           parentId: locForm.parentId || undefined,
           capacity: locForm.capacity ? Number(locForm.capacity) : undefined,
         }),
@@ -213,7 +219,7 @@ export default function WarehouseDetailPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSave} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="name">
                       Name <span className="text-destructive">*</span>
@@ -248,6 +254,23 @@ export default function WarehouseDetailPage() {
                     disabled={saving}
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label>Warehouse Type</Label>
+                  <Select
+                    value={editForm.warehouseType}
+                    onValueChange={(v) => setEditForm((p) => ({ ...p, warehouseType: v }))}
+                    disabled={saving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WAREHOUSE_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button type="submit" disabled={saving}>
                   {saving && <LoadingSpinner className="mr-2" />}
                   Save Changes
@@ -264,7 +287,10 @@ export default function WarehouseDetailPage() {
               <CardTitle className="text-base">Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <StatusBadge status={warehouse.status} />
+              <StatusBadge status={warehouse.isActive} />
+              <p className="text-sm text-muted-foreground">
+                Type: <span className="text-foreground font-medium">{warehouse.warehouseType.replace(/_/g, " ")}</span>
+              </p>
               {warehouse.branch && (
                 <>
                   <Separator />
@@ -276,13 +302,13 @@ export default function WarehouseDetailPage() {
               <PermissionGuard require="warehouse:warehouse:update">
                 <Button
                   size="sm"
-                  variant={warehouse.status === "ACTIVE" ? "outline" : "default"}
+                  variant={warehouse.isActive ? "outline" : "default"}
                   onClick={toggleStatus}
                   disabled={togglingStatus}
                   className="w-full"
                 >
                   {togglingStatus && <LoadingSpinner className="mr-2" />}
-                  {warehouse.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                  {warehouse.isActive ? "Deactivate" : "Activate"}
                 </Button>
               </PermissionGuard>
             </CardContent>
@@ -324,7 +350,7 @@ export default function WarehouseDetailPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">{loc.name}</td>
                     <td className="px-4 py-3">
-                      <Badge variant="secondary">{loc.type}</Badge>
+                      <Badge variant="secondary">{loc.locationType}</Badge>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{loc.parent?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">
@@ -345,7 +371,7 @@ export default function WarehouseDetailPage() {
             <DialogTitle>Add Location</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAddLocation} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="loc-name">
                   Name <span className="text-destructive">*</span>
@@ -375,8 +401,8 @@ export default function WarehouseDetailPage() {
             <div className="space-y-1">
               <Label>Type</Label>
               <Select
-                value={locForm.type}
-                onValueChange={(v) => setLocForm((p) => ({ ...p, type: v }))}
+                value={locForm.locationType}
+                onValueChange={(v) => setLocForm((p) => ({ ...p, locationType: v }))}
                 disabled={addingLoc}
               >
                 <SelectTrigger>

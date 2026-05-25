@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getUserById, updateUser } from "@/modules/users/users.service";
 import { updateUserSchema } from "@/modules/users/users.validation";
 import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +14,11 @@ export async function GET(
   const { id } = await params;
   const user = await getUserById(id);
   if (!user) return notFound("User not found");
-  return success(user);
+  return success({
+    ...user,
+    status: user.isActive ? "ACTIVE" : "INACTIVE",
+    roles: user.roles.map((r: any) => ({ id: r.role.id, name: r.role.name, code: r.role.code })),
+  });
 }
 
 export async function PUT(
@@ -44,6 +48,6 @@ export async function PUT(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "User not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

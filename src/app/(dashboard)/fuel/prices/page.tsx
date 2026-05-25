@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const FUEL_TYPES = ["DIESEL", "PETROL", "PETROL_95", "PETROL_93", "ELECTRIC"];
 
@@ -41,6 +42,8 @@ export default function FuelPricesPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
+  const { user } = useCurrentUser();
+  const currency = user?.companies?.[0]?.currency ?? "TZS";
 
   const fetchPrices = useCallback(async () => {
     setLoading(true);
@@ -90,7 +93,7 @@ export default function FuelPricesPage() {
 
   const columns = [
     { key: "fuelType", header: "Fuel Type", cell: (r: FuelPrice) => <Badge variant="outline">{r.fuelType.replace(/_/g, " ")}</Badge> },
-    { key: "pricePerLiter", header: "Price / L", cell: (r: FuelPrice) => <span className="font-semibold">${r.pricePerLiter.toFixed(3)}</span> },
+    { key: "pricePerLiter", header: "Price / L", cell: (r: FuelPrice) => <span className="font-semibold">{currency} {r.pricePerLiter.toFixed(3)}</span> },
     { key: "effectiveFrom", header: "Effective From", cell: (r: FuelPrice) => format(new Date(r.effectiveFrom), "dd MMM yyyy") },
     { key: "effectiveTo", header: "Effective To", cell: (r: FuelPrice) => r.effectiveTo ? format(new Date(r.effectiveTo), "dd MMM yyyy") : <span className="text-muted-foreground">—</span> },
     { key: "notes", header: "Notes", cell: (r: FuelPrice) => <span className="text-sm text-muted-foreground">{r.notes ?? "—"}</span> },
@@ -134,7 +137,7 @@ export default function FuelPricesPage() {
                     <Label>Price per Liter *</Label>
                     <Input type="number" min="0" step="0.001" value={form.pricePerLiter} onChange={(e) => setForm((p) => ({ ...p, pricePerLiter: e.target.value }))} placeholder="0.000" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label>Effective From *</Label>
                       <Input type="date" value={form.effectiveFrom} onChange={(e) => setForm((p) => ({ ...p, effectiveFrom: e.target.value }))} />
@@ -165,7 +168,7 @@ export default function FuelPricesPage() {
             <Card key={fuelType}>
               <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">{fuelType.replace(/_/g, " ")}</CardTitle></CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">${price!.pricePerLiter.toFixed(3)}</p>
+                <p className="text-2xl font-bold">{currency} {price!.pricePerLiter.toFixed(3)}</p>
                 <p className="text-xs text-muted-foreground mt-1">per liter</p>
               </CardContent>
             </Card>

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Truck, MapPin, Clock, Package } from "lucide-react";
+import { ArrowLeft, Truck, MapPin, Clock, Package, Fuel } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
@@ -64,9 +64,11 @@ interface Trip {
   vehicle?: { id: string; plateNumber: string; make: string; model: string } | null;
   driver?: {
     id: string;
-    employee?: { firstName: string; lastName: string } | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    employee?: { fullName: string } | null;
   } | null;
-  cargoLines?: CargoLine[];
+  cargo?: CargoLine[];
   logs?: LogEntry[];
 }
 
@@ -95,6 +97,7 @@ export default function TripDetailPage() {
 
   // Cancel dialog
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
 
   // Add log dialog
@@ -169,6 +172,7 @@ export default function TripDetailPage() {
       const res = await fetch(`/api/trips/${id}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReason.trim() || undefined }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to cancel trip"); return; }
@@ -212,9 +216,8 @@ export default function TripDetailPage() {
   if (loading) return <LoadingState />;
   if (!trip) return <div className="text-muted-foreground">Trip not found.</div>;
 
-  const driverName = trip.driver?.employee
-    ? `${trip.driver.employee.firstName} ${trip.driver.employee.lastName}`
-    : "—";
+  const driverName = trip.driver?.employee?.fullName ??
+    ([trip.driver?.firstName, trip.driver?.lastName].filter(Boolean).join(" ") || "—");
 
   return (
     <div>
@@ -253,6 +256,17 @@ export default function TripDetailPage() {
               </Button>
             </PermissionGuard>
           </>
+        )}
+
+        {trip.status === "COMPLETED" && trip.vehicle?.id && (
+          <PermissionGuard require="fuel:issue:create">
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/fuel/issues/create?vehicleId=${trip.vehicle.id}&tripRef=${encodeURIComponent(trip.reference)}`}>
+                <Fuel className="h-4 w-4 mr-2" />
+                Record Fuel
+              </Link>
+            </Button>
+          </PermissionGuard>
         )}
 
         {trip.status === "DISPATCHED" && (
@@ -403,7 +417,7 @@ export default function TripDetailPage() {
         </div>
 
         {/* Cargo Lines */}
-        {(trip.cargoLines ?? []).length > 0 && (
+        {(trip.cargo ?? []).length > 0 && (
           <div>
             <h2 className="text-base font-semibold mb-3">Cargo Lines</h2>
             <div className="rounded-md border overflow-hidden">
@@ -416,7 +430,7 @@ export default function TripDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(trip.cargoLines ?? []).map((line) => (
+                  {(trip.cargo ?? []).map((line) => (
                     <tr key={line.id} className="border-t">
                       <td className="px-4 py-2">{line.description}</td>
                       <td className="px-4 py-2 text-muted-foreground">{line.quantity ?? "—"}</td>
@@ -529,6 +543,16 @@ export default function TripDetailPage() {
           <p className="text-sm text-muted-foreground">
             This will cancel trip <strong>{trip.reference}</strong>. This action cannot be undone.
           </p>
+          <div className="space-y-2">
+            <Label htmlFor="cancel-reason">Reason (optional)</Label>
+            <Input
+              id="cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Enter cancellation reason"
+              disabled={cancelling}
+            />
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCancelOpen(false)} disabled={cancelling}>Back</Button>
             <Button variant="destructive" onClick={handleCancel} disabled={cancelling}>

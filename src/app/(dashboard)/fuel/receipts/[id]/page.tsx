@@ -28,9 +28,12 @@ interface Receipt {
   tank?: { id: string; name: string; currentLevel: number; capacity: number } | null;
   supplierName: string | null;
   deliveryNoteRef: string | null;
-  quantity: number;
+  quantityLiters: number;
   pricePerLiter: number | null;
   totalCost: number | null;
+  currency: string;
+  exchangeRate: number | null;
+  baseCurrencyAmount: number | null;
   status: string;
   notes: string | null;
   createdAt: string;
@@ -75,7 +78,7 @@ export default function ReceiptDetailPage() {
   if (!receipt) return <div className="text-muted-foreground">Receipt not found.</div>;
 
   const newLevel = receipt.tank
-    ? Math.min(receipt.tank.currentLevel + receipt.quantity, receipt.tank.capacity)
+    ? Math.min(receipt.tank.currentLevel + receipt.quantityLiters, receipt.tank.capacity)
     : null;
 
   return (
@@ -110,7 +113,7 @@ export default function ReceiptDetailPage() {
             <StatusBadge status={receipt.status} />
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Reference</p>
                 <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{receipt.reference}</code>
@@ -142,24 +145,29 @@ export default function ReceiptDetailPage() {
 
             <Separator />
 
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Quantity</p>
-                <p className="text-lg font-bold">{receipt.quantity.toLocaleString()} L</p>
+                <p className="text-lg font-bold">{receipt.quantityLiters.toLocaleString()} L</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Price / Liter</p>
                 <p className="text-lg font-bold">
-                  {receipt.pricePerLiter != null ? `$${receipt.pricePerLiter.toFixed(3)}` : "—"}
+                  {receipt.pricePerLiter != null ? receipt.pricePerLiter.toLocaleString(undefined, { style: "currency", currency: receipt.currency || "TZS" }) : "—"}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Total Cost</p>
                 <p className="text-lg font-bold">
                   {receipt.totalCost != null
-                    ? `$${receipt.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ? receipt.totalCost.toLocaleString(undefined, { style: "currency", currency: receipt.currency || "TZS" })
                     : "—"}
                 </p>
+                {receipt.currency && receipt.currency !== "TZS" && receipt.baseCurrencyAmount != null && (
+                  <p className="text-xs text-muted-foreground">
+                    ≈ {receipt.baseCurrencyAmount.toLocaleString(undefined, { style: "currency", currency: "TZS" })} @ {receipt.exchangeRate}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -212,7 +220,7 @@ export default function ReceiptDetailPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Quantity to Add</span>
-              <span className="font-medium text-green-600">+{receipt.quantity.toLocaleString()} L</span>
+              <span className="font-medium text-green-600">+{receipt.quantityLiters.toLocaleString()} L</span>
             </div>
             {receipt.tank && (
               <>

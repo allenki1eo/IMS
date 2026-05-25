@@ -256,14 +256,14 @@ export default function ScheduleDetailPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="intervalKm">Interval (km)</Label>
                     <Input
                       id="intervalKm"
                       name="intervalKm"
                       type="number"
-                      min="0"
+                      min="1"
                       value={form.intervalKm}
                       onChange={handleChange}
                       disabled={saving}
@@ -275,7 +275,7 @@ export default function ScheduleDetailPage() {
                       id="intervalDays"
                       name="intervalDays"
                       type="number"
-                      min="0"
+                      min="1"
                       value={form.intervalDays}
                       onChange={handleChange}
                       disabled={saving}
@@ -283,7 +283,7 @@ export default function ScheduleDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="nextDueAt">Next Due Date</Label>
                     <Input

@@ -21,12 +21,14 @@ import {
 
 interface Branch { id: string; name: string; }
 
+const WAREHOUSE_TYPES = ["MAIN", "DAYSTORE", "COLD_STORAGE", "PRODUCTION_FLOOR"];
+
 interface FormState {
   name: string;
   code: string;
   branchId: string;
   address: string;
-  managerEmployeeId: string;
+  warehouseType: string;
 }
 
 const DEFAULT: FormState = {
@@ -34,7 +36,7 @@ const DEFAULT: FormState = {
   code: "",
   branchId: "",
   address: "",
-  managerEmployeeId: "",
+  warehouseType: "MAIN",
 };
 
 export default function NewWarehousePage() {
@@ -74,7 +76,7 @@ export default function NewWarehousePage() {
           code: form.code,
           branchId: form.branchId || undefined,
           address: form.address || undefined,
-          managerEmployeeId: form.managerEmployeeId || undefined,
+          warehouseType: form.warehouseType || undefined,
         }),
       });
       const json = await res.json();
@@ -109,7 +111,7 @@ export default function NewWarehousePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="name">
                   Name <span className="text-destructive">*</span>
@@ -174,15 +176,21 @@ export default function NewWarehousePage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="managerEmployeeId">Manager Employee ID</Label>
-              <Input
-                id="managerEmployeeId"
-                name="managerEmployeeId"
-                value={form.managerEmployeeId}
-                onChange={handleChange}
-                placeholder="Optional — employee ID of the manager"
+              <Label>Warehouse Type</Label>
+              <Select
+                value={form.warehouseType}
+                onValueChange={(v) => setForm((prev) => ({ ...prev, warehouseType: v }))}
                 disabled={submitting}
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WAREHOUSE_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex gap-2 pt-2">

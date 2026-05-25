@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { convertAmount } from "@/modules/finance/exchange-rates.service";
 
 function generateRef(prefix: string): string {
   const d = new Date();
@@ -8,7 +9,6 @@ function generateRef(prefix: string): string {
 }
 
 export async function listReceipts(
-  companyId: string,
   params: {
     search?: string;
     tankId?: string;
@@ -21,7 +21,6 @@ export async function listReceipts(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(tankId ? { tankId } : {}),
     ...(status ? { status } : {}),
     ...(search
@@ -71,6 +70,9 @@ export async function createReceipt(params: {
   deliveryNoteRef?: string | null;
   quantityLiters: number;
   pricePerLiter?: number | null;
+  currency?: string;
+  exchangeRate?: number | null;
+  baseCurrencyAmount?: number | null;
   notes?: string | null;
   createdById: string;
   userName: string;
@@ -80,13 +82,22 @@ export async function createReceipt(params: {
 
   const tank = await db.fuelTank.findUnique({ where: { id: data.tankId } });
   if (!tank) throw new Error("Fuel tank not found");
-  if (tank.companyId !== data.companyId) throw new Error("Fuel tank not found");
 
   const reference = generateRef("FRC");
   const totalCost =
     data.quantityLiters != null && data.pricePerLiter != null
       ? data.quantityLiters * data.pricePerLiter
       : null;
+
+  const currency = data.currency ?? "TZS";
+  let exchangeRate = data.exchangeRate ?? null;
+  let baseCurrencyAmount = data.baseCurrencyAmount ?? null;
+
+  if (currency !== "TZS" && totalCost != null && !exchangeRate) {
+    const conversion = await convertAmount(data.companyId, currency, "TZS", totalCost);
+    exchangeRate = conversion.rate;
+    baseCurrencyAmount = conversion.convertedAmount;
+  }
 
   const receipt = await db.fuelReceipt.create({
     data: {
@@ -98,6 +109,9 @@ export async function createReceipt(params: {
       quantityLiters: data.quantityLiters,
       pricePerLiter: data.pricePerLiter ?? null,
       totalCost,
+      currency,
+      exchangeRate,
+      baseCurrencyAmount,
       status: "DRAFT",
       notes: data.notes ?? null,
       receivedById: createdById,

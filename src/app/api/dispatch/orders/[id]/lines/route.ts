@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { addLine } from "@/modules/dispatch/orders.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { created, badRequest, notFound, serverError } from "@/lib/response";
+import { created, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -10,7 +10,7 @@ export async function POST(
   const auth = await requirePermission(request, "dispatch:order:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -39,9 +39,14 @@ export async function POST(
       msg === "Lines can only be added to DRAFT orders" ||
       msg === "Lot not found" ||
       msg === "Product not found" ||
-      msg === "Quantity must be greater than zero"
+      msg === "Product is inactive" ||
+      msg === "Lot is not available" ||
+      msg === "Selected product does not match the lot" ||
+      msg === "Unit price cannot be negative" ||
+      msg === "Quantity must be greater than zero" ||
+      msg.startsWith("Insufficient quantity")
     )
       return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

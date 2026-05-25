@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { listItems, createItem } from "@/modules/warehouse/items.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:item:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
@@ -20,23 +20,28 @@ export async function GET(request: NextRequest) {
   const isActive =
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
 
-  const { items, total } = await listItems(companyId, {
-    search,
-    categoryId,
-    itemType,
-    isActive,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  try {
+    const { items, total } = await listItems(companyId, {
+      search,
+      categoryId,
+      itemType,
+      isActive,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
 
-  return paginated(items, buildMeta(total, paginationParams));
+    return paginated(items, buildMeta(total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:item:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -69,6 +74,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique")) return badRequest("Item code already exists");
-    return serverError();
+    return handleError(err);
   }
 }

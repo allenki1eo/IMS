@@ -83,3 +83,82 @@ export function serverError(
     { status: 500 }
   );
 }
+
+export function handleError(err: unknown): NextResponse<ApiResponse> {
+  if (err instanceof Error) {
+    const msg = err.message;
+
+    const invalidDatabaseUrl =
+      /error validating datasource/i.test(msg) &&
+      /url must start with the protocol `postgresql:\/\/` or `postgres:\/\/`/i.test(msg);
+    if (invalidDatabaseUrl) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "DATABASE_URL is not a valid Supabase Postgres URL. Set it to the Supabase Transaction Pooler URL starting with postgresql://, and set DIRECT_URL to the direct db.<project-ref>.supabase.co:5432 URL.",
+          code: "DATABASE_URL_INVALID",
+        },
+        { status: 500 }
+      );
+    }
+
+    // Business logic errors — surface directly
+    const isDbError = /prisma|postgres|sqlite|libsql|econnrefused|enotfound|can't reach database|socket hang/i.test(msg);
+    if (!isDbError && msg.length < 300) {
+      return NextResponse.json({ success: false, error: msg, code: "BAD_REQUEST" }, { status: 400 });
+    }
+
+    // DB schema errors — give a meaningful hint instead of the generic message
+    const noTable = msg.match(/no such table[:\s]+(?:main\.)?(\w+)/i);
+    if (noTable) {
+      return NextResponse.json(
+        { success: false, error: `Database table "${noTable[1]}" is missing. Run the Supabase schema migration.`, code: "SERVER_ERROR" },
+        { status: 500 }
+      );
+    }
+
+    const noColumn = msg.match(/table \w+ has no column named (\w+)/i) ||
+                     msg.match(/no such column[:\s]+(\w+)/i);
+    if (noColumn) {
+      return NextResponse.json(
+        { success: false, error: `Database column "${noColumn[1]}" is missing. Run the Supabase schema migration.`, code: "SERVER_ERROR" },
+        { status: 500 }
+      );
+    }
+
+    const supabaseDirectConnection =
+      /can't reach database server|connect timed out|connection timed out|econnrefused|enotfound|p1001/i.test(msg) &&
+      /db\.[\w-]+\.supabase\.co:5432/i.test(msg);
+    if (supabaseDirectConnection) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Cannot reach Supabase through the direct database URL. Set DATABASE_URL to the Supabase Transaction Pooler URL in production and keep the direct db.supabase.co URL as DIRECT_URL for migrations.",
+          code: "DATABASE_CONNECTION_ERROR",
+        },
+        { status: 500 }
+      );
+    }
+
+    const uniqueViolation = /unique constraint failed|unique/i.test(msg);
+    if (uniqueViolation) {
+      return NextResponse.json(
+        { success: false, error: "A record with these details already exists.", code: "CONFLICT" },
+        { status: 409 }
+      );
+    }
+
+    // Surface the actual DB error message (truncated) so operators can diagnose it
+    const safeMsg = msg.replace(/authToken[=:]\S+/gi, "[REDACTED]").slice(0, 300);
+    return NextResponse.json(
+      { success: false, error: safeMsg, code: "SERVER_ERROR" },
+      { status: 500 }
+    );
+  }
+  return NextResponse.json(
+    { success: false, error: "An unexpected error occurred", code: "SERVER_ERROR" },
+    { status: 500 }
+  );
+}

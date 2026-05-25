@@ -33,6 +33,7 @@ interface FormData {
   deliveryNoteRef: string;
   quantity: string;
   pricePerLiter: string;
+  currency: string;
   notes: string;
 }
 
@@ -42,14 +43,20 @@ const DEFAULT: FormData = {
   deliveryNoteRef: "",
   quantity: "",
   pricePerLiter: "",
+  currency: "TZS",
   notes: "",
 };
+
+const CURRENCIES = ["TZS", "USD", "EUR", "GBP"];
 
 export default function NewReceiptPage() {
   const router = useRouter();
   const [form, setForm] = useState<FormData>(DEFAULT);
   const [submitting, setSubmitting] = useState(false);
   const [tanks, setTanks] = useState<TankOption[]>([]);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [baseAmount, setBaseAmount] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/fuel-tanks?pageSize=200&status=ACTIVE")
@@ -66,6 +73,28 @@ export default function NewReceiptPage() {
   const qty = parseFloat(form.quantity) || 0;
   const price = parseFloat(form.pricePerLiter) || 0;
   const totalCost = qty * price;
+
+  useEffect(() => {
+    if (form.currency === "TZS" || !totalCost) {
+      setExchangeRate(null);
+      setBaseAmount(null);
+      return;
+    }
+    setRateLoading(true);
+    fetch(`/api/finance/exchange-rates/latest?from=${form.currency}&to=TZS`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) {
+          setExchangeRate(json.data.rate);
+          setBaseAmount(totalCost * json.data.rate);
+        } else {
+          setExchangeRate(null);
+          setBaseAmount(null);
+        }
+      })
+      .catch(() => { setExchangeRate(null); setBaseAmount(null); })
+      .finally(() => setRateLoading(false));
+  }, [form.currency, totalCost]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,9 +116,14 @@ export default function NewReceiptPage() {
           tankId: form.tankId,
           supplierName: form.supplierName || undefined,
           deliveryNoteRef: form.deliveryNoteRef || undefined,
-          quantity: qty,
+          quantityLiters: qty,
           pricePerLiter: price || undefined,
           totalCost: totalCost || undefined,
+          currency: form.currency,
+          ...(form.currency !== "TZS" && exchangeRate != null ? {
+            exchangeRate,
+            baseCurrencyAmount: baseAmount,
+          } : {}),
           notes: form.notes || undefined,
         }),
       });
@@ -145,7 +179,7 @@ export default function NewReceiptPage() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="supplierName">Supplier Name</Label>
                   <Input id="supplierName" name="supplierName" value={form.supplierName} onChange={handleChange} placeholder="e.g. Total Energies" disabled={submitting} />
@@ -156,7 +190,7 @@ export default function NewReceiptPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="quantity">Quantity (L) <span className="text-destructive">*</span></Label>
                   <Input id="quantity" name="quantity" type="number" min="0" step="0.01" value={form.quantity} onChange={handleChange} placeholder="e.g. 5000" disabled={submitting} />
@@ -165,7 +199,30 @@ export default function NewReceiptPage() {
                   <Label htmlFor="pricePerLiter">Price per Liter</Label>
                   <Input id="pricePerLiter" name="pricePerLiter" type="number" min="0" step="0.001" value={form.pricePerLiter} onChange={handleChange} placeholder="e.g. 1.250" disabled={submitting} />
                 </div>
+                <div className="space-y-1">
+                  <Label>Currency</Label>
+                  <Select value={form.currency} onValueChange={(v) => setForm((p) => ({ ...p, currency: v }))} disabled={submitting}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+              {form.currency !== "TZS" && (
+                <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Exchange Rate</span>
+                    <span className="font-medium">{rateLoading ? "Loading..." : exchangeRate != null ? `${exchangeRate.toLocaleString()} TZS/${form.currency}` : "No rate found"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Base Amount (TZS)</span>
+                    <span className="font-medium">{baseAmount != null ? baseAmount.toLocaleString(undefined, { style: "currency", currency: "TZS" }) : "—"}</span>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1">
                 <Label htmlFor="notes">Notes</Label>
@@ -207,14 +264,19 @@ export default function NewReceiptPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Price / L</span>
-                <span>{price > 0 ? `$${price.toFixed(3)}` : "—"}</span>
+                <span>{price > 0 ? price.toLocaleString(undefined, { style: "currency", currency: form.currency }) : "—"}</span>
               </div>
               <div className="border-t pt-3 flex justify-between font-semibold">
                 <span>Total Cost</span>
                 <span className="text-lg">
-                  {totalCost > 0 ? `$${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                  {totalCost > 0 ? totalCost.toLocaleString(undefined, { style: "currency", currency: form.currency }) : "—"}
                 </span>
               </div>
+              {form.currency !== "TZS" && baseAmount != null && (
+                <div className="text-xs text-muted-foreground text-right">
+                  ≈ {baseAmount.toLocaleString(undefined, { style: "currency", currency: "TZS" })} @ {exchangeRate}
+                </div>
+              )}
             </CardContent>
           </Card>
 

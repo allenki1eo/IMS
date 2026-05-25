@@ -1,44 +1,55 @@
 import { NextRequest } from "next/server";
 import { listTests, createTest } from "@/modules/qc/tests.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "qc:test:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
   const standardId = searchParams.get("standardId") ?? undefined;
   const itemId = searchParams.get("itemId") ?? undefined;
+  const productionBatchId = searchParams.get("productionBatchId") ?? undefined;
   const testType = searchParams.get("testType") ?? undefined;
+  const testStage = searchParams.get("testStage") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
+  const search = searchParams.get("search") ?? undefined;
 
-  const { data, meta } = await listTests(companyId, {
-    standardId,
-    itemId,
-    testType,
-    status,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listTests(companyId, {
+      standardId,
+      itemId,
+      productionBatchId,
+      testType,
+      testStage,
+      status,
+      search,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "qc:test:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { standardId, itemId, batchNumber, testType, notes, sampleQty, sampleUnit } = body;
+  const { standardId, itemId, productionBatchId, batchNumber, testType, testStage, samplePoint, notes, sampleQty, sampleUnit } = body;
 
   if (!testType || typeof testType !== "string") return badRequest("testType is required");
 
@@ -50,8 +61,11 @@ export async function POST(request: NextRequest) {
       {
         standardId: standardId ?? null,
         itemId: itemId ?? null,
+        productionBatchId: productionBatchId ?? null,
         batchNumber: batchNumber ?? null,
         testType,
+        testStage: testStage ?? null,
+        samplePoint: samplePoint ?? null,
         notes: notes ?? null,
         sampleQty: sampleQty ?? null,
         sampleUnit: sampleUnit ?? null,
@@ -63,7 +77,7 @@ export async function POST(request: NextRequest) {
     return created(test);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    if (msg === "Quality standard not found" || msg === "Item not found") return badRequest(msg);
-    return serverError();
+    if (msg === "Quality standard not found" || msg === "Item not found" || msg === "Production batch not found") return badRequest(msg);
+    return handleError(err);
   }
 }

@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
 export async function listPrices(
-  companyId: string,
   params: {
     fuelType?: string;
   }
@@ -10,7 +9,6 @@ export async function listPrices(
   const { fuelType } = params;
 
   const where = {
-    companyId,
     ...(fuelType ? { fuelType } : {}),
   };
 
@@ -20,12 +18,11 @@ export async function listPrices(
   });
 }
 
-export async function getCurrentPrice(companyId: string, fuelType: string) {
+export async function getCurrentPrice(fuelType: string) {
   const now = new Date();
 
   return db.fuelPrice.findFirst({
     where: {
-      companyId,
       fuelType,
       effectiveFrom: { lte: now },
       OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }],

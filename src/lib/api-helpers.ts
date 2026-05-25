@@ -1,8 +1,8 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "./session";
 import { validateSession } from "./session";
 import { hasPermission } from "./permissions";
-import { unauthorized, forbidden } from "./response";
+import { unauthorized, forbidden, serverError, badRequest } from "./response";
 import type { AuthUser } from "@/types/auth";
 
 export async function getUser(request: NextRequest): Promise<AuthUser | null> {
@@ -57,8 +57,48 @@ export function getRequestMeta(request: NextRequest) {
   return { ipAddress, userAgent };
 }
 
-export async function getCompanyId(): Promise<string | null> {
-  const { db } = await import("./db");
-  const company = await db.company.findFirst({ select: { id: true } });
-  return company?.id ?? null;
+export async function getCompanyId(request?: NextRequest): Promise<string | null> {
+  if (request) {
+    const companyId = request.headers.get("x-company-id");
+    if (companyId) return companyId;
+  }
+  try {
+    const { db } = await import("./db");
+    const company = await db.company.findFirst({ select: { id: true } });
+    return company?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Safely parse JSON from a request body.
+ * Returns { body, error } — if error is set, return it immediately.
+ */
+export async function parseBody<T = Record<string, unknown>>(
+  request: NextRequest
+): Promise<{ body: T; error: null } | { body: null; error: NextResponse }> {
+  try {
+    const body = await request.json() as T;
+    return { body, error: null };
+  } catch {
+    return { body: null, error: badRequest("Invalid or missing JSON body") };
+  }
+}
+
+/**
+ * Wraps a route handler so any unhandled exception returns a 500 JSON response
+ * instead of crashing the route with an HTML error page.
+ */
+export function withErrorHandling(
+  handler: (request: NextRequest, context?: { params: Record<string, string> }) => Promise<NextResponse>
+) {
+  return async (request: NextRequest, context?: { params: Record<string, string> }) => {
+    try {
+      return await handler(request, context);
+    } catch (err) {
+      console.error("[API Error]", err);
+      return serverError("An unexpected error occurred");
+    }
+  };
 }

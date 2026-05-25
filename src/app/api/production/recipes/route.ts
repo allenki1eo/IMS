@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listProductionRecipes, createProductionRecipe } from "@/modules/production/recipes.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 type MaterialBody = {
@@ -17,25 +17,30 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "production:recipe:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
-  const { data, meta } = await listProductionRecipes(companyId, {
-    search: searchParams.get("search") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
-  return paginated(data, buildMeta(meta.total, pagination));
+  try {
+    const { data, meta } = await listProductionRecipes(companyId, {
+      search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "production:recipe:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -76,7 +81,7 @@ export async function POST(request: NextRequest) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique")) return badRequest("Recipe code/version already exists");
     if (msg.includes("material")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }
 

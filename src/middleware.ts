@@ -4,7 +4,9 @@ import { jwtVerify } from "jose";
 const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
+  "/change-password",
   "/api/settings", // public settings
+  "/api/webhooks/", // webhook receivers use HMAC, not session auth
   "/_next",
   "/favicon.ico",
   "/placeholder-logo.svg",
@@ -46,6 +48,11 @@ export async function middleware(request: NextRequest) {
     const headers = new Headers(request.headers);
     headers.set("x-user-id", userId);
     headers.set("x-user-jti", jti);
+
+    const companyId = request.cookies.get("erp_company_id")?.value;
+    if (companyId) {
+      headers.set("x-company-id", companyId);
+    }
 
     return NextResponse.next({ request: { headers } });
   } catch {

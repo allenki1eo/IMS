@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { addWorkOrderItem } from "@/modules/maintenance/workorders.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { created, badRequest, notFound, serverError } from "@/lib/response";
+import { created, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -10,7 +10,7 @@ export async function POST(
   const auth = await requirePermission(request, "maintenance:workorder:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id: workOrderId } = await params;
@@ -35,7 +35,7 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Work order not found") return notFound(msg);
     if (msg === "Spare part not found") return badRequest(msg);
-    if (msg.includes("Insufficient stock")) return badRequest(msg);
-    return serverError();
+    if (msg.includes("Insufficient stock") || msg.includes("must be greater") || msg.includes("cannot be negative") || msg.includes("Items can only")) return badRequest(msg);
+    return handleError(err);
   }
 }

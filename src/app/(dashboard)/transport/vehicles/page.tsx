@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Upload, Trash2 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ImportModal } from "@/components/shared/ImportModal";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,14 +21,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface VehicleRow {
   id: string;
   plateNumber: string;
+  companyId: string;
   make: string;
   model: string;
   vehicleType: string;
+  usageType: string;
   capacity: number | null;
   status: string;
   insuranceExpiry: string | null;
@@ -67,32 +74,58 @@ function ExpiryCell({ date }: { date: string | null }) {
 }
 
 export default function VehiclesPage() {
-  const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [importOpen, setImportOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   useEffect(() => { setPage(1); }, [debounced, typeFilter, statusFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (typeFilter !== "ALL") params.set("vehicleType", typeFilter);
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (typeFilter !== "ALL") params.set("vehicleType", typeFilter);
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  const url = `/api/vehicles?${params}`;
+  const { data: vehicles, total, loading, mutate } = usePagedData<VehicleRow>(url);
 
-    fetch(`/api/vehicles?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setVehicles(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load vehicles"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, typeFilter, statusFilter]);
+  async function handleBulkAction(status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED") {
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/vehicles/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, status }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
+      toast.success(`${json.data?.updated ?? selectedIds.length} vehicle(s) set to ${status.toLowerCase()}`);
+      setSelectedIds([]);
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/vehicles/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete vehicle");
+      return;
+    }
+    toast.success("Vehicle deleted");
+    setDeleteId(null);
+    mutate();
+  }
 
   const columns = [
     {
@@ -100,6 +133,15 @@ export default function VehiclesPage() {
       header: "Plate",
       cell: (row: VehicleRow) => (
         <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-semibold">{row.plateNumber}</code>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: VehicleRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {
@@ -114,6 +156,13 @@ export default function VehiclesPage() {
       header: "Type",
       cell: (row: VehicleRow) => (
         <Badge variant="secondary">{row.vehicleType}</Badge>
+      ),
+    },
+    {
+      key: "usageType",
+      header: "Usage",
+      cell: (row: VehicleRow) => (
+        <Badge variant={row.usageType === "PRIVATE" ? "default" : "outline"}>{row.usageType}</Badge>
       ),
     },
     {
@@ -139,9 +188,16 @@ export default function VehiclesPage() {
       key: "actions",
       header: "Actions",
       cell: (row: VehicleRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/transport/vehicles/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/transport/vehicles/${row.id}`}>View</Link>
+          </Button>
+          <PermissionGuard require="transport:vehicle:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -153,17 +209,23 @@ export default function VehiclesPage() {
         description="Manage fleet vehicles and their details"
         actions={
           <PermissionGuard require="transport:vehicle:create">
-            <Button asChild>
-              <Link href="/transport/vehicles/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Vehicle
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button asChild>
+                <Link href="/transport/vehicles/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Vehicle
+                </Link>
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -171,7 +233,7 @@ export default function VehiclesPage() {
           className="max-w-xs"
         />
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -181,7 +243,7 @@ export default function VehiclesPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full sm:w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -192,6 +254,16 @@ export default function VehiclesPage() {
         </Select>
       </div>
 
+      <BulkActionBar
+        selected={selectedIds}
+        onClear={() => setSelectedIds([])}
+        actions={[
+          { label: "Set Active", onClick: () => handleBulkAction("ACTIVE"), loading: bulkLoading },
+          { label: "Set Maintenance", variant: "outline", onClick: () => handleBulkAction("MAINTENANCE"), loading: bulkLoading },
+          { label: "Set Inactive", variant: "destructive", onClick: () => handleBulkAction("INACTIVE"), loading: bulkLoading },
+        ]}
+      />
+
       <DataTable
         columns={columns}
         data={vehicles}
@@ -200,8 +272,37 @@ export default function VehiclesPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
+        selectable
+        onSelectionChange={setSelectedIds}
         emptyTitle="No vehicles found"
         emptyDescription="Add your first vehicle to the fleet."
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false);
+          setPage(1);
+        }}
+        title="Import Vehicles"
+        apiEndpoint="/api/vehicles/import"
+        templateHeaders={["plateNumber", "make", "model", "year", "vehicleType", "color", "chassisNumber", "engineNumber", "fuelType", "capacity"]}
+        templateFilename="vehicles-import-template"
+        instructions={[
+          "plateNumber, make, and model are required",
+          "vehicleType: TRUCK, VAN, CAR, MOTORCYCLE, TRAILER (default: TRUCK)",
+          "fuelType: DIESEL, PETROL, ELECTRIC, HYBRID (default: DIESEL)",
+          "year and capacity are optional numbers",
+        ]}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Vehicle"
+        description="Are you sure you want to delete this vehicle? This action cannot be undone."
       />
     </div>
   );

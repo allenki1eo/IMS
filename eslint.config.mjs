@@ -18,6 +18,7 @@ const eslintConfig = [
     rules: {
       "@next/next/no-html-link-for-pages": "off",
       "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-explicit-any": "off",
       "react/no-unescaped-entities": "off",
     },
   },

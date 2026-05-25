@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 
 export async function getConsumptionByVehicle(
-  companyId: string,
   params: {
     from?: string;
     to?: string;
@@ -11,7 +10,6 @@ export async function getConsumptionByVehicle(
   const { from, to, vehicleId } = params;
 
   const where = {
-    companyId,
     ...(vehicleId ? { vehicleId } : {}),
     ...(from || to
       ? {
@@ -65,7 +63,11 @@ export async function getConsumptionByVehicle(
     }
   }
 
-  return Array.from(grouped.values()).sort((a, b) => b.totalLiters - a.totalLiters);
+  const results = Array.from(grouped.values()).sort((a, b) => b.totalLiters - a.totalLiters);
+  return results.map((r) => ({
+    ...r,
+    avgLitersPerIssue: r.issueCount > 0 ? r.totalLiters / r.issueCount : 0,
+  }));
 }
 
 function getPeriodKey(date: Date, groupBy: "day" | "week" | "month"): string {
@@ -89,7 +91,6 @@ function getPeriodKey(date: Date, groupBy: "day" | "week" | "month"): string {
 }
 
 export async function getConsumptionByPeriod(
-  companyId: string,
   params: {
     groupBy: "day" | "week" | "month";
     from?: string;
@@ -100,7 +101,6 @@ export async function getConsumptionByPeriod(
   const { groupBy, from, to, tankId } = params;
 
   const where = {
-    companyId,
     ...(tankId ? { tankId } : {}),
     ...(from || to
       ? {

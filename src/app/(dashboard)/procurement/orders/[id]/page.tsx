@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PrintButton } from "@/components/shared/PrintButton";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -27,6 +28,8 @@ interface PurchaseOrder {
   taxAmount: number;
   totalAmount: number;
   currency: string;
+  exchangeRate: number | null;
+  baseCurrencyAmount: number | null;
   notes?: string | null;
   supplier: { id: string; code: string; name: string; contactPerson?: string | null; email?: string | null; phone?: string | null };
   request?: { id: string; reference: string; purpose: string; status: string } | null;
@@ -121,9 +124,12 @@ export default function PurchaseOrderDetailPage() {
         title={order.reference}
         description={order.supplier.name}
         actions={
-          <Button variant="outline" asChild>
-            <Link href="/procurement/orders"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link>
-          </Button>
+          <div className="flex gap-2">
+            <PrintButton className="no-print" />
+            <Button variant="outline" asChild>
+              <Link href="/procurement/orders"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link>
+            </Button>
+          </div>
         }
       />
 
@@ -148,6 +154,12 @@ export default function PurchaseOrderDetailPage() {
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatMoney(order.subtotal, order.currency)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span>{formatMoney(order.taxAmount, order.currency)}</span></div>
             <div className="flex justify-between border-t pt-3 text-base font-semibold"><span>Total</span><span>{formatMoney(order.totalAmount, order.currency)}</span></div>
+            {order.currency && order.currency !== "TZS" && (
+              <>
+                <div className="flex justify-between text-xs text-muted-foreground pt-1"><span>Exchange Rate</span><span>{order.exchangeRate != null ? order.exchangeRate.toLocaleString() : "—"}</span></div>
+                <div className="flex justify-between text-xs text-muted-foreground"><span>Base Amount (TZS)</span><span>{order.baseCurrencyAmount != null ? order.baseCurrencyAmount.toLocaleString(undefined, { style: "currency", currency: "TZS" }) : "—"}</span></div>
+              </>
+            )}
             <div className="space-y-2 pt-3">
               {order.status === "DRAFT" && (
                 <PermissionGuard require="procurement:order:send">

@@ -1,6 +1,12 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+function assertPositiveFiniteNumber(value: number, field: string) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${field} must be greater than 0`);
+  }
+}
+
 export async function listProductionLines(
   companyId: string,
   params: { search?: string; status?: string; lineType?: string; page: number; pageSize: number }
@@ -57,6 +63,10 @@ export async function createProductionLine(
   userName: string,
   ipAddress?: string
 ) {
+  if (data.capacityPerDay != null) {
+    assertPositiveFiniteNumber(data.capacityPerDay, "capacityPerDay");
+  }
+
   const line = await db.productionLine.create({
     data: {
       companyId,
@@ -113,5 +123,37 @@ export async function updateProductionLineStatus(
     companyId,
   });
   return updated;
+}
+
+export async function deleteProductionLine(
+  companyId: string,
+  id: string,
+  userId: string,
+  userName: string,
+  ipAddress?: string
+) {
+  const existing = await db.productionLine.findFirst({
+    where: { id, companyId },
+    include: { _count: { select: { batches: true } } },
+  });
+  if (!existing) throw new Error("Production line not found");
+  if (existing._count.batches > 0) {
+    throw new Error("Production line has batches and cannot be deleted");
+  }
+
+  await db.productionLine.delete({ where: { id } });
+
+  await createAuditLog({
+    userId,
+    userName,
+    action: "PRODUCTION_LINE_DELETE",
+    module: "production",
+    resource: "line",
+    recordId: id,
+    oldValue: { code: existing.code, name: existing.name },
+    description: `Deleted production line: ${existing.name} (${existing.code})`,
+    ipAddress,
+    companyId,
+  });
 }
 

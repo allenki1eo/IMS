@@ -1,14 +1,15 @@
 import { NextRequest } from "next/server";
 import { listVehicles, createVehicle } from "@/modules/transport/vehicles.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:vehicle:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
@@ -18,23 +19,35 @@ export async function GET(request: NextRequest) {
   const vehicleType = searchParams.get("vehicleType") ?? undefined;
   const branchId = searchParams.get("branchId") ?? undefined;
 
-  const { data, meta } = await listVehicles(companyId, {
-    search,
-    status,
-    vehicleType,
-    branchId,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
+  // Only cache unfiltered list requests
+  const useCache = !search && !status && !vehicleType && !branchId;
+  if (useCache) {
+    const cached = cache.get<unknown[]>(cacheKey.vehicles(companyId));
+    if (cached) return paginated(cached, buildMeta(cached.length, paginationParams));
+  }
 
-  return paginated(data, buildMeta(meta.total, paginationParams));
+  try {
+    const { data, meta } = await listVehicles({
+      search,
+      status,
+      vehicleType,
+      branchId,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
+    if (useCache) cache.set(cacheKey.vehicles(companyId), data, TTL.REFERENCE);
+    return paginated(data, buildMeta(meta.total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "transport:vehicle:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -45,14 +58,17 @@ export async function POST(request: NextRequest) {
     model,
     year,
     vehicleType,
+    usageType,
     capacity,
     fuelType,
+    fuelTankCapacity,
     color,
     chassisNumber,
     engineNumber,
     odometer,
     insuranceExpiry,
     roadWorthyExpiry,
+    nextServiceDate,
     notes,
   } = body;
 
@@ -71,25 +87,29 @@ export async function POST(request: NextRequest) {
       model,
       year: year ?? null,
       vehicleType: vehicleType ?? "TRUCK",
+      usageType: usageType ?? "OWNED",
       capacity: capacity ?? null,
       fuelType: fuelType ?? "DIESEL",
+      fuelTankCapacity: fuelTankCapacity ?? null,
       color: color ?? null,
       chassisNumber: chassisNumber ?? null,
       engineNumber: engineNumber ?? null,
       odometer: odometer ?? 0,
       insuranceExpiry: insuranceExpiry ? new Date(insuranceExpiry) : null,
       roadWorthyExpiry: roadWorthyExpiry ? new Date(roadWorthyExpiry) : null,
+      nextServiceDate: nextServiceDate ? new Date(nextServiceDate) : null,
       notes: notes ?? null,
       createdById: auth.user.id,
       userName: auth.user.fullName,
       ipAddress,
     });
+    cache.invalidate(cacheKey.vehicles(companyId));
     return created(vehicle);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique") || msg.toLowerCase().includes("plate")) {
       return badRequest("Plate number already exists");
     }
-    return serverError();
+    return handleError(err);
   }
 }

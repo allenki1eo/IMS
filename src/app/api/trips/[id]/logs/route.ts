@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { addTripLog } from "@/modules/transport/trips.service";
 import { requirePermission } from "@/lib/api-helpers";
-import { created, badRequest, notFound, serverError } from "@/lib/response";
+import { created, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -29,6 +29,6 @@ export async function POST(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Trip not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
   }
 }

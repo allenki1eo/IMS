@@ -11,6 +11,7 @@ import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,8 +32,8 @@ interface WorkOrder {
   description?: string | null;
   estimatedCost?: number | null;
   actualCost?: number | null;
-  completionNotes?: string | null;
-  odometerAtService?: number | null;
+  notes?: string | null;
+  odometerAtWork?: number | null;
   startedAt?: string | null;
   completedAt?: string | null;
   createdAt: string;
@@ -47,8 +48,8 @@ interface WorkOrderItem {
   description: string;
   sparePart?: { id: string; code: string; name: string } | null;
   quantity: number;
-  unitCost: number;
-  totalCost: number;
+  unitCost?: number | null;
+  totalCost?: number | null;
 }
 
 interface SparePartOption {
@@ -73,6 +74,7 @@ function priorityClass(priority: string): string {
 }
 
 export default function WorkOrderDetailPage() {
+  const currency = useCurrency();
   const { id } = useParams<{ id: string }>();
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [items, setItems] = useState<WorkOrderItem[]>([]);
@@ -207,7 +209,7 @@ export default function WorkOrderDetailPage() {
   if (loading) return <LoadingState />;
   if (!workOrder) return <div className="text-muted-foreground">Work order not found.</div>;
 
-  const totalItemsCost = items.reduce((sum, i) => sum + i.totalCost, 0);
+  const totalItemsCost = items.reduce((sum, i) => sum + (i.totalCost ?? 0), 0);
 
   return (
     <div>
@@ -230,7 +232,7 @@ export default function WorkOrderDetailPage() {
           <CardHeader>
             <CardTitle className="text-base">Work Order Info</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Status</p>
               <div className="mt-1"><StatusBadge status={workOrder.status} /></div>
@@ -267,20 +269,20 @@ export default function WorkOrderDetailPage() {
                 <p className="mt-1">{format(new Date(workOrder.completedAt), "dd MMM yyyy HH:mm")}</p>
               </div>
             )}
-            {workOrder.odometerAtService != null && (
+            {workOrder.odometerAtWork != null && (
               <div>
                 <p className="text-muted-foreground">Odometer at Service</p>
-                <p className="mt-1">{workOrder.odometerAtService.toLocaleString()} km</p>
+                <p className="mt-1">{workOrder.odometerAtWork.toLocaleString()} km</p>
               </div>
             )}
             <div className="col-span-2">
               <p className="text-muted-foreground">Description</p>
               <p className="mt-1">{workOrder.description ?? "—"}</p>
             </div>
-            {workOrder.completionNotes && (
+            {workOrder.notes && (
               <div className="col-span-2">
                 <p className="text-muted-foreground">Completion Notes</p>
-                <p className="mt-1">{workOrder.completionNotes}</p>
+                <p className="mt-1">{workOrder.notes}</p>
               </div>
             )}
           </CardContent>
@@ -296,19 +298,19 @@ export default function WorkOrderDetailPage() {
               <span className="text-muted-foreground">Estimated Cost</span>
               <span>
                 {workOrder.estimatedCost != null
-                  ? `$${workOrder.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  ? `${currency} ${workOrder.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   : "—"}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Items Total</span>
-              <span>${totalItemsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>{currency} {totalItemsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {workOrder.actualCost != null && (
               <div className="flex justify-between font-semibold border-t pt-3">
                 <span>Actual Cost</span>
                 <span className="text-lg">
-                  ${workOrder.actualCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currency} {workOrder.actualCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             )}
@@ -433,7 +435,7 @@ export default function WorkOrderDetailPage() {
             <div className="px-4 py-4 border-b bg-muted/20">
               <form onSubmit={handleAddItem} className="space-y-3">
                 <p className="text-sm font-medium">Add Item</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Type</Label>
                     <Select
@@ -484,13 +486,13 @@ export default function WorkOrderDetailPage() {
                     </Select>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Quantity</Label>
                     <Input
                       className="h-8"
                       type="number"
-                      min="0"
+                      min="0.01"
                       step="0.01"
                       value={itemForm.quantity}
                       onChange={(e) => setItemForm((p) => ({ ...p, quantity: e.target.value }))}
@@ -573,10 +575,10 @@ export default function WorkOrderDetailPage() {
                       </td>
                       <td className="px-4 py-3">{item.quantity.toLocaleString()}</td>
                       <td className="px-4 py-3">
-                        ${item.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currency} {(item.unitCost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        ${item.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {currency} {(item.totalCost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       {workOrder.status !== "COMPLETED" && workOrder.status !== "CANCELLED" && (
                         <td className="px-4 py-3">
@@ -599,7 +601,7 @@ export default function WorkOrderDetailPage() {
                   <tr className="border-t bg-muted/20 font-semibold">
                     <td colSpan={5} className="px-4 py-3 text-right">Total</td>
                     <td className="px-4 py-3">
-                      ${totalItemsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {currency} {totalItemsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     {workOrder.status !== "COMPLETED" && workOrder.status !== "CANCELLED" && (
                       <td className="px-4 py-3" />

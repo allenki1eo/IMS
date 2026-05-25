@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PrintButton } from "@/components/shared/PrintButton";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
@@ -25,7 +26,7 @@ import {
 interface DispatchLine {
   id: string;
   product?: { id: string; code: string; name: string } | null;
-  lot?: { id: string; lotNumber?: string | null } | null;
+  lot?: { id: string; lotNumber?: string | null; product?: { id: string; code: string; name: string } | null } | null;
   description: string;
   quantity: number;
   uom: string;
@@ -42,7 +43,7 @@ interface DispatchOrder {
   deliveryAddress?: string | null;
   scheduledDate?: string | null;
   vehicle?: { id: string; plateNumber: string; make?: string | null; model?: string | null } | null;
-  driver?: { id: string; firstName: string; lastName: string } | null;
+  driver?: { id: string; firstName?: string | null; lastName?: string | null; employee?: { fullName: string } | null } | null;
   notes?: string | null;
   createdAt: string;
   lines?: DispatchLine[];
@@ -203,9 +204,13 @@ export default function DispatchOrderDetailPage() {
 
   const lines = order.lines ?? [];
   const totalValue = lines.reduce((sum, l) => sum + (l.totalPrice ?? 0), 0);
+  const totalQuantity = lines.reduce((sum, line) => sum + line.quantity, 0);
   const isDraft = order.status === "DRAFT";
   const isConfirmed = order.status === "CONFIRMED";
   const isDispatched = order.status === "DISPATCHED";
+  const driverName = order.driver
+    ? (order.driver.employee?.fullName ?? [order.driver.firstName, order.driver.lastName].filter(Boolean).join(" ")) || "Unnamed driver"
+    : "";
 
   return (
     <div>
@@ -213,12 +218,15 @@ export default function DispatchOrderDetailPage() {
         title={order.reference}
         description={`Dispatch Order — ${order.customerName}`}
         actions={
-          <Button variant="outline" asChild>
-            <Link href="/dispatch/orders">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <PrintButton className="no-print" />
+            <Button variant="outline" asChild>
+              <Link href="/dispatch/orders">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -258,7 +266,7 @@ export default function DispatchOrderDetailPage() {
           {order.driver && (
             <div>
               <p className="text-muted-foreground">Driver</p>
-              <p className="mt-1">{order.driver.firstName} {order.driver.lastName}</p>
+              <p className="mt-1">{driverName}</p>
             </div>
           )}
           <div>
@@ -281,10 +289,9 @@ export default function DispatchOrderDetailPage() {
       </Card>
 
       {/* Action Buttons */}
-      <PermissionGuard require="dispatch:order:update">
-        <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="flex gap-2 mb-6 flex-wrap">
           {isDraft && (
-            <>
+            <PermissionGuard require="dispatch:order:update">
               <Button onClick={() => handleAction("confirm")} disabled={actionLoading}>
                 {actionLoading && <LoadingSpinner className="mr-2" />}
                 Confirm Order
@@ -292,27 +299,32 @@ export default function DispatchOrderDetailPage() {
               <Button variant="destructive" onClick={() => handleAction("cancel")} disabled={actionLoading}>
                 Cancel
               </Button>
-            </>
+            </PermissionGuard>
           )}
           {isConfirmed && (
             <>
-              <Button onClick={() => handleAction("dispatch")} disabled={actionLoading}>
-                {actionLoading && <LoadingSpinner className="mr-2" />}
-                Dispatch
-              </Button>
-              <Button variant="destructive" onClick={() => handleAction("cancel")} disabled={actionLoading}>
-                Cancel
-              </Button>
+              <PermissionGuard require="dispatch:order:dispatch">
+                <Button onClick={() => handleAction("dispatch")} disabled={actionLoading}>
+                  {actionLoading && <LoadingSpinner className="mr-2" />}
+                  Dispatch
+                </Button>
+              </PermissionGuard>
+              <PermissionGuard require="dispatch:order:update">
+                <Button variant="destructive" onClick={() => handleAction("cancel")} disabled={actionLoading}>
+                  Cancel
+                </Button>
+              </PermissionGuard>
             </>
           )}
           {isDispatched && (
-            <Button onClick={() => handleAction("deliver")} disabled={actionLoading}>
-              {actionLoading && <LoadingSpinner className="mr-2" />}
-              Mark Delivered
-            </Button>
+            <PermissionGuard require="dispatch:order:deliver">
+              <Button onClick={() => handleAction("deliver")} disabled={actionLoading}>
+                {actionLoading && <LoadingSpinner className="mr-2" />}
+                Mark Delivered
+              </Button>
+            </PermissionGuard>
           )}
-        </div>
-      </PermissionGuard>
+      </div>
 
       {/* Order Lines */}
       <Card className="mb-6">
@@ -390,7 +402,7 @@ export default function DispatchOrderDetailPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="line-quantity">Quantity <span className="text-destructive">*</span></Label>
                     <Input
@@ -546,10 +558,14 @@ export default function DispatchOrderDetailPage() {
 
       {/* Totals Card */}
       <Card>
-        <CardContent className="pt-6 grid grid-cols-2 gap-4 text-sm">
+        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
             <p className="text-muted-foreground">Lines Count</p>
             <p className="text-2xl font-bold mt-1">{lines.length}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Total Quantity</p>
+            <p className="text-2xl font-bold mt-1">{totalQuantity.toLocaleString()}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Total Value</p>

@@ -43,10 +43,10 @@ interface UOM { id: string; name: string; symbol: string; }
 
 interface StockBalance {
   id: string;
-  warehouseName: string;
-  locationName: string | null;
+  warehouse: { name: string } | null;
+  location: { name: string } | null;
   quantity: number;
-  uomSymbol: string;
+  item: { uom: { symbol: string } | null } | null;
 }
 
 interface LedgerEntry {
@@ -54,8 +54,9 @@ interface LedgerEntry {
   createdAt: string;
   transactionType: string;
   quantity: number;
-  warehouseName: string;
-  reference: string | null;
+  warehouse: { name: string } | null;
+  referenceType: string | null;
+  referenceId: string | null;
 }
 
 const ITEM_TYPES = [
@@ -148,7 +149,7 @@ export default function ItemDetailPage() {
     setSaving(true);
     try {
       const res = await fetch(`/api/items/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
@@ -220,7 +221,7 @@ export default function ItemDetailPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label>Item Type</Label>
                     <Select
@@ -275,7 +276,7 @@ export default function ItemDetailPage() {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="minStock">Min Stock</Label>
                     <Input
@@ -391,10 +392,10 @@ export default function ItemDetailPage() {
                 <tbody>
                   {stockBalances.map((s) => (
                     <tr key={s.id} className="border-t hover:bg-muted/30">
-                      <td className="px-4 py-3">{s.warehouseName}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{s.locationName ?? "—"}</td>
+                      <td className="px-4 py-3">{s.warehouse?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{s.location?.name ?? "—"}</td>
                       <td className="px-4 py-3 font-semibold">{s.quantity}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{s.uomSymbol}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{s.item?.uom?.symbol ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -434,8 +435,8 @@ export default function ItemDetailPage() {
                       <td className={`px-4 py-3 font-semibold ${l.quantity >= 0 ? "text-green-600" : "text-red-600"}`}>
                         {l.quantity >= 0 ? "+" : ""}{l.quantity}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{l.warehouseName}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{l.reference ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{l.warehouse?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{l.referenceType ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

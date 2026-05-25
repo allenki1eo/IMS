@@ -1,5 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { convertAmount } from "@/modules/finance/exchange-rates.service";
 
 function generateRef(): string {
   const d = new Date();
@@ -16,9 +18,62 @@ type OrderLineInput = {
   unitCost: number;
 };
 
+type PurchaseRequestLineForOrder = {
+  itemId: string | null;
+  itemCode: string | null;
+  description: string;
+  quantity: number;
+  uom: string;
+  estimatedUnitCost: number | null;
+};
+
+type PurchaseRequestForOrder = {
+  companyId: string;
+  status: string;
+  lines: PurchaseRequestLineForOrder[];
+};
+
+type PurchaseOrderLineForReceive = {
+  id: string;
+  quantity: number;
+  receivedQty: number;
+};
+
+type PurchaseOrderForReceive = {
+  companyId: string;
+  status: string;
+  reference: string;
+  lines: PurchaseOrderLineForReceive[];
+};
+
 function computeTotals(lines: OrderLineInput[], taxAmount = 0) {
   const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitCost, 0);
   return { subtotal, taxAmount, totalAmount: subtotal + taxAmount };
+}
+
+async function getApprovedPurchaseRequestForOrder(companyId: string, requestId: string): Promise<PurchaseRequestForOrder> {
+  const request = await db.purchaseRequest.findUnique({
+    where: { id: requestId },
+    include: { lines: true },
+  }) as PurchaseRequestForOrder | null;
+  if (!request) throw new Error("Purchase request not found");
+  if (request.companyId !== companyId) throw new Error("Purchase request not found");
+  if (request.status !== "APPROVED") {
+    throw new Error("Only approved purchase requests can be converted");
+  }
+  if (!request.lines.length) throw new Error("Purchase request has no lines");
+  return request;
+}
+
+function orderLinesFromRequest(request: PurchaseRequestForOrder): OrderLineInput[] {
+  return request.lines.map((line) => ({
+    itemId: line.itemId,
+    itemCode: line.itemCode,
+    description: line.description,
+    quantity: line.quantity,
+    uom: line.uom,
+    unitCost: line.estimatedUnitCost ?? 0,
+  }));
 }
 
 export async function listPurchaseOrders(
@@ -89,33 +144,41 @@ export async function createPurchaseOrder(
     expectedDelivery?: Date | string | null;
     taxAmount?: number;
     currency?: string;
+    exchangeRate?: number | null;
+    baseCurrencyAmount?: number | null;
     notes?: string | null;
-    lines: OrderLineInput[];
+    lines?: OrderLineInput[];
   },
   createdById: string,
   userName: string,
   ipAddress?: string
 ) {
-  if (!data.lines.length) throw new Error("At least one line is required");
-
   const supplier = await db.supplier.findUnique({ where: { id: data.supplierId } });
   if (!supplier) throw new Error("Supplier not found");
   if (supplier.companyId !== companyId) throw new Error("Supplier not found");
   if (supplier.status !== "ACTIVE") throw new Error("Supplier is inactive");
 
+  let request: PurchaseRequestForOrder | null = null;
   if (data.requestId) {
-    const request = await db.purchaseRequest.findUnique({ where: { id: data.requestId } });
-    if (!request) throw new Error("Purchase request not found");
-    if (request.companyId !== companyId) throw new Error("Purchase request not found");
-    if (!["APPROVED", "CONVERTED"].includes(request.status)) {
-      throw new Error("Only approved purchase requests can be converted");
-    }
+    request = await getApprovedPurchaseRequestForOrder(companyId, data.requestId);
   }
 
-  const reference = generateRef();
-  const totals = computeTotals(data.lines, data.taxAmount ?? 0);
+  const orderLines = data.lines?.length ? data.lines : request ? orderLinesFromRequest(request) : [];
+  if (!orderLines.length) throw new Error("At least one line is required");
 
-  const order = await db.$transaction(async (tx) => {
+  const reference = generateRef();
+  const totals = computeTotals(orderLines, data.taxAmount ?? 0);
+  const currency = data.currency ?? "TZS";
+  let exchangeRate = data.exchangeRate ?? null;
+  let baseCurrencyAmount = data.baseCurrencyAmount ?? null;
+
+  if (currency !== "TZS" && !exchangeRate) {
+    const conversion = await convertAmount(companyId, currency, "TZS", totals.totalAmount);
+    exchangeRate = conversion.rate;
+    baseCurrencyAmount = conversion.convertedAmount;
+  }
+
+  const order = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const created = await tx.purchaseOrder.create({
       data: {
         companyId,
@@ -126,11 +189,13 @@ export async function createPurchaseOrder(
         subtotal: totals.subtotal,
         taxAmount: totals.taxAmount,
         totalAmount: totals.totalAmount,
-        currency: data.currency ?? "USD",
+        currency,
+        exchangeRate,
+        baseCurrencyAmount,
         notes: data.notes ?? null,
         createdById,
         lines: {
-          create: data.lines.map((line) => ({
+          create: orderLines.map((line) => ({
             itemId: line.itemId ?? null,
             itemCode: line.itemCode ?? null,
             description: line.description,
@@ -215,7 +280,7 @@ export async function receivePurchaseOrder(
   const existing = await db.purchaseOrder.findUnique({
     where: { id },
     include: { lines: true },
-  });
+  }) as PurchaseOrderForReceive | null;
   if (!existing) throw new Error("Purchase order not found");
   if (existing.companyId !== companyId) throw new Error("Purchase order not found");
   if (!["SENT", "PARTIALLY_RECEIVED"].includes(existing.status)) {
@@ -231,7 +296,7 @@ export async function receivePurchaseOrder(
     }
   }
 
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     for (const line of lines) {
       await tx.purchaseOrderLine.update({
         where: { id: line.lineId },
@@ -239,7 +304,7 @@ export async function receivePurchaseOrder(
       });
     }
 
-    const refreshedLines = await tx.purchaseOrderLine.findMany({ where: { purchaseOrderId: id } });
+    const refreshedLines = await tx.purchaseOrderLine.findMany({ where: { purchaseOrderId: id } }) as PurchaseOrderLineForReceive[];
     const allReceived = refreshedLines.every((line) => line.receivedQty >= line.quantity);
     const anyReceived = refreshedLines.some((line) => line.receivedQty > 0);
 

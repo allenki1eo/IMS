@@ -99,16 +99,16 @@ export default function WarehouseOverviewPage() {
     try {
       const res = await fetch("/api/stock/balance?sort=stockPct&pageSize=10");
       const json = await res.json();
-      const rows = (json.data ?? []).map((r: Record<string, unknown>) => ({
+      const rows = (json.data ?? []).map((r: any) => ({
         id: String(r.id ?? r.itemId ?? Math.random()),
-        itemCode: r.itemCode as string,
-        itemName: r.itemName as string,
-        warehouseName: r.warehouseName as string,
+        itemCode: r.item?.code as string ?? "",
+        itemName: r.item?.name as string ?? "",
+        warehouseName: r.warehouse?.name as string ?? "",
         quantity: Number(r.quantity ?? 0),
-        reorderPoint: Number(r.reorderPoint ?? 0),
-        uomSymbol: r.uomSymbol as string ?? "",
-        stockPct: r.reorderPoint
-          ? Math.round((Number(r.quantity) / Number(r.reorderPoint)) * 100)
+        reorderPoint: Number(r.item?.reorderPoint ?? 0),
+        uomSymbol: r.item?.uom?.symbol as string ?? "",
+        stockPct: r.item?.reorderPoint
+          ? Math.round((Number(r.quantity) / Number(r.item.reorderPoint)) * 100)
           : 100,
       }));
       setStockRows(rows);
@@ -190,7 +190,7 @@ export default function WarehouseOverviewPage() {
         description="Overview of stock, warehouses, and operations"
       />
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
           title="Total Warehouses"
           value={stats.totalWarehouses}

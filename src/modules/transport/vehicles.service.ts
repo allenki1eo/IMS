@@ -8,7 +8,6 @@ function generateRef(prefix: string): string {
 }
 
 export async function listVehicles(
-  companyId: string,
   params: {
     search?: string;
     branchId?: string;
@@ -22,7 +21,6 @@ export async function listVehicles(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(branchId ? { branchId } : {}),
     ...(status ? { status } : {}),
     ...(vehicleType ? { vehicleType } : {}),
@@ -57,7 +55,7 @@ export async function listVehicles(
 }
 
 export async function getVehicleById(id: string) {
-  return db.vehicle.findUnique({
+  const vehicle = await db.vehicle.findUnique({
     where: { id },
     include: {
       documents: {
@@ -101,6 +99,7 @@ export async function getVehicleById(id: string) {
       },
     },
   });
+  return vehicle;
 }
 
 export async function createVehicle(params: {
@@ -111,14 +110,17 @@ export async function createVehicle(params: {
   model: string;
   year?: number | null;
   vehicleType?: string;
+  usageType?: string;
   capacity?: number | null;
   fuelType?: string;
+  fuelTankCapacity?: number | null;
   color?: string | null;
   chassisNumber?: string | null;
   engineNumber?: string | null;
   odometer?: number;
   insuranceExpiry?: Date | null;
   roadWorthyExpiry?: Date | null;
+  nextServiceDate?: Date | null;
   notes?: string | null;
   createdById: string;
   userName: string;
@@ -135,14 +137,17 @@ export async function createVehicle(params: {
       model: data.model,
       year: data.year ?? null,
       vehicleType: data.vehicleType ?? "TRUCK",
+      usageType: data.usageType ?? "COMMERCIAL",
       capacity: data.capacity ?? null,
       fuelType: data.fuelType ?? "DIESEL",
+      fuelTankCapacity: data.fuelTankCapacity ?? null,
       color: data.color ?? null,
       chassisNumber: data.chassisNumber ?? null,
       engineNumber: data.engineNumber ?? null,
       odometer: data.odometer ?? 0,
       insuranceExpiry: data.insuranceExpiry ?? null,
       roadWorthyExpiry: data.roadWorthyExpiry ?? null,
+      nextServiceDate: data.nextServiceDate ?? null,
       notes: data.notes ?? null,
       createdById,
     },
@@ -178,8 +183,10 @@ export async function updateVehicle(params: {
     model?: string;
     year?: number | null;
     vehicleType?: string;
+    usageType?: string;
     capacity?: number | null;
     fuelType?: string;
+    fuelTankCapacity?: number | null;
     color?: string | null;
     chassisNumber?: string | null;
     engineNumber?: string | null;

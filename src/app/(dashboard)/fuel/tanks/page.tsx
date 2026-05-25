@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -18,16 +19,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface TankRow {
   id: string;
   name: string;
+  companyId: string;
   code: string;
   fuelType: string;
   capacity: number;
   currentLevel: number;
   minLevel: number;
-  status: string;
+  isActive: boolean;
 }
 
 const FUEL_TYPE_FILTERS = [
@@ -46,31 +50,36 @@ function fillPctColor(pct: number): string {
 }
 
 export default function TanksPage() {
-  const [tanks, setTanks] = useState<TankRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [fuelType, setFuelType] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
 
   useEffect(() => { setPage(1); }, [debounced, fuelType]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (fuelType !== "ALL") params.set("fuelType", fuelType);
-    fetch(`/api/fuel-tanks?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setTanks(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load tanks"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, fuelType]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (fuelType !== "ALL") params.set("fuelType", fuelType);
+  const url = `/api/fuel-tanks?${params}`;
+
+  const { data: tanks, total, loading, mutate } = usePagedData<TankRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/fuel-tanks/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Tank deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete tank");
+    }
+  }
 
   const columns = [
     {
@@ -85,6 +94,15 @@ export default function TanksPage() {
             <AlertTriangle className="h-4 w-4 text-amber-500" />
           )}
         </div>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: TankRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {
@@ -129,15 +147,20 @@ export default function TanksPage() {
     {
       key: "status",
       header: "Status",
-      cell: (row: TankRow) => <StatusBadge status={row.status} />,
+      cell: (row: TankRow) => <StatusBadge status={row.isActive} />,
     },
     {
       key: "actions",
       header: "Actions",
       cell: (row: TankRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/fuel/tanks/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/fuel/tanks/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -159,15 +182,15 @@ export default function TanksPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search by name or code..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <Select value={fuelType} onValueChange={setFuelType}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -189,6 +212,7 @@ export default function TanksPage() {
         emptyTitle="No tanks found"
         emptyDescription="Add your first fuel tank to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

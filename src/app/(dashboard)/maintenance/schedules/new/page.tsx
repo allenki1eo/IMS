@@ -186,14 +186,14 @@ export default function NewSchedulePage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="intervalKm">Interval (km)</Label>
                 <Input
                   id="intervalKm"
                   name="intervalKm"
                   type="number"
-                  min="0"
+                  min="1"
                   step="1"
                   value={form.intervalKm}
                   onChange={handleChange}
@@ -207,7 +207,7 @@ export default function NewSchedulePage() {
                   id="intervalDays"
                   name="intervalDays"
                   type="number"
-                  min="0"
+                  min="1"
                   step="1"
                   value={form.intervalDays}
                   onChange={handleChange}
@@ -217,7 +217,7 @@ export default function NewSchedulePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="nextDueAt">Next Due Date</Label>
                 <Input

@@ -143,7 +143,7 @@ export default function NewTankPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="name">Name <span className="text-destructive">*</span></Label>
                 <Input
@@ -182,7 +182,7 @@ export default function NewTankPage() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="capacity">Capacity (L) <span className="text-destructive">*</span></Label>
                 <Input

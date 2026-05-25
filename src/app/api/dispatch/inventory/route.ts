@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { listLots, receiveLot } from "@/modules/dispatch/inventory.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "dispatch:lot:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
@@ -16,21 +16,26 @@ export async function GET(request: NextRequest) {
   const productId = searchParams.get("productId") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { data, meta } = await listLots(companyId, {
-    productId,
-    status,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  try {
+    const { data, meta } = await listLots(companyId, {
+      productId,
+      status,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
 
-  return paginated(data, buildMeta(meta.total, pagination));
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "dispatch:lot:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -63,10 +68,13 @@ export async function POST(request: NextRequest) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (
       msg === "Product not found" ||
+      msg === "Product is inactive" ||
       msg === "Warehouse not found" ||
-      msg === "Quantity must be greater than zero"
+      msg === "Quantity must be greater than zero" ||
+      msg === "Unit cost cannot be negative" ||
+      msg === "Best before date is invalid"
     )
       return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

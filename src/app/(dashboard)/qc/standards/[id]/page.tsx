@@ -216,7 +216,7 @@ export default function QcStandardDetailPage() {
           <CardHeader>
             <CardTitle className="text-base">Standard Info</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Code</p>
               <p className="font-medium mt-1"><code className="bg-muted px-1.5 py-0.5 rounded text-xs">{standard.code}</code></p>
@@ -246,7 +246,7 @@ export default function QcStandardDetailPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSaveEdit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="edit-code">Code <span className="text-destructive">*</span></Label>
                     <Input
@@ -323,7 +323,7 @@ export default function QcStandardDetailPage() {
             <div className="px-4 py-4 border-b bg-muted/20">
               <form onSubmit={handleAddParam} className="space-y-3">
                 <p className="text-sm font-medium">Add Parameter</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Name <span className="text-destructive">*</span></Label>
                     <Input
@@ -357,7 +357,7 @@ export default function QcStandardDetailPage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Min Value</Label>
                     <Input

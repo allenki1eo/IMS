@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -19,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface VehicleOption {
   id: string;
@@ -27,6 +30,7 @@ interface VehicleOption {
 
 interface ScheduleRow {
   id: string;
+  companyId: string;
   vehicle?: { plateNumber: string } | null;
   maintenanceType: string;
   intervalKm?: number | null;
@@ -37,13 +41,13 @@ interface ScheduleRow {
 }
 
 export default function SchedulesPage() {
-  const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [vehicleId, setVehicleId] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const PAGE_SIZE = 20;
 
@@ -56,20 +60,25 @@ export default function SchedulesPage() {
 
   useEffect(() => { setPage(1); }, [debounced, vehicleId]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (vehicleId !== "ALL") params.set("vehicleId", vehicleId);
-    fetch(`/api/maintenance/schedules?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setSchedules(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load schedules"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, vehicleId]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (vehicleId !== "ALL") params.set("vehicleId", vehicleId);
+  const url = `/api/maintenance/schedules?${params}`;
+
+  const { data: schedules, total, loading, mutate } = usePagedData<ScheduleRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/maintenance/schedules/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Schedule deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete schedule");
+    }
+  }
 
   const columns = [
     {
@@ -77,6 +86,15 @@ export default function SchedulesPage() {
       header: "Vehicle",
       cell: (row: ScheduleRow) => (
         <span className="font-medium">{row.vehicle?.plateNumber ?? "—"}</span>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      cell: (row: ScheduleRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {
@@ -123,9 +141,14 @@ export default function SchedulesPage() {
       key: "actions",
       header: "Actions",
       cell: (row: ScheduleRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/maintenance/schedules/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/maintenance/schedules/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -147,12 +170,12 @@ export default function SchedulesPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search schedules..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
         <Select value={vehicleId} onValueChange={setVehicleId}>
           <SelectTrigger className="w-[200px]">
@@ -178,6 +201,7 @@ export default function SchedulesPage() {
         emptyTitle="No schedules found"
         emptyDescription="Add your first maintenance schedule to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

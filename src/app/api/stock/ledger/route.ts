@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { getStockLedger } from "@/modules/warehouse/stock.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { paginated, badRequest, serverError } from "@/lib/response";
+import { paginated, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:stock:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     });
 
     return paginated(entries, buildMeta(total, paginationParams));
-  } catch {
-    return serverError();
+  } catch (err) {
+    return handleError(err);
   }
 }

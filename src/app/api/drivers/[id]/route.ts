@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { getDriverById, updateDriver } from "@/modules/transport/drivers.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
+import { db } from "@/lib/db";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +12,7 @@ export async function GET(
   const auth = await requirePermission(request, "transport:driver:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -30,7 +32,18 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { licenseNumber, licenseClass, licenseExpiry, medicalExpiry, status, notes } = body;
+  const {
+    firstName,
+    lastName,
+    phone,
+    email,
+    licenseNumber,
+    licenseClass,
+    licenseExpiry,
+    medicalExpiry,
+    status,
+    notes,
+  } = body;
 
   const { ipAddress } = getRequestMeta(request);
 
@@ -38,6 +51,10 @@ export async function PATCH(
     const updated = await updateDriver({
       id,
       data: {
+        ...(firstName !== undefined ? { firstName } : {}),
+        ...(lastName !== undefined ? { lastName } : {}),
+        ...(phone !== undefined ? { phone } : {}),
+        ...(email !== undefined ? { email } : {}),
         ...(licenseNumber !== undefined ? { licenseNumber } : {}),
         ...(licenseClass !== undefined ? { licenseClass } : {}),
         ...(licenseExpiry !== undefined
@@ -57,6 +74,42 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Driver not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermission(request, "transport:driver:delete");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { id } = await params;
+  const driver = await getDriverById(id);
+  if (!driver) return notFound("Driver not found");
+  if (driver.companyId !== companyId) return notFound("Driver not found");
+
+  const { ipAddress } = getRequestMeta(request);
+
+  try {
+    await db.driver.delete({ where: { id } });
+    await createAuditLog({
+      userId: auth.user.id,
+      userName: auth.user.fullName,
+      action: "DRIVER_DELETE",
+      module: "transport",
+      resource: "driver",
+      recordId: id,
+      description: `Deleted driver record`,
+      ipAddress,
+      companyId,
+    });
+    return success({ deleted: true });
+  } catch (err) {
+    return handleError(err);
   }
 }

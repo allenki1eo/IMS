@@ -5,6 +5,65 @@ export async function getCompany() {
   return db.company.findFirst();
 }
 
+export async function getCompanyById(id: string) {
+  return db.company.findUnique({ where: { id } });
+}
+
+export async function listCompanies() {
+  return db.company.findMany({
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function createCompany(params: {
+  data: {
+    name: string;
+    legalName?: string | null;
+    registrationNumber?: string | null;
+    taxNumber?: string | null;
+    address?: string | null;
+    city?: string | null;
+    country?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    website?: string | null;
+    currency?: string;
+    dateFormat?: string;
+    fiscalYearStart?: number;
+  };
+  createdById: string;
+  userName: string;
+  ipAddress?: string;
+  userAgent?: string;
+}) {
+  const { data, createdById, userName, ipAddress, userAgent } = params;
+
+  const company = await db.company.create({
+    data: {
+      ...data,
+      currency: data.currency ?? "USD",
+      dateFormat: data.dateFormat ?? "YYYY-MM-DD",
+      fiscalYearStart: data.fiscalYearStart ?? 1,
+    },
+  });
+
+  await createAuditLog({
+    userId: createdById,
+    userName,
+    action: "COMPANY_CREATE",
+    module: "company",
+    resource: "company",
+    recordId: company.id,
+    newValue: data,
+    description: "Created new company",
+    ipAddress,
+    userAgent,
+    companyId: company.id,
+  });
+
+  return company;
+}
+
 export async function updateCompany(params: {
   id: string;
   data: {

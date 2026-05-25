@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -11,6 +12,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface ProductRow {
   id: string;
@@ -22,30 +24,29 @@ interface ProductRow {
   isActive: boolean;
 }
 
+const PAGE_SIZE = 20;
+
 export default function FgProductsPage() {
-  const [products, setProducts] = useState<ProductRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  const PAGE_SIZE = 20;
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  const { data: products, total, loading, mutate } = usePagedData<ProductRow>(`/api/dispatch/products?${params}`);
 
-  useEffect(() => { setPage(1); }, [debounced]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    fetch(`/api/dispatch/products?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setProducts(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load products"))
-      .finally(() => setLoading(false));
-  }, [page, debounced]);
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/dispatch/products/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Product deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete product");
+    }
+  }
 
   const columns = [
     {
@@ -96,9 +97,14 @@ export default function FgProductsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: ProductRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/dispatch/products/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dispatch/products/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -120,12 +126,12 @@ export default function FgProductsPage() {
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={(v) => { setSearch(v); setPage(1); }}
           placeholder="Search by code or name..."
-          className="max-w-sm"
+          className="w-full sm:max-w-xs"
         />
       </div>
 
@@ -140,6 +146,7 @@ export default function FgProductsPage() {
         emptyTitle="No products found"
         emptyDescription="Create your first finished goods product to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

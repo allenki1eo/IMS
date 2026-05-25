@@ -1,14 +1,15 @@
 import { NextRequest } from "next/server";
 import { listSuppliers, createSupplier } from "@/modules/procurement/suppliers.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "procurement:supplier:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
@@ -16,21 +17,34 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
-  const { data, meta } = await listSuppliers(companyId, {
-    search,
-    status,
-    page: pagination.page,
-    pageSize: pagination.pageSize,
-  });
+  // Only cache unfiltered list requests
+  const useCache = !search && !status;
+  if (useCache) {
+    const cached = cache.get<unknown[]>(cacheKey.suppliers(companyId));
+    if (cached) return paginated(cached, buildMeta(cached.length, pagination));
+  }
 
-  return paginated(data, buildMeta(meta.total, pagination));
+  try {
+    const { data, meta } = await listSuppliers(companyId, {
+      search,
+      status,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
+
+    if (useCache) cache.set(cacheKey.suppliers(companyId), data, TTL.REFERENCE);
+    return paginated(data, buildMeta(meta.total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "procurement:supplier:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -57,11 +71,12 @@ export async function POST(request: NextRequest) {
       auth.user.fullName,
       ipAddress
     );
+    cache.invalidate(cacheKey.suppliers(companyId));
     return created(supplier);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.toLowerCase().includes("unique")) return badRequest("Supplier code already exists");
-    return serverError();
+    return handleError(err);
   }
 }
 

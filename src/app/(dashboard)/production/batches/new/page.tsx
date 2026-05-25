@@ -12,15 +12,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LINE_TYPES } from "../../_components/production-ui";
+import { LINE_TYPES, qty } from "../../_components/production-ui";
 
 interface LineOption { id: string; code: string; name: string }
 interface RecipeOption { id: string; code: string; name: string; productName: string; batchSize: number; uom: string }
+
+interface CapacityMaterial {
+  description: string;
+  requiredPerBatch: number;
+  availableStock: number;
+  maxUnits: number;
+  status: string;
+}
+
+interface CapacityData {
+  maxUnits: number;
+  batchSize: number;
+  limitingMaterial?: { description: string; requiredPerBatch: number; availableStock: number } | null;
+  materials: CapacityMaterial[];
+}
 
 export default function NewProductionBatchPage() {
   const router = useRouter();
   const [lines, setLines] = useState<LineOption[]>([]);
   const [recipes, setRecipes] = useState<RecipeOption[]>([]);
+  const [capacity, setCapacity] = useState<CapacityData | null>(null);
+  const [capacityLoading, setCapacityLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     lineId: "",
@@ -53,13 +70,22 @@ export default function NewProductionBatchPage() {
 
   useEffect(() => {
     const recipe = recipes.find((r) => r.id === form.recipeId);
-    if (!recipe) return;
+    if (!recipe) {
+      setCapacity(null);
+      return;
+    }
     setForm((prev) => ({
       ...prev,
       productName: prev.productName || recipe.productName,
       plannedQty: prev.plannedQty || String(recipe.batchSize),
       uom: prev.uom || recipe.uom,
     }));
+    setCapacityLoading(true);
+    fetch(`/api/production/recipes/${recipe.id}/capacity`)
+      .then((r) => r.json())
+      .then((d) => setCapacity(d.data ?? null))
+      .catch(() => {})
+      .finally(() => setCapacityLoading(false));
   }, [form.recipeId, recipes]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -132,7 +158,7 @@ export default function NewProductionBatchPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1 sm:col-span-1"><Label>Product Name</Label><Input value={form.productName} onChange={(e) => setForm((p) => ({ ...p, productName: e.target.value }))} disabled={submitting} /></div>
-              <div className="space-y-1"><Label>Planned Qty</Label><Input type="number" min="0" step="0.01" value={form.plannedQty} onChange={(e) => setForm((p) => ({ ...p, plannedQty: e.target.value }))} disabled={submitting} /></div>
+              <div className="space-y-1"><Label>Planned Qty</Label><Input type="number" min="0.01" step="0.01" value={form.plannedQty} onChange={(e) => setForm((p) => ({ ...p, plannedQty: e.target.value }))} disabled={submitting} /></div>
               <div className="space-y-1"><Label>UOM</Label><Input value={form.uom} onChange={(e) => setForm((p) => ({ ...p, uom: e.target.value }))} disabled={submitting} /></div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -140,6 +166,37 @@ export default function NewProductionBatchPage() {
               <div className="space-y-1"><Label>Planned End</Label><Input type="date" value={form.plannedEnd} onChange={(e) => setForm((p) => ({ ...p, plannedEnd: e.target.value }))} disabled={submitting} /></div>
             </div>
             <div className="space-y-1"><Label>Notes</Label><textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={3} disabled={submitting} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 resize-none" /></div>
+            {capacity && (
+              <div className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Material Availability</span>
+                  {capacityLoading && <LoadingSpinner className="h-4 w-4" />}
+                </div>
+                {capacity.maxUnits > 0 && Number(form.plannedQty) > capacity.maxUnits && (
+                  <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-2 text-sm text-amber-700 dark:text-amber-400">
+                    <span className="font-medium">Warning:</span> Insufficient materials. Maximum producible: <span className="font-bold">{capacity.maxUnits.toLocaleString()}</span> units.
+                    {capacity.limitingMaterial && (
+                      <span> Limiting: {capacity.limitingMaterial.description} ({qty(capacity.limitingMaterial.availableStock, "")} in stock).</span>
+                    )}
+                  </div>
+                )}
+                {capacity.maxUnits === 0 && (
+                  <div className="rounded-md bg-destructive/10 border border-destructive/20 p-2 text-sm text-destructive">
+                    <span className="font-medium">No stock available</span> for any production of this recipe.
+                  </div>
+                )}
+                <div className="grid gap-1">
+                  {capacity.materials.map((mat, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{mat.description}</span>
+                      <span className={mat.status === "SHORTAGE" ? "text-destructive" : mat.status === "OK" ? "text-green-600" : "text-muted-foreground"}>
+                        {qty(mat.availableStock, "")} / {qty(mat.requiredPerBatch, "")} per batch
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 pt-2"><Button type="submit" disabled={submitting}>{submitting && <LoadingSpinner className="mr-2" />}Plan Batch</Button><Button type="button" variant="outline" asChild><Link href="/production/batches">Cancel</Link></Button></div>
           </form>
         </CardContent>

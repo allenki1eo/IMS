@@ -1,15 +1,12 @@
 import { NextRequest } from "next/server";
 import { listIssues, createIssue } from "@/modules/fuel/issues.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest, serverError } from "@/lib/response";
+import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:issue:read");
   if ("error" in auth) return auth.error;
-
-  const companyId = await getCompanyId();
-  if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
   const paginationParams = parsePagination(searchParams);
@@ -20,25 +17,29 @@ export async function GET(request: NextRequest) {
   const from = searchParams.get("from") ?? undefined;
   const to = searchParams.get("to") ?? undefined;
 
-  const { data, meta } = await listIssues(companyId, {
-    search,
-    tankId,
-    vehicleId,
-    driverId,
-    from,
-    to,
-    page: paginationParams.page,
-    pageSize: paginationParams.pageSize,
-  });
-
-  return paginated(data, buildMeta(meta.total, paginationParams));
+  try {
+    const { data, meta } = await listIssues({
+      search,
+      tankId,
+      vehicleId,
+      driverId,
+      from,
+      to,
+      page: paginationParams.page,
+      pageSize: paginationParams.pageSize,
+    });
+    return paginated(data, buildMeta(meta.total, paginationParams));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:issue:create");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -82,6 +83,6 @@ export async function POST(request: NextRequest) {
     if (msg === "Vehicle not found") return badRequest(msg);
     if (msg === "Fuel tank is inactive") return badRequest(msg);
     if (msg.includes("Insufficient fuel")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

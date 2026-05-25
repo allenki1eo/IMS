@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Upload, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ImportModal } from "@/components/shared/ImportModal";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface ItemRow {
   id: string;
@@ -53,14 +56,13 @@ const TYPE_LABELS: Record<string, string> = {
 const PAGE_SIZE = 20;
 
 export default function ItemsPage() {
-  const [items, setItems] = useState<ItemRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [activeFilter, setActiveFilter] = useState("ALL");
+  const [importOpen, setImportOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => {
@@ -72,23 +74,26 @@ export default function ItemsPage() {
 
   useEffect(() => { setPage(1); }, [debounced, categoryFilter, typeFilter, activeFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (categoryFilter !== "ALL") params.set("categoryId", categoryFilter);
-    if (typeFilter !== "ALL") params.set("itemType", typeFilter);
-    if (activeFilter !== "ALL") params.set("isActive", activeFilter === "ACTIVE" ? "true" : "false");
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (categoryFilter !== "ALL") params.set("categoryId", categoryFilter);
+  if (typeFilter !== "ALL") params.set("itemType", typeFilter);
+  if (activeFilter !== "ALL") params.set("isActive", activeFilter === "ACTIVE" ? "true" : "false");
+  const url = `/api/items?${params}`;
+  const { data: items, total, loading, mutate } = usePagedData<ItemRow>(url);
 
-    fetch(`/api/items?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setItems(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load items"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, categoryFilter, typeFilter, activeFilter]);
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/items/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete item");
+      return;
+    }
+    toast.success("Item deleted");
+    setDeleteId(null);
+    mutate();
+  }
 
   const columns = [
     {
@@ -142,9 +147,16 @@ export default function ItemsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: ItemRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/warehouse/items/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/warehouse/items/${row.id}`}>View</Link>
+          </Button>
+          <PermissionGuard require="warehouse:item:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -156,17 +168,23 @@ export default function ItemsPage() {
         description="Manage inventory items and their details"
         actions={
           <PermissionGuard require="warehouse:item:create">
-            <Button asChild>
-              <Link href="/warehouse/items/new">
-                <Plus className="h-4 w-4 mr-2" />
-                New Item
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button asChild>
+                <Link href="/warehouse/items/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Item
+                </Link>
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -174,7 +192,7 @@ export default function ItemsPage() {
           className="max-w-xs"
         />
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
@@ -185,7 +203,7 @@ export default function ItemsPage() {
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -195,7 +213,7 @@ export default function ItemsPage() {
           </SelectContent>
         </Select>
         <Select value={activeFilter} onValueChange={setActiveFilter}>
-          <SelectTrigger className="w-[120px]">
+          <SelectTrigger className="w-full sm:w-[120px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -216,6 +234,32 @@ export default function ItemsPage() {
         onPageChange={setPage}
         emptyTitle="No items found"
         emptyDescription="Add your first item to the catalog."
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false);
+          setPage(1);
+        }}
+        title="Import Items"
+        apiEndpoint="/api/items/import"
+        templateHeaders={["name", "sku", "description", "categoryId", "uomId", "reorderPoint", "safetyStock", "unitCost"]}
+        templateFilename="items-import-template"
+        instructions={[
+          "name and sku are required",
+          "categoryId and uomId are optional (use database IDs)",
+          "reorderPoint, safetyStock, unitCost are optional numbers",
+        ]}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Item"
+        description="Are you sure you want to delete this item? This action cannot be undone."
       />
     </div>
   );

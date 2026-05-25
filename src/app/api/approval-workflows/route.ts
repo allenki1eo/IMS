@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listWorkflows, createWorkflow } from "@/modules/approvals/approvals.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, created, badRequest, serverError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 import { z } from "zod";
 
 const createWorkflowSchema = z.object({
@@ -25,18 +25,23 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "approvals:workflow:manage");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
-  const workflows = await listWorkflows(companyId);
-  return success(workflows);
+  try {
+    const workflows = await listWorkflows(companyId);
+    return success(workflows);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "approvals:workflow:manage");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
@@ -57,6 +62,6 @@ export async function POST(request: NextRequest) {
     return created(workflow);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    return serverError();
+    return handleError(err);
   }
 }

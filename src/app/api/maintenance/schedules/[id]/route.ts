@@ -5,7 +5,7 @@ import {
   deleteSchedule,
 } from "@/modules/maintenance/schedules.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, noContent, badRequest, notFound, serverError } from "@/lib/response";
+import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +14,7 @@ export async function GET(
   const auth = await requirePermission(request, "maintenance:schedule:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -31,7 +31,7 @@ export async function PATCH(
   const auth = await requirePermission(request, "maintenance:schedule:update");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -75,7 +75,9 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Maintenance schedule not found") return notFound(msg);
-    return serverError();
+    if (msg === "Vehicle not found") return badRequest(msg);
+    if (msg.includes("must be greater") || msg.includes("cannot be negative") || msg.includes("invalid")) return badRequest(msg);
+    return handleError(err);
   }
 }
 
@@ -86,7 +88,7 @@ export async function DELETE(
   const auth = await requirePermission(request, "maintenance:schedule:delete");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -99,6 +101,6 @@ export async function DELETE(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Maintenance schedule not found") return notFound(msg);
     if (msg.includes("Cannot delete")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }

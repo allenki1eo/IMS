@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { getIncidentById, updateIncident } from "@/modules/transport/incidents.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
+import { db } from "@/lib/db";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +12,7 @@ export async function GET(
   const auth = await requirePermission(request, "transport:incident:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -52,6 +54,42 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Incident not found") return notFound(msg);
-    return serverError();
+    return handleError(err);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermission(request, "transport:incident:delete");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { id } = await params;
+  const incident = await getIncidentById(id);
+  if (!incident) return notFound("Incident not found");
+  if (incident.companyId !== companyId) return notFound("Incident not found");
+
+  const { ipAddress } = getRequestMeta(request);
+
+  try {
+    await db.vehicleIncident.delete({ where: { id } });
+    await createAuditLog({
+      userId: auth.user.id,
+      userName: auth.user.fullName,
+      action: "INCIDENT_DELETE",
+      module: "transport",
+      resource: "incident",
+      recordId: id,
+      description: `Deleted vehicle incident record`,
+      ipAddress,
+      companyId,
+    });
+    return success({ deleted: true });
+  } catch (err) {
+    return handleError(err);
   }
 }

@@ -15,18 +15,21 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface StockRow {
   id: string;
-  itemCode: string;
-  itemName: string;
-  categoryName: string | null;
-  warehouseName: string;
-  locationName: string | null;
+  item: {
+    code: string;
+    name: string;
+    category?: { name: string } | null;
+    uom?: { symbol: string } | null;
+    minStock: number | null;
+    reorderPoint: number | null;
+  } | null;
+  warehouse: { name: string } | null;
+  location: { name: string } | null;
   quantity: number;
-  uomSymbol: string;
-  minStock: number | null;
-  reorderPoint: number | null;
 }
 
 interface Warehouse { id: string; name: string; }
@@ -34,16 +37,13 @@ interface Warehouse { id: string; name: string; }
 const PAGE_SIZE = 20;
 
 function stockStatus(row: StockRow): "CRITICAL" | "LOW" | "OK" {
-  if (row.reorderPoint != null && row.quantity <= row.reorderPoint) return "CRITICAL";
-  if (row.minStock != null && row.quantity <= row.minStock) return "LOW";
+  if (row.item?.reorderPoint != null && row.quantity <= row.item.reorderPoint) return "CRITICAL";
+  if (row.item?.minStock != null && row.quantity <= row.item.minStock) return "LOW";
   return "OK";
 }
 
 export default function StockPage() {
-  const [stock, setStock] = useState<StockRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseFilter, setWarehouseFilter] = useState("ALL");
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -58,55 +58,45 @@ export default function StockPage() {
 
   useEffect(() => { setPage(1); }, [debounced, warehouseFilter, lowStockOnly]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (warehouseFilter !== "ALL") params.set("warehouseId", warehouseFilter);
-    if (lowStockOnly) params.set("lowStock", "true");
-
-    fetch(`/api/stock/balance?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setStock(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load stock"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, warehouseFilter, lowStockOnly]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (warehouseFilter !== "ALL") params.set("warehouseId", warehouseFilter);
+  if (lowStockOnly) params.set("lowStock", "true");
+  const url = `/api/stock/balance?${params}`;
+  const { data: stock, total, loading } = usePagedData<StockRow>(url);
 
   const columns = [
     {
       key: "itemCode",
       header: "Code",
       cell: (row: StockRow) => (
-        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.itemCode}</code>
+        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.item?.code ?? "—"}</code>
       ),
     },
     {
       key: "itemName",
       header: "Item",
-      cell: (row: StockRow) => <span className="font-medium">{row.itemName}</span>,
+      cell: (row: StockRow) => <span className="font-medium">{row.item?.name ?? "—"}</span>,
     },
     {
       key: "categoryName",
       header: "Category",
       cell: (row: StockRow) => (
-        <span className="text-muted-foreground text-sm">{row.categoryName ?? "—"}</span>
+        <span className="text-muted-foreground text-sm">{row.item?.category?.name ?? "—"}</span>
       ),
     },
     {
       key: "warehouseName",
       header: "Warehouse",
       cell: (row: StockRow) => (
-        <span className="text-sm">{row.warehouseName}</span>
+        <span className="text-sm">{row.warehouse?.name ?? "—"}</span>
       ),
     },
     {
       key: "locationName",
       header: "Location",
       cell: (row: StockRow) => (
-        <span className="text-muted-foreground text-sm">{row.locationName ?? "—"}</span>
+        <span className="text-muted-foreground text-sm">{row.location?.name ?? "—"}</span>
       ),
     },
     {
@@ -122,7 +112,7 @@ export default function StockPage() {
             : "text-foreground";
         return (
           <span className={colorClass}>
-            {row.quantity} {row.uomSymbol}
+            {row.quantity} {row.item?.uom?.symbol ?? ""}
           </span>
         );
       },
@@ -132,7 +122,7 @@ export default function StockPage() {
       header: "Min Stock",
       cell: (row: StockRow) => (
         <span className="text-muted-foreground text-sm">
-          {row.minStock != null ? `${row.minStock} ${row.uomSymbol}` : "—"}
+          {row.item?.minStock != null ? `${row.item.minStock} ${row.item?.uom?.symbol ?? ""}` : "—"}
         </span>
       ),
     },
@@ -155,7 +145,7 @@ export default function StockPage() {
         description="Current stock levels across all warehouses"
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap items-center">
+      <div className="flex flex-wrap gap-2 mb-4 flex-wrap items-center">
         <SearchInput
           value={search}
           onChange={setSearch}

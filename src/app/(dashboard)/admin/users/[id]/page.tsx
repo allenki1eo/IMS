@@ -83,18 +83,19 @@ export default function UserDetailPage() {
 
   async function toggleStatus() {
     if (!user) return;
-    const newStatus = user.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const activate = user.status !== "ACTIVE";
+    const newStatus = activate ? "ACTIVE" : "INACTIVE";
     setSavingStatus(true);
     try {
       const res = await fetch(`/api/users/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ isActive: activate }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to update status"); return; }
       setUser((u) => u ? { ...u, status: newStatus } : u);
-      toast.success(`User ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+      toast.success(`User ${activate ? "activated" : "deactivated"}`);
     } catch {
       toast.error("Network error");
     } finally {
@@ -220,7 +221,7 @@ export default function UserDetailPage() {
 
             <Separator className="mb-4" />
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Username</span>
                 <p className="font-medium">@{user.username}</p>

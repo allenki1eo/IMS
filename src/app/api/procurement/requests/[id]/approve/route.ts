@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { approvePurchaseRequest } from "@/modules/procurement/requests.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, serverError } from "@/lib/response";
+import { success, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function POST(
   request: NextRequest,
@@ -10,7 +10,7 @@ export async function POST(
   const auth = await requirePermission(request, "procurement:request:approve");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId();
+  const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
 
   const { id } = await params;
@@ -22,7 +22,7 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Purchase request not found") return notFound(msg);
     if (msg.includes("SUBMITTED")) return badRequest(msg);
-    return serverError();
+    return handleError(err);
   }
 }
 

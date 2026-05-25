@@ -16,6 +16,30 @@ type BatchMaterialInput = {
   uom?: string;
 };
 
+type RecipeMaterialRow = {
+  itemId: string | null;
+  itemCode: string | null;
+  description: string;
+  quantity: number;
+  uom: string;
+  wastagePct: number;
+};
+
+function assertPositiveFiniteNumber(value: number, field: string) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${field} must be greater than 0`);
+  }
+}
+
+function parseOptionalDate(value: Date | string | null | undefined, field: string) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`${field} is invalid`);
+  }
+  return date;
+}
+
 export async function listProductionBatches(
   companyId: string,
   params: { search?: string; status?: string; lineId?: string; page: number; pageSize: number }
@@ -109,7 +133,7 @@ export async function createProductionBatch(
     uom = data.uom ?? recipe.uom;
     if (!materials.length) {
       const multiplier = plannedQty && recipe.batchSize > 0 ? plannedQty / recipe.batchSize : 1;
-      materials = recipe.materials.map((line) => ({
+      materials = recipe.materials.map((line: RecipeMaterialRow) => ({
         itemId: line.itemId,
         itemCode: line.itemCode,
         description: line.description,
@@ -120,7 +144,24 @@ export async function createProductionBatch(
   }
 
   if (!productName) throw new Error("productName is required");
-  if (!plannedQty || plannedQty <= 0) throw new Error("plannedQty must be greater than 0");
+  if (plannedQty == null) throw new Error("plannedQty must be greater than 0");
+  assertPositiveFiniteNumber(plannedQty, "plannedQty");
+
+  for (const mat of materials) {
+    if (!mat.description || !mat.description.trim()) {
+      throw new Error("material description is required");
+    }
+    assertPositiveFiniteNumber(mat.plannedQty, `material quantity for ${mat.description || "line"}`);
+    if (mat.issuedQty != null && (!Number.isFinite(mat.issuedQty) || mat.issuedQty < 0)) {
+      throw new Error(`issued quantity for ${mat.description || "line"} cannot be negative`);
+    }
+  }
+
+  const plannedStart = parseOptionalDate(data.plannedStart, "plannedStart");
+  const plannedEnd = parseOptionalDate(data.plannedEnd, "plannedEnd");
+  if (plannedStart && plannedEnd && plannedEnd < plannedStart) {
+    throw new Error("plannedEnd cannot be before plannedStart");
+  }
 
   const reference = generateRef();
   const batch = await db.productionBatch.create({
@@ -135,8 +176,8 @@ export async function createProductionBatch(
       productName,
       plannedQty,
       uom,
-      plannedStart: data.plannedStart ? new Date(data.plannedStart) : null,
-      plannedEnd: data.plannedEnd ? new Date(data.plannedEnd) : null,
+      plannedStart,
+      plannedEnd,
       notes: data.notes ?? null,
       createdById,
       materials: {
@@ -212,6 +253,9 @@ export async function completeProductionBatch(
   const existing = await db.productionBatch.findUnique({ where: { id } });
   if (!existing || existing.companyId !== companyId) throw new Error("Production batch not found");
   if (existing.status !== "IN_PROGRESS") throw new Error("Only IN_PROGRESS batches can be completed");
+  if (actualQty != null) {
+    assertPositiveFiniteNumber(actualQty, "actualQty");
+  }
 
   const updated = await db.productionBatch.update({
     where: { id },
@@ -236,6 +280,38 @@ export async function completeProductionBatch(
     companyId,
   });
   return updated;
+}
+
+export async function deleteProductionBatch(
+  companyId: string,
+  id: string,
+  userId: string,
+  userName: string,
+  ipAddress?: string
+) {
+  const existing = await db.productionBatch.findFirst({ where: { id, companyId } });
+  if (!existing) throw new Error("Production batch not found");
+  if (!["PLANNED", "CANCELLED"].includes(existing.status)) {
+    throw new Error("Only PLANNED or CANCELLED batches can be deleted");
+  }
+
+  await db.$transaction([
+    db.batchMaterial.deleteMany({ where: { batchId: id } }),
+    db.productionBatch.delete({ where: { id } }),
+  ]);
+
+  await createAuditLog({
+    userId,
+    userName,
+    action: "PRODUCTION_BATCH_DELETE",
+    module: "production",
+    resource: "batch",
+    recordId: id,
+    oldValue: { reference: existing.reference, status: existing.status },
+    description: `Deleted production batch: ${existing.reference}`,
+    ipAddress,
+    companyId,
+  });
 }
 
 export async function cancelProductionBatch(

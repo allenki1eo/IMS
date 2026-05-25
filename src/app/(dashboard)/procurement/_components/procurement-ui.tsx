@@ -31,7 +31,7 @@ export function formatNumber(value: number | null | undefined, maximumFractionDi
   return Number(value ?? 0).toLocaleString(undefined, { maximumFractionDigits });
 }
 
-export function formatMoney(value: number | null | undefined, currency = "USD") {
+export function formatMoney(value: number | null | undefined, currency = "TZS") {
   if (value == null) return "-";
   return value.toLocaleString(undefined, {
     style: "currency",
