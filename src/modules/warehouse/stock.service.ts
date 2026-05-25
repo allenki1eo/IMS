@@ -6,43 +6,68 @@ export async function getStockBalance(
     warehouseId?: string;
     itemId?: string;
     lowStock?: boolean;
+    page?: number;
+    limit?: number;
   }
 ) {
-  const { warehouseId, itemId, lowStock } = params;
+  const { warehouseId, itemId, lowStock, page = 1, limit = 100 } = params;
+  const skip = (page - 1) * limit;
 
-  const balances = await db.stockBalance.findMany({
-    where: {
-      warehouse: { companyId },
-      ...(warehouseId ? { warehouseId } : {}),
-      ...(itemId ? { itemId } : {}),
-    },
-    include: {
-      item: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          itemType: true,
-          reorderPoint: true,
-          minStock: true,
-          uom: { select: { id: true, symbol: true, code: true } },
-        },
+  const where = {
+    warehouse: { companyId },
+    ...(warehouseId ? { warehouseId } : {}),
+    ...(itemId ? { itemId } : {}),
+  };
+
+  const include = {
+    item: {
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        itemType: true,
+        reorderPoint: true,
+        minStock: true,
+        uom: { select: { id: true, symbol: true, code: true } },
       },
-      warehouse: { select: { id: true, name: true, code: true } },
-      location: { select: { id: true, name: true, code: true } },
     },
-    orderBy: [{ warehouse: { name: "asc" } }, { item: { name: "asc" } }],
-  });
+    warehouse: { select: { id: true, name: true, code: true } },
+    location: { select: { id: true, name: true, code: true } },
+  };
 
   if (lowStock) {
-    return balances.filter((b) => {
+    // For low-stock filter we need to fetch all and filter in-memory (reorderPoint is on item)
+    const balances = await db.stockBalance.findMany({
+      where,
+      include,
+      orderBy: [{ warehouse: { name: "asc" } }, { item: { name: "asc" } }],
+    });
+    const filtered = balances.filter((b) => {
       const reorderPoint = b.item.reorderPoint;
       if (reorderPoint === null || reorderPoint === undefined) return false;
       return b.quantity <= reorderPoint;
     });
+    return {
+      items: filtered,
+      total: filtered.length,
+      page: 1,
+      limit: filtered.length,
+      totalPages: 1,
+    };
   }
 
-  return balances;
+  const [items, total] = await Promise.all([
+    db.stockBalance.findMany({
+      where,
+      include,
+      orderBy: [{ warehouse: { name: "asc" } }, { item: { name: "asc" } }],
+      skip,
+      take: limit,
+    }),
+    db.stockBalance.count({ where }),
+  ]);
+
+  return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
 export async function getStockLedger(

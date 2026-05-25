@@ -122,27 +122,29 @@ export async function createAdjustment(params: {
 
   const reference = generateRef("ADJ");
 
-  // Fetch system quantities from StockBalance for each line
-  const linesWithSystem = await Promise.all(
-    lines.map(async (line) => {
-      const balance = await db.stockBalance.findFirst({
-        where: {
-          itemId: line.itemId,
-          warehouseId,
-          locationId: line.locationId ?? null,
-        },
-      });
-      const systemQty = balance?.quantity ?? 0;
-      const difference = line.countedQty - systemQty;
-      return {
-        itemId: line.itemId,
-        locationId: line.locationId ?? null,
-        systemQty,
-        countedQty: line.countedQty,
-        difference,
-      };
-    })
+  // Fetch system quantities from StockBalance — bulk fetch to avoid N+1
+  const allBalances = await db.stockBalance.findMany({
+    where: {
+      warehouseId,
+      itemId: { in: lines.map((l) => l.itemId) },
+    },
+  });
+  const balanceMap = new Map(
+    allBalances.map((b) => [`${b.itemId}:${b.locationId ?? ""}`, b])
   );
+
+  const linesWithSystem = lines.map((line) => {
+    const balance = balanceMap.get(`${line.itemId}:${line.locationId ?? ""}`) ?? null;
+    const systemQty = balance?.quantity ?? 0;
+    const difference = line.countedQty - systemQty;
+    return {
+      itemId: line.itemId,
+      locationId: line.locationId ?? null,
+      systemQty,
+      countedQty: line.countedQty,
+      difference,
+    };
+  });
 
   const adjustment = await db.stockAdjustment.create({
     data: {
@@ -289,35 +291,37 @@ export async function applyAdjustment(
     data: { status: "APPLIED", appliedAt: now },
   });
 
-  // Adjust stock balances and create ledger entries per line
-  for (const line of adjustment.lines) {
-    if (line.difference === 0) continue;
+  // Adjust stock balances and create ledger entries per line (parallel)
+  await Promise.all(
+    adjustment.lines
+      .filter((line) => line.difference !== 0)
+      .map(async (line) => {
+        const balanceAfter = await upsertStockBalance({
+          itemId: line.itemId,
+          warehouseId: adjustment.warehouseId,
+          locationId: line.locationId,
+          delta: line.difference,
+        });
 
-    const balanceAfter = await upsertStockBalance({
-      itemId: line.itemId,
-      warehouseId: adjustment.warehouseId,
-      locationId: line.locationId,
-      delta: line.difference,
-    });
+        const transactionType = line.difference > 0 ? "ADJUSTMENT_IN" : "ADJUSTMENT_OUT";
 
-    const transactionType = line.difference > 0 ? "ADJUSTMENT_IN" : "ADJUSTMENT_OUT";
-
-    await db.stockLedger.create({
-      data: {
-        companyId: adjustment.companyId,
-        itemId: line.itemId,
-        warehouseId: adjustment.warehouseId,
-        locationId: line.locationId,
-        transactionType,
-        quantity: Math.abs(line.difference),
-        balanceAfter,
-        referenceType: "ADJUSTMENT",
-        referenceId: adjustment.id,
-        notes: `Stock adjustment applied: ${adjustment.reference} — ${adjustment.reason}`,
-        createdById: appliedById,
-      },
-    });
-  }
+        await db.stockLedger.create({
+          data: {
+            companyId: adjustment.companyId,
+            itemId: line.itemId,
+            warehouseId: adjustment.warehouseId,
+            locationId: line.locationId,
+            transactionType,
+            quantity: Math.abs(line.difference),
+            balanceAfter,
+            referenceType: "ADJUSTMENT",
+            referenceId: adjustment.id,
+            notes: `Stock adjustment applied: ${adjustment.reference} — ${adjustment.reason}`,
+            createdById: appliedById,
+          },
+        });
+      })
+  );
 
   await createAuditLog({
     userId: appliedById,
