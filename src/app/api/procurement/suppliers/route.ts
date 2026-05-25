@@ -3,6 +3,7 @@ import { listSuppliers, createSupplier } from "@/modules/procurement/suppliers.s
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "procurement:supplier:read");
@@ -16,6 +17,13 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
 
+  // Only cache unfiltered list requests
+  const useCache = !search && !status;
+  if (useCache) {
+    const cached = cache.get<unknown[]>(cacheKey.suppliers(companyId));
+    if (cached) return paginated(cached, buildMeta(cached.length, pagination));
+  }
+
   try {
     const { data, meta } = await listSuppliers(companyId, {
       search,
@@ -24,6 +32,7 @@ export async function GET(request: NextRequest) {
       pageSize: pagination.pageSize,
     });
 
+    if (useCache) cache.set(cacheKey.suppliers(companyId), data, TTL.REFERENCE);
     return paginated(data, buildMeta(meta.total, pagination));
   } catch (err) {
     console.error("[API Error]", err);
@@ -62,6 +71,7 @@ export async function POST(request: NextRequest) {
       auth.user.fullName,
       ipAddress
     );
+    cache.invalidate(cacheKey.suppliers(companyId));
     return created(supplier);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";

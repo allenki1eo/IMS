@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { hashToken } from "./crypto";
+import { cache, cacheKey } from "./cache";
 import type { AuthUser } from "@/types/auth";
 
 export async function createSession(params: {
@@ -39,16 +40,25 @@ export async function createSession(params: {
 
 export async function validateSession(jti: string): Promise<boolean> {
   const hash = hashToken(jti);
+
+  // Check short-lived cache first to avoid a DB hit on every request
+  const cached = cache.get<boolean>(cacheKey.session(hash));
+  if (cached !== null) return cached;
+
   const session = await db.session.findUnique({
     where: { tokenHash: hash },
   });
 
-  if (!session || !session.isActive) return false;
+  if (!session || !session.isActive) {
+    cache.set(cacheKey.session(hash), false, 30_000);
+    return false;
+  }
   if (session.expiresAt < new Date()) {
     await db.session.update({
       where: { id: session.id },
       data: { isActive: false },
     });
+    cache.set(cacheKey.session(hash), false, 30_000);
     return false;
   }
 
@@ -60,6 +70,7 @@ export async function validateSession(jti: string): Promise<boolean> {
     })
     .catch(() => {});
 
+  cache.set(cacheKey.session(hash), true, 30_000);
   return true;
 }
 
@@ -69,20 +80,25 @@ export async function revokeSession(jti: string, reason = "logout"): Promise<voi
     where: { tokenHash: hash },
     data: { isActive: false, revokedAt: new Date(), revokedReason: reason },
   });
+  cache.invalidateExact(cacheKey.session(hash));
 }
 
 export async function revokeSessionById(sessionId: string, reason = "manual"): Promise<void> {
+  const session = await db.session.findUnique({ where: { id: sessionId }, select: { tokenHash: true } });
   await db.session.update({
     where: { id: sessionId },
     data: { isActive: false, revokedAt: new Date(), revokedReason: reason },
   });
+  if (session) cache.invalidateExact(cacheKey.session(session.tokenHash));
 }
 
 export async function revokeAllUserSessions(userId: string, reason = "force_logout"): Promise<void> {
+  const sessions = await db.session.findMany({ where: { userId, isActive: true }, select: { tokenHash: true } });
   await db.session.updateMany({
     where: { userId, isActive: true },
     data: { isActive: false, revokedAt: new Date(), revokedReason: reason },
   });
+  for (const s of sessions) cache.invalidateExact(cacheKey.session(s.tokenHash));
 }
 
 export async function getAuthUser(userId: string): Promise<AuthUser | null> {

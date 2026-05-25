@@ -4,6 +4,7 @@ import { listWarehouses, createWarehouse } from "@/modules/warehouse/warehouse.s
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { created, badRequest, handleError } from "@/lib/response";
 import { db } from "@/lib/db";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "warehouse:warehouse:read");
@@ -20,6 +21,13 @@ export async function GET(request: NextRequest) {
   const isActive =
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
 
+  // Only cache unfiltered list requests
+  const useCache = !search && !branchId && isActive === undefined && !warehouseType;
+  if (useCache) {
+    const cached = cache.get<unknown[]>(cacheKey.warehouses(companyId));
+    if (cached) return NextResponse.json({ success: true, data: cached, meta: { total: cached.length, page: 1, pageSize: cached.length, totalPages: 1 } });
+  }
+
   try {
     const warehouses = await listWarehouses(companyId, {
       search,
@@ -28,6 +36,7 @@ export async function GET(request: NextRequest) {
       warehouseType,
     });
 
+    if (useCache) cache.set(cacheKey.warehouses(companyId), warehouses, TTL.REFERENCE);
     return NextResponse.json({ success: true, data: warehouses, meta: { total: warehouses.length, page: 1, pageSize: warehouses.length, totalPages: 1 } });
   } catch (err) {
     console.error("[API Error]", err);
@@ -66,6 +75,7 @@ export async function POST(request: NextRequest) {
       ipAddress,
       userAgent,
     });
+    cache.invalidate(cacheKey.warehouses(companyId));
     return created(warehouse);
   } catch (err) {
     console.error("[API Error] createWarehouse:", err);
