@@ -197,33 +197,35 @@ export async function confirmGRN(
     },
   });
 
-  // Process each line: upsert stock balance and insert ledger entry
-  for (const line of grn.lines) {
-    const balanceAfter = await upsertStockBalance({
-      itemId: line.itemId,
-      warehouseId: grn.warehouseId,
-      locationId: line.locationId,
-      delta: line.quantity,
-    });
-
-    await db.stockLedger.create({
-      data: {
-        companyId: grn.companyId,
+  // Process each line: upsert stock balance and insert ledger entry (parallel)
+  await Promise.all(
+    grn.lines.map(async (line) => {
+      const balanceAfter = await upsertStockBalance({
         itemId: line.itemId,
         warehouseId: grn.warehouseId,
         locationId: line.locationId,
-        transactionType: "RECEIPT",
-        quantity: line.quantity,
-        balanceAfter,
-        unitCost: line.unitCost,
-        totalCost: line.totalCost,
-        referenceType: "GRN",
-        referenceId: grn.id,
-        notes: `GRN confirmed: ${grn.reference}`,
-        createdById: confirmedById,
-      },
-    });
-  }
+        delta: line.quantity,
+      });
+
+      await db.stockLedger.create({
+        data: {
+          companyId: grn.companyId,
+          itemId: line.itemId,
+          warehouseId: grn.warehouseId,
+          locationId: line.locationId,
+          transactionType: "RECEIPT",
+          quantity: line.quantity,
+          balanceAfter,
+          unitCost: line.unitCost,
+          totalCost: line.totalCost,
+          referenceType: "GRN",
+          referenceId: grn.id,
+          notes: `GRN confirmed: ${grn.reference}`,
+          createdById: confirmedById,
+        },
+      });
+    })
+  );
 
   await createAuditLog({
     userId: confirmedById,

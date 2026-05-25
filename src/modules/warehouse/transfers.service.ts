@@ -119,17 +119,27 @@ export async function createTransfer(params: {
     userAgent,
   } = params;
 
-  // Validate source stock is sufficient for each line
+  // Validate source stock is sufficient for each line — bulk fetch to avoid N+1
+  const itemIds = lines.map((l) => l.itemId);
+  const [allBalances, allItems] = await Promise.all([
+    db.stockBalance.findMany({
+      where: { itemId: { in: itemIds }, warehouseId: fromWarehouseId },
+    }),
+    db.item.findMany({
+      where: { id: { in: itemIds } },
+      select: { id: true, name: true, code: true },
+    }),
+  ]);
+  const balanceMap = new Map<string, number>();
+  for (const b of allBalances) {
+    balanceMap.set(b.itemId, (balanceMap.get(b.itemId) ?? 0) + b.quantity);
+  }
+  const itemMap = new Map(allItems.map((i) => [i.id, i]));
+
   for (const line of lines) {
-    const balances = await db.stockBalance.findMany({
-      where: { itemId: line.itemId, warehouseId: fromWarehouseId },
-    });
-    const totalAvailable = balances.reduce((sum, b) => sum + b.quantity, 0);
+    const totalAvailable = balanceMap.get(line.itemId) ?? 0;
     if (totalAvailable < line.quantity) {
-      const item = await db.item.findUnique({
-        where: { id: line.itemId },
-        select: { name: true, code: true },
-      });
+      const item = itemMap.get(line.itemId);
       throw new Error(
         `Insufficient stock for item ${item?.name ?? line.itemId}: available ${totalAvailable}, requested ${line.quantity}`
       );
@@ -198,31 +208,33 @@ export async function dispatchTransfer(
     data: { status: "DISPATCHED", dispatchedAt: now },
   });
 
-  // Deduct from source warehouse and create TRANSFER_OUT ledger entries
-  for (const line of transfer.lines) {
-    const balanceAfter = await upsertStockBalance({
-      itemId: line.itemId,
-      warehouseId: transfer.fromWarehouseId,
-      locationId: line.fromLocationId,
-      delta: -line.quantity,
-    });
-
-    await db.stockLedger.create({
-      data: {
-        companyId: transfer.companyId,
+  // Deduct from source warehouse and create TRANSFER_OUT ledger entries (parallel)
+  await Promise.all(
+    transfer.lines.map(async (line) => {
+      const balanceAfter = await upsertStockBalance({
         itemId: line.itemId,
         warehouseId: transfer.fromWarehouseId,
         locationId: line.fromLocationId,
-        transactionType: "TRANSFER_OUT",
-        quantity: line.quantity,
-        balanceAfter,
-        referenceType: "TRANSFER",
-        referenceId: transfer.id,
-        notes: `Transfer dispatched: ${transfer.reference}`,
-        createdById: dispatchedById,
-      },
-    });
-  }
+        delta: -line.quantity,
+      });
+
+      await db.stockLedger.create({
+        data: {
+          companyId: transfer.companyId,
+          itemId: line.itemId,
+          warehouseId: transfer.fromWarehouseId,
+          locationId: line.fromLocationId,
+          transactionType: "TRANSFER_OUT",
+          quantity: line.quantity,
+          balanceAfter,
+          referenceType: "TRANSFER",
+          referenceId: transfer.id,
+          notes: `Transfer dispatched: ${transfer.reference}`,
+          createdById: dispatchedById,
+        },
+      });
+    })
+  );
 
   await createAuditLog({
     userId: dispatchedById,
@@ -276,31 +288,33 @@ export async function receiveTransfer(
     data: { status: "RECEIVED", receivedAt: now },
   });
 
-  // Add to destination warehouse and create TRANSFER_IN ledger entries
-  for (const line of transfer.lines) {
-    const balanceAfter = await upsertStockBalance({
-      itemId: line.itemId,
-      warehouseId: transfer.toWarehouseId,
-      locationId: line.toLocationId,
-      delta: line.quantity,
-    });
-
-    await db.stockLedger.create({
-      data: {
-        companyId: transfer.companyId,
+  // Add to destination warehouse and create TRANSFER_IN ledger entries (parallel)
+  await Promise.all(
+    transfer.lines.map(async (line) => {
+      const balanceAfter = await upsertStockBalance({
         itemId: line.itemId,
         warehouseId: transfer.toWarehouseId,
         locationId: line.toLocationId,
-        transactionType: "TRANSFER_IN",
-        quantity: line.quantity,
-        balanceAfter,
-        referenceType: "TRANSFER",
-        referenceId: transfer.id,
-        notes: `Transfer received: ${transfer.reference}`,
-        createdById: receivedById,
-      },
-    });
-  }
+        delta: line.quantity,
+      });
+
+      await db.stockLedger.create({
+        data: {
+          companyId: transfer.companyId,
+          itemId: line.itemId,
+          warehouseId: transfer.toWarehouseId,
+          locationId: line.toLocationId,
+          transactionType: "TRANSFER_IN",
+          quantity: line.quantity,
+          balanceAfter,
+          referenceType: "TRANSFER",
+          referenceId: transfer.id,
+          notes: `Transfer received: ${transfer.reference}`,
+          createdById: receivedById,
+        },
+      });
+    })
+  );
 
   await createAuditLog({
     userId: receivedById,
