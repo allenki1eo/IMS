@@ -3,6 +3,7 @@ import { getSettings, bulkUpdateSettings, createSetting } from "@/modules/settin
 import { requireAuth, requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { success, created, badRequest, handleError } from "@/lib/response";
 import { z } from "zod";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 const bulkUpdateSchema = z.array(
   z.object({
@@ -27,11 +28,20 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
+  const category = searchParams.get("category") ?? undefined;
+
+  // Only cache unfiltered (no category) requests
+  if (!category) {
+    const cached = cache.get<unknown>(cacheKey.settings(companyId));
+    if (cached) return success(cached);
+  }
+
   try {
     const settings = await getSettings({
       companyId,
-      category: searchParams.get("category") ?? undefined,
+      category,
     });
+    if (!category) cache.set(cacheKey.settings(companyId), settings, TTL.SETTINGS);
     return success(settings);
   } catch (err) {
     return handleError(err);
@@ -60,6 +70,7 @@ export async function POST(request: NextRequest) {
       ipAddress,
       userAgent,
     });
+    cache.invalidate(cacheKey.settings(companyId));
     return created(setting);
   } catch (err) {
     return handleError(err);
@@ -88,6 +99,7 @@ export async function PUT(request: NextRequest) {
       ipAddress,
       userAgent,
     });
+    cache.invalidate(cacheKey.settings(companyId));
     return success(results);
   } catch (err) {
     return handleError(err);
