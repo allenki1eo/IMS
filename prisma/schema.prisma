@@ -88,6 +88,7 @@ model Department {
   children   Department[] @relation("DeptHierarchy")
   employees  Employee[]
 
+  @@index([companyId])
   @@map("departments")
 }
 
@@ -260,6 +261,7 @@ model Setting {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId])
   @@index([category])
   @@map("settings")
 }
@@ -447,6 +449,7 @@ model ItemCategory {
   items    Item[]
 
   @@unique([companyId, code])
+  @@index([companyId])
   @@map("item_categories")
 }
 
@@ -463,6 +466,7 @@ model UnitOfMeasure {
   items Item[]
 
   @@unique([companyId, code])
+  @@index([companyId])
   @@map("units_of_measure")
 }
 
