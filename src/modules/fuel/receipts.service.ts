@@ -9,7 +9,6 @@ function generateRef(prefix: string): string {
 }
 
 export async function listReceipts(
-  companyId: string,
   params: {
     search?: string;
     tankId?: string;
@@ -22,7 +21,6 @@ export async function listReceipts(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(tankId ? { tankId } : {}),
     ...(status ? { status } : {}),
     ...(search
@@ -54,8 +52,8 @@ export async function listReceipts(
   return { data: receipts, meta: { total, page, pageSize } };
 }
 
-export async function getReceiptById(id: string, companyId?: string) {
-  const receipt = await db.fuelReceipt.findUnique({
+export async function getReceiptById(id: string) {
+  return db.fuelReceipt.findUnique({
     where: { id },
     include: {
       tank: {
@@ -63,8 +61,6 @@ export async function getReceiptById(id: string, companyId?: string) {
       },
     },
   });
-  if (companyId && receipt && receipt.companyId !== companyId) return null;
-  return receipt;
 }
 
 export async function createReceipt(params: {
@@ -86,7 +82,6 @@ export async function createReceipt(params: {
 
   const tank = await db.fuelTank.findUnique({ where: { id: data.tankId } });
   if (!tank) throw new Error("Fuel tank not found");
-  if (tank.companyId !== data.companyId) throw new Error("Fuel tank not found");
 
   const reference = generateRef("FRC");
   const totalCost =
@@ -147,14 +142,12 @@ export async function createReceipt(params: {
 
 export async function confirmReceipt(
   id: string,
-  companyId: string,
   confirmedById: string,
   userName: string,
   ipAddress?: string
 ) {
   const receipt = await db.fuelReceipt.findUnique({ where: { id } });
   if (!receipt) throw new Error("Fuel receipt not found");
-  if (receipt.companyId !== companyId) throw new Error("Fuel receipt not found");
   if (receipt.status !== "DRAFT") throw new Error("Only DRAFT receipts can be confirmed");
 
   const tank = await db.fuelTank.findUnique({ where: { id: receipt.tankId } });

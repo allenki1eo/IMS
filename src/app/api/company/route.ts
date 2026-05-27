@@ -3,6 +3,7 @@ import { getCompanyById, updateCompany, createCompany } from "@/modules/company/
 import { updateCompanySchema, createCompanySchema } from "@/modules/company/company.validation";
 import { requirePermission, requireAuth, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { success, badRequest, notFound, handleError, created } from "@/lib/response";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -11,10 +12,14 @@ export async function GET(request: NextRequest) {
   const companyId = await getCompanyId(request);
   if (!companyId) return notFound("Company not configured");
 
+  const cached = cache.get<unknown>(cacheKey.company(companyId));
+  if (cached) return success(cached);
+
   try {
     const company = await getCompanyById(companyId);
     if (!company) return notFound("Company not found");
 
+    cache.set(cacheKey.company(companyId), company, TTL.COMPANY);
     return success(company);
   } catch (err) {
     console.error("[API Error]", err);
@@ -59,15 +64,23 @@ export async function PUT(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
+  // Convert empty strings to null for optional fields
+  const data = {
+    ...parsed.data,
+    email: parsed.data.email === "" ? null : parsed.data.email,
+    website: parsed.data.website === "" ? null : parsed.data.website,
+  };
+
   try {
     const updated = await updateCompany({
       id: companyId,
-      data: parsed.data,
+      data,
       updatedById: auth.user.id,
       userName: auth.user.fullName,
       ipAddress,
       userAgent,
     });
+    cache.invalidate(`company:`);
     return success(updated);
   } catch (err) {
     return handleError(err);

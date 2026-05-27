@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface FuelIssue {
   id: string;
@@ -30,12 +31,14 @@ export default function FuelIssueDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [issue, setIssue] = useState<FuelIssue | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useCurrentUser();
+  const currency = user?.companies?.[0]?.currency ?? "TZS";
 
   const fetchIssue = useCallback(async () => {
     try {
       const res = await fetch(`/api/fuel-issues/${id}`);
       if (!res.ok) throw new Error();
-      setIssue(await res.json());
+      setIssue((await res.json()).data);
     } catch { toast.error("Failed to load fuel issue"); }
     finally { setLoading(false); }
   }, [id]);
@@ -77,14 +80,14 @@ export default function FuelIssueDetailPage() {
             {issue.pricePerLiter != null && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Price / L</span>
-                <span>${issue.pricePerLiter.toFixed(3)}</span>
+                <span>{currency} {issue.pricePerLiter.toFixed(3)}</span>
               </div>
             )}
             {issue.totalCost != null && (
               <div className="flex justify-between border-t pt-3">
                 <span className="font-semibold">Total Cost</span>
                 <span className="font-semibold text-lg">
-                  ${issue.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currency} {issue.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             )}

@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface IncidentRow {
   id: string;
@@ -28,7 +30,7 @@ interface IncidentRow {
   location: string | null;
   status: string;
   vehicle?: { plateNumber: string } | null;
-  trip?: { reference: string } | null;
+  trip?: { id: string; reference: string } | null;
 }
 
 const PAGE_SIZE = 20;
@@ -42,32 +44,33 @@ const INCIDENT_TYPE_COLORS: Record<string, "default" | "secondary" | "destructiv
 };
 
 export default function IncidentsPage() {
-  const [incidents, setIncidents] = useState<IncidentRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, typeFilter, statusFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (typeFilter !== "ALL") params.set("incidentType", typeFilter);
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (typeFilter !== "ALL") params.set("incidentType", typeFilter);
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  const url = `/api/incidents?${params}`;
+  const { data: incidents, total, loading, mutate } = usePagedData<IncidentRow>(url);
 
-    fetch(`/api/incidents?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setIncidents(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load incidents"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, typeFilter, statusFilter]);
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/incidents/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete incident");
+      return;
+    }
+    toast.success("Incident deleted");
+    setDeleteId(null);
+    mutate();
+  }
 
   const columns = [
     {
@@ -82,7 +85,7 @@ export default function IncidentsPage() {
       header: "Trip",
       cell: (row: IncidentRow) => (
         row.trip ? (
-          <Link href={`/transport/trips/${row.trip}`} className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded hover:underline">
+          <Link href={`/transport/trips/${row.trip.id}`} className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded hover:underline">
             {row.trip.reference}
           </Link>
         ) : (
@@ -124,9 +127,16 @@ export default function IncidentsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: IncidentRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/transport/incidents/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/transport/incidents/${row.id}`}>View</Link>
+          </Button>
+          <PermissionGuard require="transport:incident:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -192,6 +202,14 @@ export default function IncidentsPage() {
         onPageChange={setPage}
         emptyTitle="No incidents found"
         emptyDescription="No incidents have been reported."
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Incident"
+        description="Are you sure you want to delete this incident? This action cannot be undone."
       />
     </div>
   );

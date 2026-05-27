@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, LayoutList, LayoutDashboard } from "lucide-react";
+import { Plus, LayoutList, LayoutDashboard, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
+import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { FilterBar } from "@/components/shared/FilterBar";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { KanbanBoard, type KanbanCard } from "@/components/shared/KanbanBoard";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface TripRow {
   id: string;
@@ -24,7 +27,7 @@ interface TripRow {
   status: string;
   priority: string;
   vehicle?: { plateNumber: string } | null;
-  driver?: { employee?: { firstName: string; lastName: string } | null } | null;
+  driver?: { firstName?: string | null; lastName?: string | null; employee?: { fullName: string } | null } | null;
 }
 
 const PAGE_SIZE = 20;
@@ -52,56 +55,89 @@ const PRIORITY_COLOR: Record<string, string> = {
 };
 
 export default function TripsPage() {
-  const [trips, setTrips] = useState<TripRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [view, setView] = useState<"table" | "kanban">("table");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const hasFilters = debounced !== "" || statusFilter !== "ALL" || !!dateFrom || !!dateTo;
 
   useEffect(() => { setPage(1); }, [debounced, statusFilter, dateFrom, dateTo]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(view === "kanban" ? 200 : PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-    if (dateFrom) params.set("dateFrom", dateFrom);
-    if (dateTo) params.set("dateTo", dateTo);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(view === "kanban" ? 200 : PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  if (dateFrom) params.set("dateFrom", dateFrom);
+  if (dateTo) params.set("dateTo", dateTo);
+  const url = `/api/trips?${params}`;
+  const { data: trips, total, loading, mutate } = usePagedData<TripRow>(url);
 
-    fetch(`/api/trips?${params}`)
-      .then((r) => r.json())
-      .then((d) => { setTrips(d.data ?? []); setTotal(d.meta?.total ?? 0); })
-      .catch(() => toast.error("Failed to load trips"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, statusFilter, dateFrom, dateTo, view]);
+  async function handleBulkAction(action: "cancel" | "delete") {
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/trips/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, action }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
+      toast.success(`${json.data?.updated ?? selectedIds.length} trip(s) ${action === "cancel" ? "cancelled" : "deleted"}`);
+      setSelectedIds([]);
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/trips/${deleteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Failed to delete trip");
+      return;
+    }
+    toast.success("Trip deleted");
+    setDeleteId(null);
+    mutate();
+  }
 
   const columns = [
     {
       key: "reference", header: "Reference", sortable: true,
       cell: (row: TripRow) => <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.reference}</code>,
+      exportValue: (row: TripRow) => row.reference,
     },
     {
       key: "vehicle", header: "Vehicle",
       cell: (row: TripRow) => <span className="text-sm font-medium">{row.vehicle?.plateNumber ?? "—"}</span>,
+      exportValue: (row: TripRow) => row.vehicle?.plateNumber ?? "—",
     },
     {
       key: "driver", header: "Driver",
       cell: (row: TripRow) => {
-        const emp = row.driver?.employee;
-        return <span className="text-sm text-muted-foreground">{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</span>;
+        const name = row.driver?.employee?.fullName ??
+          ([row.driver?.firstName, row.driver?.lastName].filter(Boolean).join(" ") || "—");
+        return <span className="text-sm text-muted-foreground">{name}</span>;
       },
+      exportValue: (row: TripRow) =>
+        row.driver?.employee?.fullName ??
+        ([row.driver?.firstName, row.driver?.lastName].filter(Boolean).join(" ") || "—"),
     },
     {
       key: "route", header: "Route",
       cell: (row: TripRow) => (
         <span className="text-sm">{row.origin} <span className="text-muted-foreground">→</span> {row.destination}</span>
       ),
+      exportValue: (row: TripRow) => `${row.origin} → ${row.destination}`,
     },
     {
       key: "scheduledDeparture", header: "Departure", sortable: true,
@@ -110,13 +146,30 @@ export default function TripsPage() {
           {row.scheduledDeparture ? format(new Date(row.scheduledDeparture), "dd MMM yyyy HH:mm") : "—"}
         </span>
       ),
+      exportValue: (row: TripRow) =>
+        row.scheduledDeparture ? format(new Date(row.scheduledDeparture), "dd MMM yyyy HH:mm") : "—",
     },
-    { key: "status", header: "Status", cell: (row: TripRow) => <StatusBadge status={row.status} /> },
-    { key: "priority", header: "Priority", cell: (row: TripRow) => <StatusBadge status={row.priority} /> },
+    {
+      key: "status", header: "Status",
+      cell: (row: TripRow) => <StatusBadge status={row.status} />,
+      exportValue: (row: TripRow) => row.status,
+    },
+    {
+      key: "priority", header: "Priority",
+      cell: (row: TripRow) => <StatusBadge status={row.priority} />,
+      exportValue: (row: TripRow) => row.priority,
+    },
     {
       key: "actions", header: "",
       cell: (row: TripRow) => (
-        <Button variant="outline" size="sm" asChild><Link href={`/transport/trips/${row.id}`}>View</Link></Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" asChild><Link href={`/transport/trips/${row.id}`}>View</Link></Button>
+          <PermissionGuard require="transport:trip:delete">
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -189,19 +242,31 @@ export default function TripsPage() {
       </div>
 
       {view === "table" ? (
-        <DataTable
-          columns={columns}
-          data={trips}
-          loading={loading}
-          page={page}
-          pageSize={PAGE_SIZE}
-          total={total}
-          onPageChange={setPage}
-          exportable
-          exportFilename="trips"
-          emptyTitle="No trips found"
-          emptyDescription="Create your first trip to get started."
-        />
+        <>
+          <BulkActionBar
+            selected={selectedIds}
+            onClear={() => setSelectedIds([])}
+            actions={[
+              { label: "Cancel Selected", onClick: () => handleBulkAction("cancel"), loading: bulkLoading },
+              { label: "Delete Selected", variant: "destructive", onClick: () => handleBulkAction("delete"), loading: bulkLoading },
+            ]}
+          />
+          <DataTable
+            columns={columns}
+            data={trips}
+            loading={loading}
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPageChange={setPage}
+            selectable
+            onSelectionChange={setSelectedIds}
+            exportable
+            exportFilename="trips"
+            emptyTitle="No trips found"
+            emptyDescription="Create your first trip to get started."
+          />
+        </>
       ) : (
         <KanbanBoard
           columns={KANBAN_COLUMNS}
@@ -210,6 +275,14 @@ export default function TripsPage() {
           emptyLabel="No trips"
         />
       )}
+
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Trip"
+        description="Are you sure you want to delete this trip? This action cannot be undone."
+      />
     </div>
   );
 }

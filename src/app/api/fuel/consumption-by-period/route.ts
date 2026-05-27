@@ -1,14 +1,11 @@
 import { NextRequest } from "next/server";
 import { getConsumptionByPeriod } from "@/modules/fuel/reports.service";
-import { requirePermission, getCompanyId } from "@/lib/api-helpers";
+import { requirePermission } from "@/lib/api-helpers";
 import { success, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:report:read");
   if ("error" in auth) return auth.error;
-
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
   const groupByParam = searchParams.get("groupBy") ?? "day";
@@ -21,7 +18,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getConsumptionByPeriod(companyId, {
+    const data = await getConsumptionByPeriod({
       groupBy: groupByParam as "day" | "week" | "month",
       from,
       to,

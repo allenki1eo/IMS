@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+
 import { format } from "date-fns";
-import { Plus, LayoutList, LayoutDashboard } from "lucide-react";
+import { Plus, LayoutList, LayoutDashboard, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { FilterBar } from "@/components/shared/FilterBar";
@@ -13,10 +15,14 @@ import { KanbanBoard, type KanbanCard } from "@/components/shared/KanbanBoard";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedData } from "@/hooks/usePagedData";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface WorkOrderRow {
   id: string;
   reference: string;
+  companyId: string;
   vehicle?: { plateNumber: string } | null;
   maintenanceType: string;
   priority: string;
@@ -59,34 +65,41 @@ const PRIORITY_COLOR: Record<string, string> = {
 };
 
 export default function WorkOrdersPage() {
-  const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const currency = useCurrency();
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
   const [view, setView] = useState<"table" | "kanban">("table");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
+
+  const { user } = useCurrentUser();
+  const companyMap = Object.fromEntries((user?.companies ?? []).map((c) => [c.id, c.name]));
 
   const hasFilters = debounced !== "" || status !== "ALL" || priority !== "ALL";
 
   useEffect(() => { setPage(1); }, [debounced, status, priority]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(view === "kanban" ? 200 : PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    if (priority !== "ALL") params.set("priority", priority);
-    fetch(`/api/maintenance/work-orders?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setWorkOrders(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load work orders"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status, priority, view]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(view === "kanban" ? 200 : PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  if (priority !== "ALL") params.set("priority", priority);
+  const url = `/api/maintenance/work-orders?${params}`;
+
+  const { data: workOrders, total, loading, mutate } = usePagedData<WorkOrderRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/maintenance/work-orders/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Work order deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete work order");
+    }
+  }
 
   const columns = [
     {
@@ -101,8 +114,19 @@ export default function WorkOrdersPage() {
     {
       key: "vehicle",
       header: "Vehicle",
+      exportValue: (row: WorkOrderRow) => row.vehicle?.plateNumber ?? "",
       cell: (row: WorkOrderRow) => (
         <span className="text-muted-foreground">{row.vehicle?.plateNumber ?? "—"}</span>
+      ),
+    },
+    {
+      key: "companyId",
+      header: "Company",
+      exportValue: (row: WorkOrderRow) => companyMap[row.companyId] ?? "",
+      cell: (row: WorkOrderRow) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium truncate max-w-[120px] block">
+          {companyMap[row.companyId] ?? "—"}
+        </span>
       ),
     },
     {
@@ -129,6 +153,7 @@ export default function WorkOrdersPage() {
     {
       key: "assignedTo",
       header: "Assigned To",
+      exportValue: (row: WorkOrderRow) => row.assignedTo ? `${row.assignedTo.firstName} ${row.assignedTo.lastName}` : "",
       cell: (row: WorkOrderRow) => (
         <span className="text-muted-foreground">
           {row.assignedTo ? `${row.assignedTo.firstName} ${row.assignedTo.lastName}` : "—"}
@@ -138,10 +163,11 @@ export default function WorkOrdersPage() {
     {
       key: "estimatedCost",
       header: "Est. Cost",
+      exportValue: (row: WorkOrderRow) => row.estimatedCost ?? "",
       cell: (row: WorkOrderRow) => (
         <span>
           {row.estimatedCost != null
-            ? `$${row.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ? `${currency} ${row.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             : "—"}
         </span>
       ),
@@ -149,6 +175,7 @@ export default function WorkOrdersPage() {
     {
       key: "createdAt",
       header: "Created",
+      exportValue: (row: WorkOrderRow) => format(new Date(row.createdAt), "dd MMM yyyy"),
       cell: (row: WorkOrderRow) => (
         <span className="text-muted-foreground whitespace-nowrap">
           {format(new Date(row.createdAt), "dd MMM yyyy")}
@@ -159,9 +186,14 @@ export default function WorkOrdersPage() {
       key: "actions",
       header: "",
       cell: (row: WorkOrderRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/maintenance/work-orders/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/maintenance/work-orders/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -253,6 +285,7 @@ export default function WorkOrdersPage() {
           emptyLabel="No work orders"
         />
       )}
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

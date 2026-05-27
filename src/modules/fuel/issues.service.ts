@@ -61,7 +61,6 @@ async function predictNextRefuel(
 }
 
 export async function listIssues(
-  companyId: string,
   params: {
     search?: string;
     tankId?: string;
@@ -77,7 +76,6 @@ export async function listIssues(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(tankId ? { tankId } : {}),
     ...(vehicleId ? { vehicleId } : {}),
     ...(driverId ? { driverId } : {}),
@@ -126,8 +124,8 @@ export async function listIssues(
   return { data: issues, meta: { total, page, pageSize } };
 }
 
-export async function getIssueById(id: string, companyId?: string) {
-  const issue = await db.fuelIssue.findUnique({
+export async function getIssueById(id: string) {
+  return db.fuelIssue.findUnique({
     where: { id },
     include: {
       tank: {
@@ -150,8 +148,6 @@ export async function getIssueById(id: string, companyId?: string) {
       },
     },
   });
-  if (companyId && issue && issue.companyId !== companyId) return null;
-  return issue;
 }
 
 export async function createIssue(params: {
@@ -172,7 +168,6 @@ export async function createIssue(params: {
 
   const tank = await db.fuelTank.findUnique({ where: { id: data.tankId } });
   if (!tank) throw new Error("Fuel tank not found");
-  if (tank.companyId !== data.companyId) throw new Error("Fuel tank not found");
   if (!tank.isActive) throw new Error("Fuel tank is inactive");
   if (tank.currentLevel < data.quantityLiters) {
     throw new Error(
@@ -182,7 +177,6 @@ export async function createIssue(params: {
 
   const vehicle = await db.vehicle.findUnique({ where: { id: data.vehicleId } });
   if (!vehicle) throw new Error("Vehicle not found");
-  if (vehicle.companyId !== data.companyId) throw new Error("Vehicle not found");
 
   const reference = generateRef("FIS");
   const totalCost =

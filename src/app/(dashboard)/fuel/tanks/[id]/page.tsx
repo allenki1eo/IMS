@@ -41,9 +41,9 @@ interface HistoryEntry {
   date: string;
   type: "RECEIPT" | "ISSUE";
   reference: string;
-  quantity: number;
-  runningBalance: number;
-  notes: string | null;
+  quantityLiters: number;
+  balanceAfter: number;
+  description: string | null;
 }
 
 const FUEL_TYPES = [
@@ -87,8 +87,9 @@ export default function TankDetailPage() {
   const loadTank = useCallback(() => {
     setLoading(true);
     fetch(`/api/fuel-tanks/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) { toast.error(d.error ?? "Failed to load tank"); return; }
         const t: Tank = d.data;
         setTank(t);
         if (t) {
@@ -114,7 +115,7 @@ export default function TankDetailPage() {
       setHistoryLoading(true);
       fetch(`/api/fuel/tank-history/${id}`)
         .then((r) => r.json())
-        .then((d) => setHistory(d.data ?? []))
+        .then((d) => setHistory(d.data?.history ?? []))
         .catch(() => toast.error("Failed to load history"))
         .finally(() => setHistoryLoading(false));
     }
@@ -353,11 +354,11 @@ export default function TankDetailPage() {
                           </td>
                           <td className="px-4 py-3">
                             <span className={entry.type === "RECEIPT" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                              {entry.type === "RECEIPT" ? "+" : "-"}{entry.quantity.toLocaleString()}
+                              {entry.type === "RECEIPT" ? "+" : "-"}{entry.quantityLiters.toLocaleString()}
                             </span>
                           </td>
-                          <td className="px-4 py-3 font-medium">{entry.runningBalance.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{entry.notes ?? "—"}</td>
+                          <td className="px-4 py-3 font-medium">{entry.balanceAfter.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{entry.description ?? "—"}</td>
                         </tr>
                       ))
                     )}

@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
       page: paginationParams.page,
       pageSize: paginationParams.pageSize,
     });
-
     return paginated(data, buildMeta(meta.total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);
@@ -46,6 +45,7 @@ export async function POST(request: NextRequest) {
   const {
     branchId,
     vehicleId,
+    trailerId,
     driverId,
     origin,
     destination,
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       companyId,
       branchId: branchId ?? null,
       vehicleId: vehicleId ?? null,
+      trailerId: trailerId ?? null,
       driverId: driverId ?? null,
       origin,
       destination,

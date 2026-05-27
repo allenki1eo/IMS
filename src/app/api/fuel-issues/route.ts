@@ -8,9 +8,6 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "fuel:issue:read");
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
-
   const { searchParams } = new URL(request.url);
   const paginationParams = parsePagination(searchParams);
   const search = searchParams.get("search") ?? undefined;
@@ -21,7 +18,7 @@ export async function GET(request: NextRequest) {
   const to = searchParams.get("to") ?? undefined;
 
   try {
-    const { data, meta } = await listIssues(companyId, {
+    const { data, meta } = await listIssues({
       search,
       tankId,
       vehicleId,
@@ -31,7 +28,6 @@ export async function GET(request: NextRequest) {
       page: paginationParams.page,
       pageSize: paginationParams.pageSize,
     });
-
     return paginated(data, buildMeta(meta.total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);

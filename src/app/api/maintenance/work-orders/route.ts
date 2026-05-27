@@ -82,8 +82,9 @@ export async function POST(request: NextRequest) {
     return created(workOrder);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    if (msg === "Vehicle not found" || msg === "Maintenance schedule not found")
+    if (msg === "Vehicle not found" || msg === "Maintenance schedule not found" || msg.includes("selected vehicle"))
       return badRequest(msg);
+    if (msg.includes("cannot be negative")) return badRequest(msg);
     return handleError(err);
   }
 }

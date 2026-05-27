@@ -68,8 +68,11 @@ export async function POST(request: NextRequest) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (
       msg === "Product not found" ||
+      msg === "Product is inactive" ||
       msg === "Warehouse not found" ||
-      msg === "Quantity must be greater than zero"
+      msg === "Quantity must be greater than zero" ||
+      msg === "Unit cost cannot be negative" ||
+      msg === "Best before date is invalid"
     )
       return badRequest(msg);
     return handleError(err);

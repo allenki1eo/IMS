@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface OrderRow {
   id: string;
@@ -28,6 +30,7 @@ interface OrderRow {
   scheduledDate?: string | null;
   vehicle?: { plateNumber: string } | null;
   lineCount?: number;
+  totalQuantity?: number;
 }
 
 const STATUS_FILTERS = [
@@ -39,32 +42,31 @@ const STATUS_FILTERS = [
   { label: "Cancelled", value: "CANCELLED" },
 ];
 
+const PAGE_SIZE = 20;
+
 export default function DispatchOrdersPage() {
-  const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  const PAGE_SIZE = 20;
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  const { data: orders, total, loading, mutate } = usePagedData<OrderRow>(`/api/dispatch/orders?${params}`);
 
-  useEffect(() => { setPage(1); }, [debounced, status]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/dispatch/orders?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setOrders(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load dispatch orders"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/dispatch/orders/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Dispatch order deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.error ?? d.message ?? "Failed to delete dispatch order");
+    }
+  }
 
   const columns = [
     {
@@ -110,12 +112,28 @@ export default function DispatchOrdersPage() {
       ),
     },
     {
+      key: "totalQuantity",
+      header: "Qty",
+      cell: (row: OrderRow) => (
+        <span className="font-medium">{(row.totalQuantity ?? 0).toLocaleString()}</span>
+      ),
+    },
+    {
       key: "actions",
       header: "Actions",
       cell: (row: OrderRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/dispatch/orders/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dispatch/orders/${row.id}`}>View</Link>
+          </Button>
+          {row.status === "DRAFT" && row.lineCount === 0 && (
+            <PermissionGuard require="dispatch:order:delete">
+              <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </PermissionGuard>
+          )}
+        </div>
       ),
     },
   ];
@@ -140,11 +158,11 @@ export default function DispatchOrdersPage() {
       <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={(v) => { setSearch(v); setPage(1); }}
           placeholder="Search by reference or customer..."
           className="w-full sm:max-w-xs"
         />
-        <Select value={status} onValueChange={setStatus}>
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
@@ -167,6 +185,7 @@ export default function DispatchOrdersPage() {
         emptyTitle="No dispatch orders found"
         emptyDescription="Create your first dispatch order to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

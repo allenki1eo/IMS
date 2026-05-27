@@ -58,7 +58,24 @@ interface Vehicle {
 
 interface Driver {
   id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  licenseNumber?: string | null;
   employee?: { id: string; fullName: string; employeeNumber: string } | null;
+}
+
+interface Trip {
+  id: string;
+  origin: string | null;
+  destination: string | null;
+  actualDeparture: string | null;
+  scheduledDeparture: string | null;
+  currentLocation: string | null;
+  cargoDescription: string | null;
+  trailer: { plateNumber: string } | null;
+  cargo: { description: string }[];
+  logs: { location: string | null }[];
 }
 
 interface EntryRow {
@@ -75,6 +92,7 @@ interface EntryRow {
   remarks: string | null;
   vehicle: Vehicle;
   driver: Driver | null;
+  trip: Trip | null;
 }
 
 interface Report {
@@ -138,7 +156,7 @@ export default function DailyMovementDetailPage() {
           r.entries.map((e) => ({
             vehicleId: e.vehicleId,
             vehicleStatus: e.vehicleStatus,
-            driverId: e.driver?.employee?.fullName ?? "",
+            driverId: e.driver?.employee?.fullName ?? ([e.driver?.firstName, e.driver?.lastName].filter(Boolean).join(" ")) ?? "",
             destination: e.destination ?? "",
             departureTime: e.departureTime ? e.departureTime.slice(0, 16) : "",
             expectedReturn: e.expectedReturn ? e.expectedReturn.slice(0, 16) : "",
@@ -247,7 +265,9 @@ export default function DailyMovementDetailPage() {
   if (!report) return <div className="p-8 text-center text-muted-foreground">Report not found.</div>;
 
   const isDraft = report.status === "DRAFT";
-  const counts = isDraft ? calcCounts(entries) : { onTrip: report.onTrip, present: report.present, maintenance: report.maintenance, offsite: report.offsite, other: report.other };
+  const counts = isDraft
+    ? calcCounts(entries)
+    : { onTrip: report.onTrip, present: report.present, maintenance: report.maintenance, offsite: report.offsite, other: report.other };
 
   return (
     <div>
@@ -261,7 +281,7 @@ export default function DailyMovementDetailPage() {
                 <ArrowLeft className="h-4 w-4 mr-1" /> Back
               </Link>
             </Button>
-            {isDraft ? (
+            {isDraft && (
               <>
                 <PermissionGuard require="transport:daily-movement:update">
                   <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
@@ -276,17 +296,80 @@ export default function DailyMovementDetailPage() {
                   </Button>
                 </PermissionGuard>
               </>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
-                <Printer className="h-4 w-4 mr-1" /> Print
-              </Button>
             )}
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="h-4 w-4 mr-1" /> Print
+            </Button>
           </div>
         }
       />
 
+      {/* Print-only: Full Truck Control Sheet */}
+      <div className="print-only">
+        <div className="text-center mb-2">
+          <div className="text-[17px] font-bold tracking-widest uppercase leading-tight">
+            {typeof window !== "undefined"
+              ? (document.title.split("—")[0]?.trim() || "COMPANY NAME")
+              : "COMPANY NAME"}
+          </div>
+          <div className="text-[14px] font-bold tracking-widest uppercase mt-0.5">
+            DAILY TRUCK CONTROL SHEET
+          </div>
+        </div>
+        <div className="flex justify-end mb-1 text-[11px] font-medium tracking-wide">
+          {format(new Date(report.reportDate), "dd. MM. yyyy")}
+        </div>
+        <table className="w-full border-collapse text-[10px]" style={{ fontFamily: "monospace" }}>
+          <thead>
+            <tr style={{ backgroundColor: "#b0b0b0" }}>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">No.</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">TRUCK</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">TRAILER</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold" style={{ minWidth: 110 }}>DRIVER</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">PHONE</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">LICENCE</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">START TRIP</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">FROM</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold" style={{ minWidth: 80 }}>TO</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">GOODS</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">TODAY</th>
+              <th className="border border-gray-700 px-1 py-1 text-center font-bold">REMARK</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.entries.map((entry, idx) => {
+              const driverName = entry.driver?.employee?.fullName ??
+                [entry.driver?.firstName, entry.driver?.lastName].filter(Boolean).join(" ") ?? "";
+              const trip = entry.trip;
+              const startTrip = trip?.actualDeparture ?? trip?.scheduledDeparture ?? entry.departureTime;
+              const goods = trip?.cargo?.map((c) => c.description).join(", ") || trip?.cargoDescription || "";
+              const todayLocation = trip?.currentLocation || trip?.logs?.[0]?.location || entry.remarks || "";
+
+              return (
+                <tr key={entry.id}>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center">{idx + 1}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center font-semibold tracking-wide">{entry.vehicle.plateNumber}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center">{trip?.trailer?.plateNumber ?? ""}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 uppercase">{driverName}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center">{entry.driver?.phone ?? ""}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center">{entry.driver?.licenseNumber ?? ""}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center">
+                    {startTrip ? format(new Date(startTrip), "d-MMM") : ""}
+                  </td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center uppercase">{trip?.origin ?? ""}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center uppercase">{trip?.destination ?? entry.destination ?? ""}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center uppercase">{goods}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center font-medium uppercase">{todayLocation}</td>
+                  <td className="border border-gray-500 px-1 py-0.5 text-center"></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
       {/* Summary bar */}
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="no-print flex flex-wrap gap-3 mb-6">
         <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
           <span className="text-xs text-blue-500 font-medium uppercase tracking-wide">On Trip</span>
           <span className="text-2xl font-bold text-blue-600">{counts.onTrip}</span>

@@ -3,6 +3,7 @@ import { listVehicles, createVehicle } from "@/modules/transport/vehicles.servic
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:vehicle:read");
@@ -18,8 +19,15 @@ export async function GET(request: NextRequest) {
   const vehicleType = searchParams.get("vehicleType") ?? undefined;
   const branchId = searchParams.get("branchId") ?? undefined;
 
+  // Only cache unfiltered list requests
+  const useCache = !search && !status && !vehicleType && !branchId;
+  if (useCache) {
+    const cached = cache.get<unknown[]>(cacheKey.vehicles(companyId));
+    if (cached) return paginated(cached, buildMeta(cached.length, paginationParams));
+  }
+
   try {
-    const { data, meta } = await listVehicles(companyId, {
+    const { data, meta } = await listVehicles({
       search,
       status,
       vehicleType,
@@ -27,7 +35,7 @@ export async function GET(request: NextRequest) {
       page: paginationParams.page,
       pageSize: paginationParams.pageSize,
     });
-
+    if (useCache) cache.set(cacheKey.vehicles(companyId), data, TTL.REFERENCE);
     return paginated(data, buildMeta(meta.total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);
@@ -50,14 +58,17 @@ export async function POST(request: NextRequest) {
     model,
     year,
     vehicleType,
+    usageType,
     capacity,
     fuelType,
+    fuelTankCapacity,
     color,
     chassisNumber,
     engineNumber,
     odometer,
     insuranceExpiry,
     roadWorthyExpiry,
+    nextServiceDate,
     notes,
   } = body;
 
@@ -76,19 +87,23 @@ export async function POST(request: NextRequest) {
       model,
       year: year ?? null,
       vehicleType: vehicleType ?? "TRUCK",
+      usageType: usageType ?? "OWNED",
       capacity: capacity ?? null,
       fuelType: fuelType ?? "DIESEL",
+      fuelTankCapacity: fuelTankCapacity ?? null,
       color: color ?? null,
       chassisNumber: chassisNumber ?? null,
       engineNumber: engineNumber ?? null,
       odometer: odometer ?? 0,
       insuranceExpiry: insuranceExpiry ? new Date(insuranceExpiry) : null,
       roadWorthyExpiry: roadWorthyExpiry ? new Date(roadWorthyExpiry) : null,
+      nextServiceDate: nextServiceDate ? new Date(nextServiceDate) : null,
       notes: notes ?? null,
       createdById: auth.user.id,
       userName: auth.user.fullName,
       ipAddress,
     });
+    cache.invalidate(cacheKey.vehicles(companyId));
     return created(vehicle);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";

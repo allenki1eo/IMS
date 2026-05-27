@@ -25,24 +25,29 @@ export async function POST(request: NextRequest) {
     const row = rows[i];
     const rowNum = i + 2;
 
-    const employeeId = row["employeeId"]?.trim();
-    if (!employeeId) {
-      errors.push(`Row ${rowNum}: employeeId is required`);
+    const firstName = row["firstName"]?.trim() || null;
+
+    if (!firstName) {
+      errors.push(`Row ${rowNum}: firstName is required`);
       skipped++;
       continue;
     }
 
     const licenseExpiry = row["licenseExpiry"]?.trim();
+    const medicalExpiry = row["medicalExpiry"]?.trim();
 
     try {
       await createDriver({
         companyId,
-        employeeId,
+        firstName,
+        lastName: row["lastName"]?.trim() || null,
+        phone: row["phone"]?.trim() || null,
+        email: row["email"]?.trim() || null,
         licenseNumber: row["licenseNumber"]?.trim() || null,
         licenseClass: row["licenseClass"]?.trim() || null,
         licenseExpiry: licenseExpiry ? new Date(licenseExpiry) : null,
-        medicalExpiry: null,
-        notes: null,
+        medicalExpiry: medicalExpiry ? new Date(medicalExpiry) : null,
+        notes: row["notes"]?.trim() || null,
         createdById: auth.user.id,
         userName: auth.user.fullName,
         ipAddress,

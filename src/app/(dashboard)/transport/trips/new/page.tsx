@@ -29,9 +29,10 @@ interface VehicleOption {
 
 interface DriverOption {
   id: string;
+  firstName?: string | null;
+  lastName?: string | null;
   employee?: {
-    firstName: string;
-    lastName: string;
+    fullName: string;
   } | null;
 }
 
@@ -54,6 +55,7 @@ export default function NewTripPage() {
 
   const [form, setForm] = useState({
     vehicleId: "",
+    trailerId: "",
     driverId: "",
     origin: "",
     destination: "",
@@ -70,13 +72,18 @@ export default function NewTripPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  const [trailers, setTrailers] = useState<VehicleOption[]>([]);
+
   useEffect(() => {
     Promise.all([
-      fetch("/api/vehicles?status=ACTIVE&pageSize=200").then((r) => r.json()),
-      fetch("/api/drivers?isAvailable=true&pageSize=200").then((r) => r.json()),
+      fetch("/api/vehicles?pageSize=200").then((r) => r.json()),
+      fetch("/api/vehicles?vehicleType=TRAILER&pageSize=200").then((r) => r.json()),
+      fetch("/api/drivers?pageSize=200").then((r) => r.json()),
     ])
-      .then(([vJson, dJson]) => {
-        setVehicles(vJson.data ?? []);
+      .then(([vJson, trJson, dJson]) => {
+        const allVehicles: (VehicleOption & { vehicleType?: string })[] = vJson.data ?? [];
+        setVehicles(allVehicles.filter((v) => v.vehicleType !== "TRAILER"));
+        setTrailers(trJson.data ?? []);
         setDrivers(dJson.data ?? []);
       })
       .catch(() => toast.error("Failed to load options"));
@@ -104,6 +111,7 @@ export default function NewTripPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           vehicleId: form.vehicleId || undefined,
+          trailerId: form.trailerId || undefined,
           driverId: form.driverId || undefined,
           origin: form.origin.trim(),
           destination: form.destination.trim(),
@@ -113,7 +121,7 @@ export default function NewTripPage() {
           cargoDescription: form.cargoDescription.trim() || undefined,
           cargoWeight: form.cargoWeight ? Number(form.cargoWeight) : undefined,
           notes: form.notes.trim() || undefined,
-          cargoLines: validLines.length > 0
+          cargo: validLines.length > 0
             ? validLines.map((l) => ({
                 description: l.description.trim(),
                 quantity: l.quantity ? Number(l.quantity) : undefined,
@@ -156,12 +164,26 @@ export default function NewTripPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label>Vehicle</Label>
+              <Label>Truck (Vehicle)</Label>
               <Select value={form.vehicleId || "__none"} onValueChange={(v) => set("vehicleId", v === "__none" ? "" : v)} disabled={submitting}>
                 <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">None / Unassigned</SelectItem>
                   {vehicles.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.plateNumber} — {v.make} {v.model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Trailer</Label>
+              <Select value={form.trailerId || "__none"} onValueChange={(v) => set("trailerId", v === "__none" ? "" : v)} disabled={submitting}>
+                <SelectTrigger><SelectValue placeholder="Select trailer (optional)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">None</SelectItem>
+                  {trailers.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.plateNumber} — {v.make} {v.model}
                     </SelectItem>
@@ -176,10 +198,11 @@ export default function NewTripPage() {
                 <SelectContent>
                   <SelectItem value="__none">None / Unassigned</SelectItem>
                   {drivers.map((d) => {
-                    const emp = d.employee;
+                    const name = d.employee?.fullName ??
+                      ([d.firstName, d.lastName].filter(Boolean).join(" ") || d.id);
                     return (
                       <SelectItem key={d.id} value={d.id}>
-                        {emp ? `${emp.firstName} ${emp.lastName}` : d.id}
+                        {name}
                       </SelectItem>
                     );
                   })}

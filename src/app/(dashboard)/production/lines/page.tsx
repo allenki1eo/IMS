@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -12,6 +13,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 import { formatNumber, LINE_TYPES } from "../_components/production-ui";
 
 interface LineRow {
@@ -29,31 +31,34 @@ interface LineRow {
 const PAGE_SIZE = 20;
 
 export default function ProductionLinesPage() {
-  const [lines, setLines] = useState<LineRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [lineType, setLineType] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  useEffect(() => { setPage(1); }, [debounced, status, lineType]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  if (lineType !== "ALL") params.set("lineType", lineType);
+  const { data: lines, total, loading, mutate } = usePagedData<LineRow>(`/api/production/lines?${params}`);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    if (lineType !== "ALL") params.set("lineType", lineType);
-    fetch(`/api/production/lines?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setLines(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load production lines"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status, lineType]);
+  function handleFilterChange(setter: (v: string) => void) {
+    return (v: string) => { setter(v); setPage(1); };
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/production/lines/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Production line deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete production line");
+    }
+  }
 
   const columns = [
     { key: "name", header: "Line", cell: (row: LineRow) => <Link href={`/production/lines/${row.id}`} className="font-semibold hover:underline">{row.name}</Link> },
@@ -63,7 +68,12 @@ export default function ProductionLinesPage() {
     { key: "capacity", header: "Capacity / Day", cell: (row: LineRow) => <span>{row.capacityPerDay == null ? "-" : `${formatNumber(row.capacityPerDay)} ${row.uom}`}</span> },
     { key: "batches", header: "Batches", cell: (row: LineRow) => <span>{row._count?.batches ?? 0}</span> },
     { key: "status", header: "Status", cell: (row: LineRow) => <StatusBadge status={row.status} /> },
-    { key: "actions", header: "Actions", cell: (row: LineRow) => <Button variant="outline" size="sm" asChild><Link href={`/production/lines/${row.id}`}>View</Link></Button> },
+    { key: "actions", header: "Actions", cell: (row: LineRow) => (
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" asChild><Link href={`/production/lines/${row.id}`}>View</Link></Button>
+        <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}><Trash2 className="h-4 w-4" /></Button>
+      </div>
+    ) },
   ];
 
   return (
@@ -79,8 +89,8 @@ export default function ProductionLinesPage() {
       />
 
       <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search lines..." className="w-full sm:max-w-xs" />
-        <Select value={status} onValueChange={setStatus}>
+        <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search lines..." className="w-full sm:max-w-xs" />
+        <Select value={status} onValueChange={handleFilterChange(setStatus)}>
           <SelectTrigger className="w-full sm:w-[150px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
@@ -88,7 +98,7 @@ export default function ProductionLinesPage() {
             <SelectItem value="INACTIVE">Inactive</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={lineType} onValueChange={setLineType}>
+        <Select value={lineType} onValueChange={handleFilterChange(setLineType)}>
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Types</SelectItem>
@@ -98,7 +108,7 @@ export default function ProductionLinesPage() {
       </div>
 
       <DataTable columns={columns} data={lines} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No production lines found" emptyDescription="Create a line to start planning batches." />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }
-

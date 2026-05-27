@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
 export async function listIncidents(
-  companyId: string,
   params: {
     search?: string;
     vehicleId?: string;
@@ -17,7 +16,6 @@ export async function listIncidents(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(vehicleId ? { vehicleId } : {}),
     ...(tripId ? { tripId } : {}),
     ...(incidentType ? { incidentType } : {}),

@@ -25,7 +25,7 @@ export const updateCompanySchema = z.object({
   city: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable(),
+  email: z.string().email().optional().nullable().or(z.literal("")),
   website: z.string().url().optional().nullable().or(z.literal("")),
   currency: z.string().length(3).optional(),
   dateFormat: z.string().optional(),

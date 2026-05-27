@@ -1,6 +1,14 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+type TxClient = any;
+
+function parseFinanceDate(value: string, label: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new Error(`${label} is invalid`);
+  return date;
+}
+
 export async function listBankAccounts(
   companyId: string,
   params: {
@@ -194,12 +202,16 @@ export async function createBankTransaction(
   userName: string,
   ipAddress: string
 ) {
+  if (!Number.isFinite(data.amount) || data.amount <= 0) throw new Error("Amount must be greater than zero");
+  if (!["DEPOSIT", "WITHDRAWAL", "TRANSFER"].includes(data.type)) throw new Error("Invalid bank transaction type");
+  const transactionDate = parseFinanceDate(data.transactionDate, "Transaction date");
+
   const bankAccount = await db.bankAccount.findUnique({
     where: { id: data.bankAccountId },
   });
   if (!bankAccount || bankAccount.companyId !== companyId) throw new Error("Bank account not found");
 
-  const tx = await db.$transaction(async (prisma) => {
+  const tx = await db.$transaction(async (prisma: TxClient) => {
     const transaction = await prisma.bankTransaction.create({
       data: {
         companyId,
@@ -208,7 +220,7 @@ export async function createBankTransaction(
         amount: data.amount,
         reference: data.reference,
         description: data.description,
-        transactionDate: new Date(data.transactionDate),
+        transactionDate,
         counterparty: data.counterparty,
       },
     });

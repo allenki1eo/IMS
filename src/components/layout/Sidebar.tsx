@@ -9,7 +9,8 @@ import {
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
-  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink,
+  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag,
+  Leaf,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -22,11 +23,13 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CompanySwitcher } from "@/components/shared/CompanySwitcher";
 
 interface NavItem {
   label: string;
   href?: string;
   external?: boolean;
+  exact?: boolean;
   icon: React.ReactNode;
   permission?: string;
   children?: NavItem[];
@@ -63,6 +66,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Adjustments", href: "/warehouse/adjustments", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:adjustment:read" },
           { label: "Categories", href: "/warehouse/categories", icon: <Layers className="h-4 w-4" />, permission: "warehouse:category:read" },
           { label: "UOM", href: "/warehouse/uom", icon: <Layers className="h-4 w-4" />, permission: "warehouse:uom:read" },
+          { label: "Reports", href: "/warehouse/reports", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:stock:read" },
         ],
       },
       {
@@ -125,6 +129,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Recipes", href: "/production/recipes", icon: <FlaskConical className="h-4 w-4" />, permission: "production:recipe:read" },
           { label: "Lines", href: "/production/lines", icon: <Factory className="h-4 w-4" />, permission: "production:line:read" },
           { label: "Daystore", href: "/production/daystore", icon: <Package className="h-4 w-4" />, permission: "production:batch:read" },
+          { label: "Daily Report", href: "/production/daily-report", icon: <FileText className="h-4 w-4" />, permission: "production:report:read" },
         ],
       },
       {
@@ -147,6 +152,30 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Products", href: "/dispatch/products", icon: <Package className="h-4 w-4" />, permission: "dispatch:product:read" },
           { label: "Inventory", href: "/dispatch/inventory", icon: <Boxes className="h-4 w-4" />, permission: "dispatch:lot:read" },
           { label: "Dispatch Orders", href: "/dispatch/orders", icon: <SendHorizonal className="h-4 w-4" />, permission: "dispatch:order:read" },
+        ],
+      },
+      {
+        label: "TRA Stamps",
+        icon: <Tag className="h-4 w-4" />,
+        permission: "tra-stamps:stamp:read",
+        children: [
+          { label: "Overview", href: "/tra-stamps", icon: <BarChart3 className="h-4 w-4" />, permission: "tra-stamps:stamp:read" },
+          { label: "Stamp Batches", href: "/tra-stamps/batches", icon: <Package className="h-4 w-4" />, permission: "tra-stamps:stamp:read" },
+          { label: "Activations", href: "/tra-stamps/activations", icon: <CheckCircle className="h-4 w-4" />, permission: "tra-stamps:stamp:read" },
+        ],
+      },
+      {
+        label: "Cotton",
+        icon: <Leaf className="h-4 w-4" />,
+        permission: "cotton:lot:read",
+        children: [
+          { label: "Overview", href: "/cotton", icon: <BarChart3 className="h-4 w-4" />, permission: "cotton:lot:read" },
+          { label: "Seasons", href: "/cotton/seasons", icon: <Tag className="h-4 w-4" />, permission: "cotton:season:read" },
+          { label: "Bales", href: "/cotton/bales", icon: <Package className="h-4 w-4" />, permission: "cotton:bale:read" },
+          { label: "Lots", href: "/cotton/lots", icon: <Layers className="h-4 w-4" />, permission: "cotton:lot:read" },
+          { label: "Buyers", href: "/cotton/buyers", icon: <Handshake className="h-4 w-4" />, permission: "cotton:buyer:read" },
+          { label: "Contracts", href: "/cotton/contracts", icon: <FileCheck className="h-4 w-4" />, permission: "cotton:contract:read" },
+          { label: "Invoices", href: "/cotton/invoices", icon: <Receipt className="h-4 w-4" />, permission: "cotton:invoice:read" },
         ],
       },
     ],
@@ -174,6 +203,7 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Day Book", href: "/finance/day-book", icon: <BookOpen className="h-4 w-4" />, permission: "finance:journal:read" },
           { label: "Outstanding", href: "/finance/outstanding", icon: <CreditCard className="h-4 w-4" />, permission: "finance:payment:read" },
           { label: "Reports", href: "/finance/reports", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
+          { label: "Tally Sync", href: "/finance/tally", icon: <ArrowRightLeft className="h-4 w-4" />, permission: "finance:tally:read" },
         ],
       },
       {
@@ -214,7 +244,15 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: "Audit Logs", href: "/audit-logs", icon: <ScrollText className="h-4 w-4" />, permission: "audit:log:read" },
-      { label: "Settings", href: "/settings", icon: <Settings className="h-4 w-4" />, permission: "settings:settings:read" },
+      {
+        label: "Settings",
+        icon: <Settings className="h-4 w-4" />,
+        permission: "settings:settings:read",
+        children: [
+          { label: "Configuration", href: "/settings", exact: true, icon: <Settings className="h-4 w-4" />, permission: "settings:settings:read" },
+          { label: "Manage Keys", href: "/settings/keys", icon: <Key className="h-4 w-4" />, permission: "settings:settings:update" },
+        ],
+      },
     ],
   },
 ];
@@ -289,7 +327,11 @@ function NavLink({ item, depth = 0, collapsed }: { item: NavItem; depth?: number
     );
   }
 
-  const isActive = !item.external && (item.href === "/" ? pathname === "/" : item.href ? pathname.startsWith(item.href) : false);
+  const isActive = !item.external && (
+    item.href === "/" ? pathname === "/" :
+    item.href ? (item.exact ? pathname === item.href : pathname.startsWith(item.href)) :
+    false
+  );
 
   if (item.external) {
     if (collapsed) {
@@ -500,6 +542,9 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Company indicator */}
+        {!collapsed && <CompanySwitcher />}
 
         {/* Nav */}
         <ScrollArea className="flex-1">

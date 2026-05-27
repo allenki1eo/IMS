@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
   try {
     const kpis = await getExecutiveKPIs(companyId);
     return success(kpis);
-  } catch {
+  } catch (err) {
+    console.error("[Analytics KPIs]", err);
     return badRequest("Failed to load KPIs");
   }
 }

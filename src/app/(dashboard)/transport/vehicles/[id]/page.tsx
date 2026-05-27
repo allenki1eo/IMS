@@ -35,14 +35,14 @@ interface VehicleDocument {
   id: string;
   documentType: string;
   documentNumber: string | null;
-  issuedDate: string | null;
-  expiryDate: string | null;
+  issuedAt: string | null;
+  expiresAt: string | null;
   notes: string | null;
 }
 
 interface AssignmentRow {
   id: string;
-  driver?: { employee?: { firstName: string; lastName: string } | null } | null;
+  driver?: { firstName?: string | null; lastName?: string | null; employee?: { fullName: string } | null } | null;
   assignedAt: string;
   returnedAt: string | null;
   status: string;
@@ -69,9 +69,9 @@ interface Vehicle {
   capacity: number | null;
   fuelTankCapacity: number | null;
   color: string | null;
-  chassisNo: string | null;
-  engineNo: string | null;
-  currentOdometer: number | null;
+  chassisNumber: string | null;
+  engineNumber: string | null;
+  odometer: number | null;
   insuranceExpiry: string | null;
   roadWorthyExpiry: string | null;
   nextServiceDate: string | null;
@@ -120,8 +120,8 @@ export default function VehicleDetailPage() {
   const [docForm, setDocForm] = useState({
     documentType: "",
     documentNumber: "",
-    issuedDate: "",
-    expiryDate: "",
+    issuedAt: "",
+    expiresAt: "",
     notes: "",
   });
   const [savingDoc, setSavingDoc] = useState(false);
@@ -133,7 +133,7 @@ export default function VehicleDetailPage() {
       const v = json.data ?? json;
       setVehicle(v);
       setNewStatus(v.status ?? "");
-      setOdometerValue(String(v.currentOdometer ?? ""));
+      setOdometerValue(String(v.odometer ?? ""));
     } catch {
       toast.error("Failed to load vehicle");
     } finally {
@@ -147,10 +147,10 @@ export default function VehicleDetailPage() {
     if (!odometerValue) return;
     setSavingOdo(true);
     try {
-      const res = await fetch(`/api/vehicles/${id}`, {
+      const res = await fetch(`/api/vehicles/${id}/odometer`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentOdometer: Number(odometerValue) }),
+        body: JSON.stringify({ odometer: Number(odometerValue) }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to update odometer"); return; }
@@ -167,7 +167,7 @@ export default function VehicleDetailPage() {
     if (!newStatus) return;
     setSavingStatus(true);
     try {
-      const res = await fetch(`/api/vehicles/${id}`, {
+      const res = await fetch(`/api/vehicles/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -193,8 +193,8 @@ export default function VehicleDetailPage() {
         body: JSON.stringify({
           documentType: docForm.documentType,
           documentNumber: docForm.documentNumber || undefined,
-          issuedDate: docForm.issuedDate || undefined,
-          expiryDate: docForm.expiryDate || undefined,
+          issuedAt: docForm.issuedAt || undefined,
+          expiresAt: docForm.expiresAt || undefined,
           notes: docForm.notes || undefined,
         }),
       });
@@ -202,7 +202,7 @@ export default function VehicleDetailPage() {
       if (!res.ok) { toast.error(json.error ?? "Failed to add document"); return; }
       toast.success("Document added");
       setDocDialog(false);
-      setDocForm({ documentType: "", documentNumber: "", issuedDate: "", expiryDate: "", notes: "" });
+      setDocForm({ documentType: "", documentNumber: "", issuedAt: "", expiresAt: "", notes: "" });
       fetchVehicle();
     } catch {
       toast.error("Network error");
@@ -339,11 +339,11 @@ export default function VehicleDetailPage() {
                 </div>
                 <div>
                   <dt className="text-muted-foreground font-medium">Chassis No</dt>
-                  <dd className="mt-0.5 font-mono text-xs">{vehicle.chassisNo ?? "—"}</dd>
+                  <dd className="mt-0.5 font-mono text-xs">{vehicle.chassisNumber ?? "—"}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground font-medium">Engine No</dt>
-                  <dd className="mt-0.5 font-mono text-xs">{vehicle.engineNo ?? "—"}</dd>
+                  <dd className="mt-0.5 font-mono text-xs">{vehicle.engineNumber ?? "—"}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground font-medium">Insurance Expiry</dt>
@@ -386,7 +386,7 @@ export default function VehicleDetailPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground mb-3">
                 Current reading: <span className="font-semibold text-foreground">
-                  {vehicle.currentOdometer != null ? `${vehicle.currentOdometer.toLocaleString()} km` : "Not recorded"}
+                  {vehicle.odometer != null ? `${vehicle.odometer.toLocaleString()} km` : "Not recorded"}
                 </span>
               </p>
               <PermissionGuard require="transport:vehicle:update">
@@ -446,11 +446,11 @@ export default function VehicleDetailPage() {
                         )}
                       </div>
                       <div className="text-right text-sm text-muted-foreground space-y-0.5">
-                        {doc.issuedDate && (
-                          <p>Issued: {format(new Date(doc.issuedDate), "dd MMM yyyy")}</p>
+                        {doc.issuedAt && (
+                          <p>Issued: {format(new Date(doc.issuedAt), "dd MMM yyyy")}</p>
                         )}
-                        {doc.expiryDate && (
-                          <p><ExpiryDate date={doc.expiryDate} /></p>
+                        {doc.expiresAt && (
+                          <p><ExpiryDate date={doc.expiresAt} /></p>
                         )}
                       </div>
                     </div>
@@ -495,8 +495,8 @@ export default function VehicleDetailPage() {
                     <Input
                       id="docIssued"
                       type="date"
-                      value={docForm.issuedDate}
-                      onChange={(e) => setDocForm((p) => ({ ...p, issuedDate: e.target.value }))}
+                      value={docForm.issuedAt}
+                      onChange={(e) => setDocForm((p) => ({ ...p, issuedAt: e.target.value }))}
                       disabled={savingDoc}
                     />
                   </div>
@@ -505,8 +505,8 @@ export default function VehicleDetailPage() {
                     <Input
                       id="docExpiry"
                       type="date"
-                      value={docForm.expiryDate}
-                      onChange={(e) => setDocForm((p) => ({ ...p, expiryDate: e.target.value }))}
+                      value={docForm.expiresAt}
+                      onChange={(e) => setDocForm((p) => ({ ...p, expiresAt: e.target.value }))}
                       disabled={savingDoc}
                     />
                   </div>
@@ -543,13 +543,14 @@ export default function VehicleDetailPage() {
             ) : (
               <div className="space-y-2">
                 {(vehicle.assignments ?? []).map((a) => {
-                  const emp = a.driver?.employee;
+                  const driverName = a.driver?.employee?.fullName ??
+                    ([a.driver?.firstName, a.driver?.lastName].filter(Boolean).join(" ") || "Unknown Driver");
                   return (
                     <Card key={a.id}>
                       <CardContent className="pt-4 flex justify-between items-center">
                         <div>
                           <p className="font-medium text-sm">
-                            {emp ? `${emp.firstName} ${emp.lastName}` : "Unknown Driver"}
+                            {driverName}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(a.assignedAt), "dd MMM yyyy HH:mm")}

@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { getLot, updateLot } from "@/modules/dispatch/inventory.service";
+import { db } from "@/lib/db";
+import { createAuditLog } from "@/lib/audit";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, notFound, handleError } from "@/lib/response";
+import { success, noContent, badRequest, notFound, handleError } from "@/lib/response";
 
 export async function GET(
   request: NextRequest,
@@ -56,7 +58,55 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Lot not found") return notFound(msg);
-    if (msg === "Warehouse not found") return badRequest(msg);
+    if (
+      msg === "Warehouse not found" ||
+      msg === "Unit cost cannot be negative" ||
+      msg === "Best before date is invalid" ||
+      msg === "Depleted lots cannot be marked available"
+    ) return badRequest(msg);
+    return handleError(err);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermission(request, "dispatch:lot:delete");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const { id } = await params;
+  const { ipAddress } = getRequestMeta(request);
+
+  try {
+    const existing = await db.fGLot.findFirst({ where: { id, companyId } });
+    if (!existing) return notFound("Lot not found");
+
+    if (existing.quantityOut > 0) return badRequest("Lots with dispatched quantity cannot be deleted");
+
+    const lineCount = await db.dispatchOrderLine.count({ where: { lotId: id } });
+    if (lineCount > 0) return badRequest("Lots linked to dispatch orders cannot be deleted");
+
+    await db.fGLot.delete({ where: { id } });
+
+    await createAuditLog({
+      userId: auth.user.id,
+      userName: auth.user.fullName,
+      action: "FG_LOT_DELETE",
+      module: "dispatch",
+      resource: "lot",
+      recordId: id,
+      oldValue: { lotNumber: existing.lotNumber, status: existing.status },
+      description: `Deleted FG lot: ${existing.lotNumber ?? id}`,
+      ipAddress,
+      companyId,
+    });
+
+    return noContent();
+  } catch (err) {
     return handleError(err);
   }
 }

@@ -3,6 +3,18 @@ import { db } from "@/lib/db";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
 import { success, badRequest , handleError } from "@/lib/response";
 
+interface OutstandingPaymentRow {
+  id: string;
+  paymentNumber: string;
+  reference: string | null;
+  paymentDate: Date;
+  partyName: string;
+  notes: string | null;
+  amount: number;
+  currency: string;
+  bankAccount?: { name: string; currency: string } | null;
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "finance:payment:read");
   if ("error" in auth) return auth.error;
@@ -12,11 +24,9 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") ?? "payable"; // payable | receivable
+  if (type !== "payable" && type !== "receivable") return badRequest("type must be payable or receivable");
 
-  // PAYABLE: payments where direction is outgoing (we owe) and status is PENDING
-  // RECEIVABLE: payments where direction is incoming (owed to us) and status is PENDING
-  // The Payment model has: type (INCOMING|OUTGOING), status (PENDING|COMPLETED|CANCELLED), amount, paidAmount
-  const paymentType = type === "payable" ? "OUTGOING" : "INCOMING";
+  const paymentType = type === "payable" ? "PAYMENT" : "RECEIPT";
 
   try {
     const payments = await db.payment.findMany({
@@ -32,11 +42,11 @@ export async function GET(request: NextRequest) {
     });
 
     const now = new Date();
-    const enriched = payments.map((p) => {
+    const enriched = (payments as OutstandingPaymentRow[]).map((p) => {
       const daysOverdue = Math.floor((now.getTime() - new Date(p.paymentDate).getTime()) / 86_400_000);
       return {
         id: p.id,
-        reference: p.reference,
+        reference: p.reference || p.paymentNumber,
         paymentDate: p.paymentDate,
         daysOverdue: Math.max(0, daysOverdue),
         counterparty: p.partyName,
@@ -49,8 +59,8 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const totalOutstanding = enriched.reduce((s, p) => s + p.outstanding, 0);
-    const overdueCount = enriched.filter((p) => p.daysOverdue > 0).length;
+    const totalOutstanding = enriched.reduce((sum, payment) => sum + payment.outstanding, 0);
+    const overdueCount = enriched.filter((payment) => payment.daysOverdue > 0).length;
 
     return success({ payments: enriched, totalOutstanding, overdueCount, count: enriched.length });
   } catch (err) {

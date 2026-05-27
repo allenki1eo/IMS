@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { supplierId, requestId, expectedDelivery, taxAmount, currency, notes, lines } = body;
   if (!supplierId || typeof supplierId !== "string") return badRequest("supplierId is required");
-  if (!Array.isArray(lines) || lines.length === 0) return badRequest("At least one line is required");
+  if (!requestId && (!Array.isArray(lines) || lines.length === 0)) return badRequest("At least one line is required");
 
   const { ipAddress } = getRequestMeta(request);
 
@@ -68,14 +68,14 @@ export async function POST(request: NextRequest) {
         exchangeRate: body.exchangeRate ?? null,
         baseCurrencyAmount: body.baseCurrencyAmount ?? null,
         notes: notes ?? null,
-        lines: lines.map((line: OrderLineBody) => ({
+        lines: Array.isArray(lines) ? lines.map((line: OrderLineBody) => ({
           itemId: line.itemId ?? null,
           itemCode: line.itemCode ?? null,
           description: line.description,
           quantity: Number(line.quantity),
           uom: line.uom ?? "PCS",
           unitCost: Number(line.unitCost),
-        })),
+        })) : undefined,
       },
       auth.user.id,
       auth.user.fullName,

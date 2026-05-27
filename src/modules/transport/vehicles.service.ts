@@ -8,7 +8,6 @@ function generateRef(prefix: string): string {
 }
 
 export async function listVehicles(
-  companyId: string,
   params: {
     search?: string;
     branchId?: string;
@@ -22,7 +21,6 @@ export async function listVehicles(
   const skip = (page - 1) * pageSize;
 
   const where = {
-    companyId,
     ...(branchId ? { branchId } : {}),
     ...(status ? { status } : {}),
     ...(vehicleType ? { vehicleType } : {}),
@@ -56,7 +54,7 @@ export async function listVehicles(
   return { data: vehicles, meta: { total, page, pageSize } };
 }
 
-export async function getVehicleById(id: string, companyId?: string) {
+export async function getVehicleById(id: string) {
   const vehicle = await db.vehicle.findUnique({
     where: { id },
     include: {
@@ -101,7 +99,6 @@ export async function getVehicleById(id: string, companyId?: string) {
       },
     },
   });
-  if (companyId && vehicle && vehicle.companyId !== companyId) return null;
   return vehicle;
 }
 
@@ -123,6 +120,7 @@ export async function createVehicle(params: {
   odometer?: number;
   insuranceExpiry?: Date | null;
   roadWorthyExpiry?: Date | null;
+  nextServiceDate?: Date | null;
   notes?: string | null;
   createdById: string;
   userName: string;
@@ -149,6 +147,7 @@ export async function createVehicle(params: {
       odometer: data.odometer ?? 0,
       insuranceExpiry: data.insuranceExpiry ?? null,
       roadWorthyExpiry: data.roadWorthyExpiry ?? null,
+      nextServiceDate: data.nextServiceDate ?? null,
       notes: data.notes ?? null,
       createdById,
     },

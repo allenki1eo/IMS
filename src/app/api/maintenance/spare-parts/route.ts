@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Spare part category not found") return badRequest(msg);
+    if (msg.includes("cannot be negative")) return badRequest(msg);
     if (msg.toLowerCase().includes("unique")) return badRequest("Spare part code already exists");
     return handleError(err);
   }

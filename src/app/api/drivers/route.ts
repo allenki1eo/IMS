@@ -3,6 +3,7 @@ import { listDrivers, createDriver } from "@/modules/transport/drivers.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:driver:read");
@@ -19,15 +20,23 @@ export async function GET(request: NextRequest) {
   const isAvailable =
     isAvailableParam === "true" ? true : isAvailableParam === "false" ? false : undefined;
 
+  // Only cache unfiltered list requests
+  const useCache = !search && !status && isAvailable === undefined;
+  if (useCache) {
+    const cached = cache.get<unknown[]>(cacheKey.drivers(companyId));
+    if (cached) return paginated(cached, buildMeta(cached.length, paginationParams));
+  }
+
   try {
-    const { data, meta } = await listDrivers(companyId, {
+    const { data, meta } = await listDrivers({
+      companyId,
       search,
       status,
       isAvailable,
       page: paginationParams.page,
       pageSize: paginationParams.pageSize,
     });
-
+    if (useCache) cache.set(cacheKey.drivers(companyId), data, TTL.REFERENCE);
     return paginated(data, buildMeta(meta.total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);
@@ -43,16 +52,33 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { employeeId, licenseNumber, licenseClass, licenseExpiry, medicalExpiry, notes } = body;
+  const {
+    employeeId,
+    firstName,
+    lastName,
+    phone,
+    email,
+    licenseNumber,
+    licenseClass,
+    licenseExpiry,
+    medicalExpiry,
+    notes,
+  } = body;
 
-  if (!employeeId || typeof employeeId !== "string") return badRequest("employeeId is required");
+  if (!employeeId && !firstName) {
+    return badRequest("Either employeeId or firstName is required");
+  }
 
   const { ipAddress } = getRequestMeta(request);
 
   try {
     const driver = await createDriver({
       companyId,
-      employeeId,
+      employeeId: employeeId ?? null,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
+      phone: phone ?? null,
+      email: email ?? null,
       licenseNumber: licenseNumber ?? null,
       licenseClass: licenseClass ?? null,
       licenseExpiry: licenseExpiry ? new Date(licenseExpiry) : null,
@@ -62,14 +88,15 @@ export async function POST(request: NextRequest) {
       userName: auth.user.fullName,
       ipAddress,
     });
+    cache.invalidate(cacheKey.drivers(companyId));
     return created(driver);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (
       msg === "Employee not found" ||
       msg === "Employee is not marked as a driver" ||
-      msg === "Employee does not belong to this company" ||
-      msg === "Driver record already exists for this employee"
+      msg === "Driver record already exists for this employee" ||
+      msg === "Either employeeId or firstName is required"
     ) {
       return badRequest(msg);
     }

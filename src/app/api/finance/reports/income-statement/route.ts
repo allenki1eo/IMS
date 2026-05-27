@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
   try {
     const report = await getIncomeStatement(companyId, { fromDate, toDate });
     return success(report);
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && (err.message.includes("date") || err.message.includes("before"))) {
+      return badRequest(err.message);
+    }
     return badRequest("Failed to generate income statement");
   }
 }

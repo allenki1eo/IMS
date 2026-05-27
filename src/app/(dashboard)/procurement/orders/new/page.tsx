@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -26,7 +26,21 @@ interface RequestOption {
   purpose: string;
 }
 
+interface RequestDetail extends RequestOption {
+  status: string;
+  notes?: string | null;
+  lines: Array<{
+    itemId?: string | null;
+    itemCode?: string | null;
+    description: string;
+    quantity: number;
+    uom: string;
+    estimatedUnitCost?: number | null;
+  }>;
+}
+
 interface OrderLineForm {
+  itemId: string;
   description: string;
   itemCode: string;
   quantity: string;
@@ -35,6 +49,7 @@ interface OrderLineForm {
 }
 
 const EMPTY_LINE: OrderLineForm = {
+  itemId: "",
   description: "",
   itemCode: "",
   quantity: "1",
@@ -52,16 +67,67 @@ export default function NewPurchaseOrderPage() {
     requestId: "",
     expectedDelivery: "",
     taxAmount: "",
-    currency: "USD",
+    currency: "TZS",
     notes: "",
   });
   const [lines, setLines] = useState<OrderLineForm[]>([{ ...EMPTY_LINE }]);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
+
+  const loadRequestIntoOrder = useCallback(async (requestId: string) => {
+    try {
+      const res = await fetch(`/api/procurement/requests/${requestId}`);
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "Failed to load purchase request");
+        return;
+      }
+
+      const request = json.data as RequestDetail;
+      if (request.status !== "APPROVED") {
+        toast.error("Only approved purchase requests can be converted");
+        return;
+      }
+      if (!request.lines.length) {
+        toast.error("Selected purchase request has no lines");
+        return;
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        requestId,
+        notes: prev.notes || request.notes || request.purpose || "",
+      }));
+      setLines(request.lines.map((line) => ({
+        itemId: line.itemId ?? "",
+        description: line.description,
+        itemCode: line.itemCode ?? "",
+        quantity: String(line.quantity),
+        uom: line.uom || "PCS",
+        unitCost: line.estimatedUnitCost == null ? "0" : String(line.estimatedUnitCost),
+      })));
+      toast.success(`Loaded lines from ${request.reference}`);
+    } catch {
+      toast.error("Failed to load purchase request");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (form.currency === "TZS") { setExchangeRate(null); return; }
+    setRateLoading(true);
+    fetch(`/api/finance/exchange-rates/latest?from=${form.currency}&to=TZS`)
+      .then((r) => r.json())
+      .then((d) => setExchangeRate(d.data?.rate ?? null))
+      .catch(() => setExchangeRate(null))
+      .finally(() => setRateLoading(false));
+  }, [form.currency]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const supplierId = params.get("supplierId") ?? "";
     const requestId = params.get("requestId") ?? "";
     if (supplierId || requestId) setForm((prev) => ({ ...prev, supplierId, requestId }));
+    if (requestId) void loadRequestIntoOrder(requestId);
 
     Promise.all([
       fetch("/api/procurement/suppliers?status=ACTIVE&pageSize=200").then((r) => r.json()),
@@ -72,7 +138,7 @@ export default function NewPurchaseOrderPage() {
         setRequests(requestsData.data ?? []);
       })
       .catch(() => toast.error("Failed to load form options"));
-  }, []);
+  }, [loadRequestIntoOrder]);
 
   const subtotal = useMemo(() => lines.reduce((sum, line) => {
     const qty = Number(line.quantity || 0);
@@ -117,6 +183,7 @@ export default function NewPurchaseOrderPage() {
           lines: validLines.map((line) => ({
             description: line.description.trim(),
             itemCode: line.itemCode || undefined,
+            itemId: line.itemId || undefined,
             quantity: Number(line.quantity),
             uom: line.uom || "PCS",
             unitCost: Number(line.unitCost),
@@ -163,7 +230,11 @@ export default function NewPurchaseOrderPage() {
               </div>
               <div className="space-y-1">
                 <Label>Approved Request</Label>
-                <Select value={form.requestId || "__none"} onValueChange={(v) => setForm((p) => ({ ...p, requestId: v === "__none" ? "" : v }))} disabled={submitting}>
+                <Select value={form.requestId || "__none"} onValueChange={(v) => {
+                  const requestId = v === "__none" ? "" : v;
+                  setForm((p) => ({ ...p, requestId }));
+                  if (requestId) void loadRequestIntoOrder(requestId);
+                }} disabled={submitting}>
                   <SelectTrigger><SelectValue placeholder="Optional request" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">No linked request</SelectItem>
@@ -179,14 +250,42 @@ export default function NewPurchaseOrderPage() {
                 <Input id="expectedDelivery" type="date" value={form.expectedDelivery} onChange={(e) => setForm((p) => ({ ...p, expectedDelivery: e.target.value }))} disabled={submitting} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="currency">Currency</Label>
-                <Input id="currency" value={form.currency} onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value.toUpperCase() }))} maxLength={3} disabled={submitting} />
+                <Label>Currency</Label>
+                <Select value={form.currency} onValueChange={(v) => setForm((p) => ({ ...p, currency: v }))} disabled={submitting}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TZS">TZS — Tanzanian Shilling</SelectItem>
+                    <SelectItem value="USD">USD — US Dollar</SelectItem>
+                    <SelectItem value="EUR">EUR — Euro</SelectItem>
+                    <SelectItem value="KES">KES — Kenyan Shilling</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="taxAmount">Tax Amount</Label>
                 <Input id="taxAmount" type="number" min="0" step="0.01" value={form.taxAmount} onChange={(e) => setForm((p) => ({ ...p, taxAmount: e.target.value }))} disabled={submitting} />
               </div>
             </div>
+
+            {form.currency !== "TZS" && (
+              <div className="flex items-center gap-3 rounded-md bg-blue-50 border border-blue-200 px-4 py-2 text-sm text-blue-800">
+                <span className="font-medium">Exchange Rate:</span>
+                {rateLoading ? (
+                  <span className="text-muted-foreground">Loading…</span>
+                ) : exchangeRate != null ? (
+                  <>
+                    <span>1 {form.currency} = {exchangeRate.toLocaleString()} TZS</span>
+                    {total > 0 && (
+                      <span className="ml-auto font-semibold">
+                        ≈ {(total * exchangeRate).toLocaleString(undefined, { style: "currency", currency: "TZS", maximumFractionDigits: 0 })} TZS
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-amber-700">No exchange rate found — add one in Finance › Exchange Rates</span>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <Label htmlFor="notes">Notes</Label>

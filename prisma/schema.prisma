@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider  = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─────────────────────────────────────────────
@@ -65,6 +66,7 @@ model Branch {
   userRoles   UserRole[]
   warehouses  Warehouse[]
 
+  @@index([companyId])
   @@map("branches")
 }
 
@@ -88,6 +90,8 @@ model Department {
   children   Department[] @relation("DeptHierarchy")
   employees  Employee[]
 
+  @@index([companyId])
+  @@index([branchId])
   @@map("departments")
 }
 
@@ -117,6 +121,7 @@ model User {
   sessions Session[]
   employee Employee? @relation(fields: [employeeId], references: [id])
 
+  @@index([isActive])
   @@map("users")
 }
 
@@ -201,6 +206,7 @@ model Session {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([isActive, expiresAt])
   @@map("sessions")
 }
 
@@ -240,6 +246,8 @@ model Employee {
 
   @@index([companyId])
   @@index([status])
+  @@index([branchId])
+  @@index([departmentId])
   @@map("employees")
 }
 
@@ -260,6 +268,7 @@ model Setting {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId])
   @@index([category])
   @@map("settings")
 }
@@ -447,6 +456,7 @@ model ItemCategory {
   items    Item[]
 
   @@unique([companyId, code])
+  @@index([companyId])
   @@map("item_categories")
 }
 
@@ -463,6 +473,7 @@ model UnitOfMeasure {
   items Item[]
 
   @@unique([companyId, code])
+  @@index([companyId])
   @@map("units_of_measure")
 }
 
@@ -495,6 +506,8 @@ model Item {
 
   @@unique([companyId, code])
   @@index([companyId])
+  @@index([categoryId])
+  @@index([isActive])
   @@map("items")
 }
 
@@ -512,6 +525,7 @@ model StockBalance {
 
   @@unique([itemId, warehouseId, locationId])
   @@index([warehouseId])
+  @@index([itemId])
   @@map("stock_balances")
 }
 
@@ -561,6 +575,8 @@ model GoodsReceivedNote {
 
   @@index([companyId])
   @@index([status])
+  @@index([warehouseId])
+  @@index([companyId, createdAt])
   @@map("goods_received_notes")
 }
 
@@ -601,6 +617,8 @@ model StockTransfer {
 
   @@index([companyId])
   @@index([status])
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
   @@map("stock_transfers")
 }
 
@@ -640,6 +658,7 @@ model StockAdjustment {
 
   @@index([companyId])
   @@index([status])
+  @@index([warehouseId])
   @@map("stock_adjustments")
 }
 
@@ -696,6 +715,7 @@ model Vehicle {
 
   assignments        VehicleAssignment[]
   trips              TripOrder[]
+  trailedTrips       TripOrder[] @relation("TripOrderTrailer")
   incidents          VehicleIncident[]
   documents          VehicleDocument[]
   fuelIssues         FuelIssue[]
@@ -728,7 +748,11 @@ model VehicleDocument {
 model Driver {
   id            String    @id @default(cuid())
   companyId     String
-  employeeId    String    @unique
+  employeeId    String?   @unique
+  firstName     String?
+  lastName      String?
+  phone         String?
+  email         String?
   licenseNumber String?
   licenseClass  String?
   licenseExpiry DateTime?
@@ -740,7 +764,7 @@ model Driver {
   updatedAt     DateTime  @updatedAt
   createdById   String
 
-  employee       Employee            @relation(fields: [employeeId], references: [id])
+  employee       Employee?           @relation(fields: [employeeId], references: [id])
   assignments    VehicleAssignment[]
   trips          TripOrder[]
   fuelIssues     FuelIssue[]
@@ -748,6 +772,8 @@ model Driver {
   dailyMovementEntries DailyTruckMovementEntry[]
 
   @@index([companyId])
+  @@index([status])
+  @@index([isAvailable])
   @@map("drivers")
 }
 
@@ -782,8 +808,10 @@ model TripOrder {
   scheduledArrival   DateTime?
   actualDeparture    DateTime?
   actualArrival      DateTime?
+  trailerId          String?
   cargoDescription   String?
   cargoWeight        Float?
+  currentLocation    String?
   status             String    @default("PLANNED")
   priority           String    @default("NORMAL")
   approvalRequestId  String?
@@ -793,13 +821,18 @@ model TripOrder {
   createdById        String
 
   vehicle   Vehicle?          @relation(fields: [vehicleId], references: [id])
+  trailer   Vehicle?          @relation("TripOrderTrailer", fields: [trailerId], references: [id])
   driver    Driver?           @relation(fields: [driverId], references: [id])
-  logs      TripLog[]
-  cargo     TripCargo[]
-  incidents VehicleIncident[]
+  logs                 TripLog[]
+  cargo                TripCargo[]
+  incidents            VehicleIncident[]
+  dailyMovementEntries DailyTruckMovementEntry[]
 
   @@index([companyId])
   @@index([status])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([companyId, createdAt])
   @@map("trip_orders")
 }
 
@@ -854,6 +887,7 @@ model VehicleIncident {
   vehicle Vehicle    @relation(fields: [vehicleId], references: [id])
   trip    TripOrder? @relation(fields: [tripId], references: [id])
 
+  @@index([companyId])
   @@index([vehicleId])
   @@index([status])
   @@map("vehicle_incidents")
@@ -941,6 +975,8 @@ model FuelIssue {
   @@index([companyId])
   @@index([vehicleId])
   @@index([issuedAt])
+  @@index([tankId])
+  @@index([driverId])
   @@map("fuel_issues")
 }
 
@@ -1312,10 +1348,13 @@ model ProductionBatch {
   line      ProductionLine?   @relation(fields: [lineId], references: [id])
   recipe    ProductionRecipe? @relation(fields: [recipeId], references: [id])
   materials BatchMaterial[]
+  qualityTests QualityTest[]
 
   @@index([companyId])
   @@index([status])
   @@index([lineId])
+  @@index([recipeId])
+  @@index([companyId, createdAt])
   @@map("production_batches")
 }
 
@@ -1381,10 +1420,16 @@ model QualityTest {
   reference     String    @unique
   standardId    String?
   itemId        String?
+  productionBatchId String?
   batchNumber   String?
   testType      String
+  testStage     String?
+  samplePoint   String?
   status        String    @default("PENDING")
   result        String?
+  releaseDecision String?
+  releasedAt    DateTime?
+  releasedById  String?
   requestedById String
   testedById    String?
   sampleQty     Float?
@@ -1396,13 +1441,16 @@ model QualityTest {
 
   standard        QualityStandard?     @relation(fields: [standardId], references: [id])
   item            Item?                @relation(fields: [itemId], references: [id])
+  productionBatch ProductionBatch?      @relation(fields: [productionBatchId], references: [id])
   results         QualityTestResult[]
   nonConformances NonConformance[]
 
   @@index([companyId])
   @@index([standardId])
   @@index([itemId])
+  @@index([productionBatchId])
   @@index([status])
+  @@index([testStage])
   @@map("quality_tests")
 }
 
@@ -1524,6 +1572,9 @@ model DispatchOrder {
 
   @@index([companyId])
   @@index([status])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([companyId, createdAt])
   @@map("dispatch_orders")
 }
 
@@ -1599,6 +1650,8 @@ model JournalEntry {
   @@index([companyId])
   @@index([status])
   @@index([entryDate])
+  @@index([companyId, entryDate])
+  @@index([companyId, status])
   @@map("journal_entries")
 }
 
@@ -1689,6 +1742,7 @@ model Payment {
   @@index([companyId])
   @@index([status])
   @@index([paymentDate])
+  @@index([companyId, paymentDate])
   @@map("payments")
 }
 
@@ -1887,7 +1941,284 @@ model DailyTruckMovementEntry {
   report  DailyTruckMovement @relation(fields: [reportId], references: [id], onDelete: Cascade)
   vehicle Vehicle            @relation(fields: [vehicleId], references: [id])
   driver  Driver?            @relation(fields: [driverId], references: [id])
+  trip    TripOrder?         @relation(fields: [tripId], references: [id])
 
   @@unique([reportId, vehicleId])
+  @@index([vehicleId])
+  @@index([driverId])
   @@map("daily_truck_movement_entries")
+}
+
+// ─────────────────────────────────────────────
+// TRA STAMPS
+// ─────────────────────────────────────────────
+
+model TraStampBatch {
+  id          String   @id @default(cuid())
+  companyId   String
+  batchNumber String   @unique
+  stampType   String   @default("BEER")
+  quantity    Int
+  used        Int      @default(0)
+  serialFrom  String?
+  serialTo    String?
+  receivedAt  DateTime @default(now())
+  expiresAt   DateTime?
+  status      String   @default("ACTIVE")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  activations TraStampActivation[]
+
+  @@index([companyId])
+  @@map("tra_stamp_batches")
+}
+
+model TraStampActivation {
+  id          String   @id @default(cuid())
+  companyId   String
+  batchId     String
+  reference   String   @unique
+  productName String
+  quantity    Int
+  activatedAt DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  batch TraStampBatch @relation(fields: [batchId], references: [id])
+
+  @@index([companyId])
+  @@map("tra_stamp_activations")
+}
+
+// ─── Tally Integration ────────────────────────────────────────────────────────
+
+model TallySyncLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  syncedAt    DateTime @default(now())
+  status      String   @default("SUCCESS")
+  vouchersIn  Int      @default(0)
+  ledgersIn   Int      @default(0)
+  errorMsg    String?
+  triggeredBy String   @default("agent")
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@map("tally_sync_logs")
+}
+
+model TallyVoucher {
+  id            String   @id @default(cuid())
+  companyId     String
+  tallyId       String
+  voucherType   String
+  voucherNumber String
+  date          DateTime
+  narration     String?
+  amount        Float    @default(0)
+  currency      String   @default("TZS")
+  partyName     String?
+  ledgerEntries String
+  rawXml        String?
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@unique([companyId, tallyId])
+  @@index([companyId])
+  @@index([voucherType])
+  @@index([date])
+  @@map("tally_vouchers")
+}
+
+model TallyLedger {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  group      String?
+  openingBal Float    @default(0)
+  closingBal Float    @default(0)
+  currency   String   @default("TZS")
+  syncedAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("tally_ledgers")
+}
+
+model TallyApiKey {
+  id          String    @id @default(cuid())
+  companyId   String
+  keyHash     String    @unique
+  label       String
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  createdById String
+
+  @@index([companyId])
+  @@map("tally_api_keys")
+}
+
+// ─────────────────────────────────────────────
+// COTTON MODULE
+// ─────────────────────────────────────────────
+
+model CottonSeason {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String   // e.g. "2024/2025"
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  bales  CottonBale[]
+  lots   CottonLot[]
+
+  @@index([companyId])
+  @@map("cotton_seasons")
+}
+
+model CottonBale {
+  id          String   @id @default(cuid())
+  companyId   String
+  seasonId    String
+  baleNumber  String
+  weight      Float    // net weight in kg
+  grade       String   @default("A")
+  ginnery     String?
+  lotId       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  season CottonSeason @relation(fields: [seasonId], references: [id])
+  lot    CottonLot?   @relation(fields: [lotId], references: [id])
+
+  @@unique([companyId, baleNumber])
+  @@index([companyId])
+  @@index([seasonId])
+  @@index([lotId])
+  @@map("cotton_bales")
+}
+
+model CottonLot {
+  id          String   @id @default(cuid())
+  companyId   String
+  seasonId    String
+  lotNumber   String
+  description String?
+  status      String   @default("OPEN")
+  totalWeight Float    @default(0)
+  baleCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  season        CottonSeason        @relation(fields: [seasonId], references: [id])
+  bales         CottonBale[]
+  contractLines CottonContractLine[]
+
+  @@unique([companyId, lotNumber])
+  @@index([companyId])
+  @@index([seasonId])
+  @@index([status])
+  @@map("cotton_lots")
+}
+
+model CottonBuyer {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  country     String?
+  taxNumber   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  contracts CottonContract[]
+
+  @@index([companyId])
+  @@map("cotton_buyers")
+}
+
+model CottonContract {
+  id             String   @id @default(cuid())
+  companyId      String
+  contractNumber String
+  buyerId        String
+  pricePerKg     Float
+  currency       String   @default("USD")
+  totalWeight    Float    @default(0)
+  totalAmount    Float    @default(0)
+  status         String   @default("DRAFT")
+  notes          String?
+  contractDate   DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String
+
+  buyer    CottonBuyer          @relation(fields: [buyerId], references: [id])
+  lines    CottonContractLine[]
+  invoices CottonInvoice[]
+
+  @@unique([companyId, contractNumber])
+  @@index([companyId])
+  @@index([buyerId])
+  @@index([status])
+  @@map("cotton_contracts")
+}
+
+model CottonContractLine {
+  id         String @id @default(cuid())
+  contractId String
+  lotId      String
+  weight     Float  @default(0)
+  amount     Float  @default(0)
+
+  contract CottonContract @relation(fields: [contractId], references: [id])
+  lot      CottonLot      @relation(fields: [lotId], references: [id])
+
+  @@unique([contractId, lotId])
+  @@map("cotton_contract_lines")
+}
+
+model CottonInvoice {
+  id            String    @id @default(cuid())
+  companyId     String
+  invoiceNumber String
+  contractId    String
+  buyerId       String
+  totalWeight   Float     @default(0)
+  pricePerKg    Float
+  currency      String    @default("USD")
+  totalAmount   Float     @default(0)
+  status        String    @default("DRAFT")
+  issuedAt      DateTime?
+  dueDate       DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String
+
+  contract CottonContract @relation(fields: [contractId], references: [id])
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId])
+  @@index([contractId])
+  @@index([status])
+  @@map("cotton_invoices")
 }

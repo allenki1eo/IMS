@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -12,6 +13,7 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 import { formatDate, formatMoney, ORDER_STATUSES } from "../_components/procurement-ui";
 
 interface OrderRow {
@@ -30,35 +32,31 @@ interface OrderRow {
 const PAGE_SIZE = 20;
 
 export default function PurchaseOrdersPage() {
-  const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const fromQuery = params.get("status");
-    if (fromQuery) setStatus(fromQuery);
-  }, []);
 
   useEffect(() => { setPage(1); }, [debounced, status]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/procurement/orders?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setOrders(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load purchase orders"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  const url = `/api/procurement/orders?${params}`;
+  const { data: orders, total, loading, mutate } = usePagedData<OrderRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/procurement/orders/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Purchase order deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete purchase order");
+    }
+  }
 
   const columns = [
     {
@@ -78,9 +76,14 @@ export default function PurchaseOrdersPage() {
       key: "actions",
       header: "Actions",
       cell: (row: OrderRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/procurement/orders/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/procurement/orders/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -121,6 +124,7 @@ export default function PurchaseOrdersPage() {
         emptyTitle="No purchase orders found"
         emptyDescription="Create an order from an approved request or directly for a supplier."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

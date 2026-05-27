@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { format } from "date-fns";
@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingState";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface AssignmentRow {
   id: string;
@@ -39,9 +41,10 @@ interface AssignmentRow {
     model: string;
   } | null;
   driver?: {
+    firstName?: string | null;
+    lastName?: string | null;
     employee?: {
-      firstName: string;
-      lastName: string;
+      fullName: string;
     } | null;
   } | null;
 }
@@ -55,20 +58,20 @@ interface VehicleOption {
 
 interface DriverOption {
   id: string;
+  firstName?: string | null;
+  lastName?: string | null;
   employee?: {
-    firstName: string;
-    lastName: string;
+    fullName: string;
   } | null;
 }
 
 const PAGE_SIZE = 20;
 
 export default function AssignmentsPage() {
-  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -81,24 +84,12 @@ export default function AssignmentsPage() {
   const [returningId, setReturningId] = useState<string | null>(null);
   const [returning, setReturning] = useState(false);
 
-  const fetchAssignments = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-    try {
-      const res = await fetch(`/api/vehicle-assignments?${params}`);
-      const json = await res.json();
-      setAssignments(json.data ?? []);
-      setTotal(json.meta?.total ?? 0);
-    } catch {
-      toast.error("Failed to load assignments");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter]);
-
-  useEffect(() => { fetchAssignments(); }, [fetchAssignments]);
   useEffect(() => { setPage(1); }, [statusFilter]);
+
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  const url = `/api/vehicle-assignments?${params}`;
+  const { data: assignments, total, loading, mutate } = usePagedData<AssignmentRow>(url);
 
   async function openCreateDialog() {
     setAssignForm({ vehicleId: "", driverId: "", notes: "" });
@@ -134,11 +125,31 @@ export default function AssignmentsPage() {
       if (!res.ok) { toast.error(json.error ?? "Failed to create assignment"); return; }
       toast.success("Vehicle assigned successfully");
       setCreateOpen(false);
-      fetchAssignments();
+      mutate();
     } catch {
       toast.error("Network error");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleBulkAction(action: "return" | "cancel") {
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/vehicle-assignments/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, action }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Bulk action failed"); return; }
+      toast.success(`${json.data?.updated ?? selectedIds.length} assignment(s) ${action === "return" ? "returned" : "cancelled"}`);
+      setSelectedIds([]);
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBulkLoading(false);
     }
   }
 
@@ -148,12 +159,13 @@ export default function AssignmentsPage() {
       const res = await fetch(`/api/vehicle-assignments/${assignmentId}/return`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to return vehicle"); return; }
       toast.success("Vehicle returned");
       setReturningId(null);
-      fetchAssignments();
+      mutate();
     } catch {
       toast.error("Network error");
     } finally {
@@ -178,10 +190,11 @@ export default function AssignmentsPage() {
       key: "driver",
       header: "Driver",
       cell: (row: AssignmentRow) => {
-        const emp = row.driver?.employee;
+        const name = row.driver?.employee?.fullName ??
+          ([row.driver?.firstName, row.driver?.lastName].filter(Boolean).join(" ") || "—");
         return (
           <span className="text-sm">
-            {emp ? `${emp.firstName} ${emp.lastName}` : "—"}
+            {name}
           </span>
         );
       },
@@ -258,6 +271,15 @@ export default function AssignmentsPage() {
         </Select>
       </div>
 
+      <BulkActionBar
+        selected={selectedIds}
+        onClear={() => setSelectedIds([])}
+        actions={[
+          { label: "Return Selected", onClick: () => handleBulkAction("return"), loading: bulkLoading },
+          { label: "Cancel Selected", variant: "destructive", onClick: () => handleBulkAction("cancel"), loading: bulkLoading },
+        ]}
+      />
+
       <DataTable
         columns={columns}
         data={assignments}
@@ -266,6 +288,8 @@ export default function AssignmentsPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
+        selectable
+        onSelectionChange={setSelectedIds}
         emptyTitle="No assignments found"
         emptyDescription="Assign a vehicle to a driver to get started."
       />
@@ -298,10 +322,11 @@ export default function AssignmentsPage() {
                 <SelectContent>
                   <SelectItem value="__none">Select driver</SelectItem>
                   {availableDrivers.map((d) => {
-                    const emp = d.employee;
+                    const name = d.employee?.fullName ??
+                      ([d.firstName, d.lastName].filter(Boolean).join(" ") || d.id);
                     return (
                       <SelectItem key={d.id} value={d.id}>
-                        {emp ? `${emp.firstName} ${emp.lastName}` : d.id}
+                        {name}
                       </SelectItem>
                     );
                   })}

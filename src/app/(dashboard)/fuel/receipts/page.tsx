@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -19,13 +20,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface ReceiptRow {
   id: string;
   reference: string;
   tank?: { id: string; name: string } | null;
   supplierName: string | null;
-  quantity: number;
+  quantityLiters: number;
   pricePerLiter: number | null;
   totalCost: number | null;
   status: string;
@@ -42,13 +45,12 @@ const STATUS_FILTERS = [
 ];
 
 export default function ReceiptsPage() {
-  const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const currency = useCurrency();
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [tankFilter, setTankFilter] = useState("ALL");
   const [tanks, setTanks] = useState<TankOption[]>([]);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const PAGE_SIZE = 20;
@@ -62,21 +64,26 @@ export default function ReceiptsPage() {
 
   useEffect(() => { setPage(1); }, [debounced, statusFilter, tankFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-    if (tankFilter !== "ALL") params.set("tankId", tankFilter);
-    fetch(`/api/fuel-receipts?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setReceipts(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load receipts"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, statusFilter, tankFilter]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (statusFilter !== "ALL") params.set("status", statusFilter);
+  if (tankFilter !== "ALL") params.set("tankId", tankFilter);
+  const url = `/api/fuel-receipts?${params}`;
+
+  const { data: receipts, total, loading, mutate } = usePagedData<ReceiptRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/fuel-receipts/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Receipt deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete receipt");
+    }
+  }
 
   const columns = [
     {
@@ -103,14 +110,14 @@ export default function ReceiptsPage() {
     {
       key: "quantity",
       header: "Qty (L)",
-      cell: (row: ReceiptRow) => <span>{row.quantity.toLocaleString()}</span>,
+      cell: (row: ReceiptRow) => <span>{row.quantityLiters.toLocaleString()}</span>,
     },
     {
       key: "pricePerLiter",
       header: "Price/L",
       cell: (row: ReceiptRow) => (
         <span className="text-muted-foreground">
-          {row.pricePerLiter != null ? `$${row.pricePerLiter.toFixed(3)}` : "—"}
+          {row.pricePerLiter != null ? `${currency} ${row.pricePerLiter.toFixed(3)}` : "—"}
         </span>
       ),
     },
@@ -119,7 +126,7 @@ export default function ReceiptsPage() {
       header: "Total Cost",
       cell: (row: ReceiptRow) => (
         <span className="font-medium">
-          {row.totalCost != null ? `$${row.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+          {row.totalCost != null ? `${currency} ${row.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
         </span>
       ),
     },
@@ -141,9 +148,14 @@ export default function ReceiptsPage() {
       key: "actions",
       header: "Actions",
       cell: (row: ReceiptRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/fuel/receipts/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/fuel/receipts/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -206,6 +218,7 @@ export default function ReceiptsPage() {
         emptyTitle="No receipts found"
         emptyDescription="Record your first fuel delivery to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

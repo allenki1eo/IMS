@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface LotRow {
   id: string;
@@ -39,32 +41,31 @@ const STATUS_FILTERS = [
   { label: "Recalled", value: "RECALLED" },
 ];
 
+const PAGE_SIZE = 20;
+
 export default function FgInventoryPage() {
-  const [lots, setLots] = useState<LotRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
-  const PAGE_SIZE = 20;
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  const { data: lots, total, loading, mutate } = usePagedData<LotRow>(`/api/dispatch/inventory?${params}`);
 
-  useEffect(() => { setPage(1); }, [debounced, status]);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/dispatch/inventory?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setLots(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load inventory"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/dispatch/inventory/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Lot deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete lot");
+    }
+  }
 
   const columns = [
     {
@@ -123,9 +124,14 @@ export default function FgInventoryPage() {
       key: "actions",
       header: "Actions",
       cell: (row: LotRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/dispatch/inventory/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dispatch/inventory/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -150,11 +156,11 @@ export default function FgInventoryPage() {
       <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={(v) => { setSearch(v); setPage(1); }}
           placeholder="Search by product name or code..."
           className="w-full sm:max-w-xs"
         />
-        <Select value={status} onValueChange={setStatus}>
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
@@ -177,6 +183,7 @@ export default function FgInventoryPage() {
         emptyTitle="No FG lots found"
         emptyDescription="Receive finished goods stock to get started."
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

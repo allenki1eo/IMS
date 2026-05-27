@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -13,6 +14,7 @@ import { ImportModal } from "@/components/shared/ImportModal";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
+import { usePagedData } from "@/hooks/usePagedData";
 
 interface SupplierRow {
   id: string;
@@ -28,30 +30,33 @@ interface SupplierRow {
 const PAGE_SIZE = 20;
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("ALL");
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, status]);
 
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (debounced) params.set("search", debounced);
-    if (status !== "ALL") params.set("status", status);
-    fetch(`/api/procurement/suppliers?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setSuppliers(d.data ?? []);
-        setTotal(d.meta?.total ?? 0);
-      })
-      .catch(() => toast.error("Failed to load suppliers"))
-      .finally(() => setLoading(false));
-  }, [page, debounced, status]);
+  const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (debounced) params.set("search", debounced);
+  if (status !== "ALL") params.set("status", status);
+  const url = `/api/procurement/suppliers?${params}`;
+
+  const { data: suppliers, total, loading, mutate } = usePagedData<SupplierRow>(url);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/procurement/suppliers/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Supplier deleted");
+      setDeleteId(null);
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message ?? "Failed to delete supplier");
+    }
+  }
 
   const columns = [
     {
@@ -73,9 +78,14 @@ export default function SuppliersPage() {
       key: "actions",
       header: "Actions",
       cell: (row: SupplierRow) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/procurement/suppliers/${row.id}`}>View</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/procurement/suppliers/${row.id}`}>View</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -129,7 +139,7 @@ export default function SuppliersPage() {
         onClose={() => setImportOpen(false)}
         onSuccess={() => {
           setImportOpen(false);
-          setPage(1);
+          mutate();
         }}
         title="Import Suppliers"
         apiEndpoint="/api/procurement/suppliers/import"
@@ -141,6 +151,7 @@ export default function SuppliersPage() {
           "email, phone, address, taxNumber are all optional",
         ]}
       />
+      <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );
 }

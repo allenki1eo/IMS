@@ -35,7 +35,7 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Work order not found") return notFound(msg);
     if (msg === "Spare part not found") return badRequest(msg);
-    if (msg.includes("Insufficient stock")) return badRequest(msg);
+    if (msg.includes("Insufficient stock") || msg.includes("must be greater") || msg.includes("cannot be negative") || msg.includes("Items can only")) return badRequest(msg);
     return handleError(err);
   }
 }

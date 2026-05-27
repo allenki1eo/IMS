@@ -1,15 +1,12 @@
 import { NextRequest } from "next/server";
 import { listAssignments, createAssignment } from "@/modules/transport/assignments.service";
-import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
+import { requirePermission, getRequestMeta } from "@/lib/api-helpers";
 import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:assignment:read");
   if ("error" in auth) return auth.error;
-
-  const companyId = await getCompanyId(request);
-  if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
   const paginationParams = parsePagination(searchParams);
@@ -18,14 +15,13 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status") ?? undefined;
 
   try {
-    const { data, meta } = await listAssignments(companyId, {
+    const { data, meta } = await listAssignments({
       vehicleId,
       driverId,
       status,
       page: paginationParams.page,
       pageSize: paginationParams.pageSize,
     });
-
     return paginated(data, buildMeta(meta.total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);

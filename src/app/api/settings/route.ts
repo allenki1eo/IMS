@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
-import { getSettings, bulkUpdateSettings } from "@/modules/settings/settings.service";
+import { getSettings, bulkUpdateSettings, createSetting } from "@/modules/settings/settings.service";
 import { requireAuth, requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest, handleError } from "@/lib/response";
+import { success, created, badRequest, handleError } from "@/lib/response";
 import { z } from "zod";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 const bulkUpdateSchema = z.array(
   z.object({
@@ -10,6 +11,14 @@ const bulkUpdateSchema = z.array(
     value: z.string(),
   })
 );
+
+const createSchema = z.object({
+  key: z.string().min(1, "Key is required").regex(/^[a-z0-9_]+$/, "Key must be lowercase letters, numbers, and underscores only"),
+  value: z.string(),
+  category: z.string().min(1, "Category is required"),
+  description: z.string().optional(),
+  isPublic: z.boolean().optional(),
+});
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -19,15 +28,51 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const { searchParams } = new URL(request.url);
+  const category = searchParams.get("category") ?? undefined;
+
+  // Only cache unfiltered (no category) requests
+  if (!category) {
+    const cached = cache.get<unknown>(cacheKey.settings(companyId));
+    if (cached) return success(cached);
+  }
+
   try {
     const settings = await getSettings({
       companyId,
-      category: searchParams.get("category") ?? undefined,
+      category,
     });
-
+    if (!category) cache.set(cacheKey.settings(companyId), settings, TTL.SETTINGS);
     return success(settings);
   } catch (err) {
-    console.error("[API Error]", err);
+    return handleError(err);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await requirePermission(request, "settings:settings:update");
+  if ("error" in auth) return auth.error;
+
+  const companyId = await getCompanyId(request);
+  if (!companyId) return badRequest("Company not configured");
+
+  const body = await request.json();
+  const parsed = createSchema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.errors[0].message);
+
+  const { ipAddress, userAgent } = getRequestMeta(request);
+
+  try {
+    const setting = await createSetting({
+      ...parsed.data,
+      companyId,
+      updatedById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    cache.invalidate(cacheKey.settings(companyId));
+    return created(setting);
+  } catch (err) {
     return handleError(err);
   }
 }
@@ -54,9 +99,9 @@ export async function PUT(request: NextRequest) {
       ipAddress,
       userAgent,
     });
+    cache.invalidate(cacheKey.settings(companyId));
     return success(results);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed";
     return handleError(err);
   }
 }

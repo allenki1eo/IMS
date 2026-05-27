@@ -5,21 +5,20 @@ import { toast } from "sonner";
 import Link from "next/link";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell,
+  LineChart, Line,
 } from "recharts";
 import {
   Users, Warehouse, Truck, Fuel, Wrench, ShoppingCart,
-  Factory, FlaskConical, SendHorizonal, Landmark, AlertTriangle,
-  TrendingUp, TrendingDown,
+  Factory, FlaskConical, SendHorizonal, Landmark,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { Button } from "@/components/ui/button";
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"];
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function AnalyticsPage() {
+  const currency = useCurrency();
   const [kpis, setKpis] = useState<any>(null);
   const [trends, setTrends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +55,7 @@ export default function AnalyticsPage() {
     { label: "Active Batches", value: kpis?.activeBatches || 0, icon: Factory, href: "/production/batches" },
     { label: "Open NCRs", value: kpis?.openNCRs || 0, icon: FlaskConical, href: "/qc/ncr" },
     { label: "Pending Dispatch", value: kpis?.pendingDispatchOrders || 0, icon: SendHorizonal, href: "/dispatch/orders" },
-    { label: "Bank Balance", value: `$${(kpis?.totalBankBalance || 0).toLocaleString()}`, icon: Landmark, href: "/finance/bank-accounts" },
+    { label: "Bank Balance", value: `${currency} ${(kpis?.totalBankBalance || 0).toLocaleString()}`, icon: Landmark, href: "/finance/bank-accounts" },
   ];
 
   return (

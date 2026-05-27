@@ -1,6 +1,28 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+interface TestWithResult {
+  result?: string | null;
+  [key: string]: unknown;
+}
+
+interface StandardParameterRow {
+  name: string;
+  unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  targetValue?: number | null;
+  sortOrder?: number | null;
+}
+
+interface TestResultRow {
+  id: string;
+  parameterName: string;
+  minValue?: number | null;
+  maxValue?: number | null;
+  isPassed?: boolean | null;
+}
+
 function generateRef(prefix: string): string {
   const d = new Date();
   const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
@@ -12,21 +34,34 @@ export async function listTests(
   params: {
     standardId?: string;
     itemId?: string;
+    productionBatchId?: string;
     testType?: string;
+    testStage?: string;
     status?: string;
+    search?: string;
     page: number;
     pageSize: number;
   }
 ) {
-  const { standardId, itemId, testType, status, page, pageSize } = params;
+  const { standardId, itemId, productionBatchId, testType, testStage, status, search, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
     companyId,
     ...(standardId ? { standardId } : {}),
     ...(itemId ? { itemId } : {}),
+    ...(productionBatchId ? { productionBatchId } : {}),
     ...(testType ? { testType } : {}),
+    ...(testStage ? { testStage } : {}),
     ...(status ? { status } : {}),
+    ...(search
+      ? {
+          OR: [
+            { reference: { contains: search } },
+            { batchNumber: { contains: search } },
+          ],
+        }
+      : {}),
   };
 
   const [tests, total] = await Promise.all([
@@ -38,13 +73,17 @@ export async function listTests(
       include: {
         standard: { select: { id: true, code: true, name: true } },
         item: { select: { id: true, code: true, name: true } },
+        productionBatch: { select: { id: true, reference: true, productName: true, status: true } },
         _count: { select: { results: true, nonConformances: true } },
       },
     }),
     db.qualityTest.count({ where }),
   ]);
 
-  return { data: tests, meta: { total, page, pageSize } };
+  return {
+    data: (tests as TestWithResult[]).map((test) => ({ ...test, overallResult: test.result })),
+    meta: { total, page, pageSize },
+  };
 }
 
 export async function getTest(companyId: string, id: string) {
@@ -53,6 +92,7 @@ export async function getTest(companyId: string, id: string) {
     include: {
       standard: { select: { id: true, code: true, name: true } },
       item: { select: { id: true, code: true, name: true } },
+      productionBatch: { select: { id: true, reference: true, productName: true, status: true } },
       results: { orderBy: { id: "asc" } },
       nonConformances: {
         select: {
@@ -69,7 +109,7 @@ export async function getTest(companyId: string, id: string) {
 
   if (!test) return null;
   if (test.companyId !== companyId) return null;
-  return test;
+  return { ...test, overallResult: test.result };
 }
 
 export async function createTest(
@@ -77,8 +117,11 @@ export async function createTest(
   data: {
     standardId?: string | null;
     itemId?: string | null;
+    productionBatchId?: string | null;
     batchNumber?: string | null;
     testType: string;
+    testStage?: string | null;
+    samplePoint?: string | null;
     notes?: string | null;
     sampleQty?: number | null;
     sampleUnit?: string | null;
@@ -99,6 +142,14 @@ export async function createTest(
     if (item.companyId !== companyId) throw new Error("Item not found");
   }
 
+  let batchNumber = data.batchNumber ?? null;
+  if (data.productionBatchId) {
+    const batch = await db.productionBatch.findUnique({ where: { id: data.productionBatchId } });
+    if (!batch) throw new Error("Production batch not found");
+    if (batch.companyId !== companyId) throw new Error("Production batch not found");
+    batchNumber = batch.reference;
+  }
+
   const reference = generateRef("QT");
 
   const test = await db.qualityTest.create({
@@ -107,8 +158,11 @@ export async function createTest(
       reference,
       standardId: data.standardId ?? null,
       itemId: data.itemId ?? null,
-      batchNumber: data.batchNumber ?? null,
+      productionBatchId: data.productionBatchId ?? null,
+      batchNumber,
       testType: data.testType,
+      testStage: data.testStage ?? null,
+      samplePoint: data.samplePoint ?? null,
       status: "PENDING",
       requestedById: userId,
       sampleQty: data.sampleQty ?? null,
@@ -124,9 +178,10 @@ export async function createTest(
       orderBy: { sortOrder: "asc" },
     });
 
-    if (parameters.length > 0) {
+    const parameterRows = parameters as StandardParameterRow[];
+    if (parameterRows.length > 0) {
       await db.qualityTestResult.createMany({
-        data: parameters.map((p) => ({
+        data: parameterRows.map((p) => ({
           testId: test.id,
           parameterName: p.name,
           unit: p.unit,
@@ -148,8 +203,11 @@ export async function createTest(
     newValue: {
       reference,
       testType: data.testType,
+      testStage: data.testStage,
+      samplePoint: data.samplePoint,
       standardId: data.standardId,
       itemId: data.itemId,
+      productionBatchId: data.productionBatchId,
     },
     description: `Created quality test: ${reference}`,
     ipAddress,
@@ -211,7 +269,7 @@ export async function recordResults(
 
   // Update each result row
   for (const r of results) {
-    const resultRow = existing.results.find((row) => row.id === r.resultId);
+    const resultRow = (existing.results as TestResultRow[]).find((row) => row.id === r.resultId);
     if (!resultRow) continue;
 
     // Compute isPassed if actualValue is provided and numeric bounds are set
@@ -254,6 +312,7 @@ export async function recordResults(
     include: {
       standard: { select: { id: true, code: true, name: true } },
       item: { select: { id: true, code: true, name: true } },
+      productionBatch: { select: { id: true, reference: true, productName: true, status: true } },
       results: { orderBy: { id: "asc" } },
     },
   });
@@ -289,12 +348,13 @@ export async function completeTest(
       const params = await db.qualityStandardParameter.findMany({
         where: { standardId: existing.standardId, isRequired: true },
       });
-      requiredParamNames = new Set(params.map((p) => p.name));
+      requiredParamNames = new Set((params as StandardParameterRow[]).map((p) => p.name));
     }
 
+    const typedResultRows = resultRows as TestResultRow[];
     const requiredResults = requiredParamNames.size > 0
-      ? resultRows.filter((r) => requiredParamNames.has(r.parameterName))
-      : resultRows;
+      ? typedResultRows.filter((r) => requiredParamNames.has(r.parameterName))
+      : typedResultRows;
 
     const anyRequiredFailed = requiredResults.some((r) => r.isPassed === false);
     const allRequiredPassed = requiredResults.every((r) => r.isPassed === true);
@@ -362,6 +422,50 @@ export async function cancelTest(
     oldValue: { status: "PENDING" },
     newValue: { status: "CANCELLED" },
     description: `Cancelled quality test: ${existing.reference}`,
+    ipAddress,
+    companyId,
+  });
+
+  return updated;
+}
+
+export async function setReleaseDecision(
+  companyId: string,
+  id: string,
+  decision: string,
+  notes: string | null,
+  userId: string,
+  userName: string,
+  ipAddress?: string
+) {
+  const existing = await db.qualityTest.findUnique({ where: { id } });
+  if (!existing) throw new Error("Quality test not found");
+  if (existing.companyId !== companyId) throw new Error("Quality test not found");
+  if (existing.status !== "COMPLETED") throw new Error("Only COMPLETED tests can receive release decisions");
+
+  const allowed = new Set(["HOLD", "RELEASED", "CONDITIONAL_RELEASE", "REJECTED"]);
+  if (!allowed.has(decision)) throw new Error("Invalid release decision");
+
+  const updated = await db.qualityTest.update({
+    where: { id },
+    data: {
+      releaseDecision: decision,
+      releasedAt: new Date(),
+      releasedById: userId,
+      ...(notes !== undefined ? { notes } : {}),
+    },
+  });
+
+  await createAuditLog({
+    userId,
+    userName,
+    action: "QC_RELEASE_DECISION",
+    module: "qc",
+    resource: "test",
+    recordId: id,
+    oldValue: { releaseDecision: existing.releaseDecision },
+    newValue: { releaseDecision: decision },
+    description: `Set QC release decision for ${existing.reference}: ${decision}`,
     ipAddress,
     companyId,
   });
