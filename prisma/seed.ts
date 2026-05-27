@@ -627,7 +627,7 @@ async function main() {
   const passwordHash = await bcrypt.hash("Admin@1234", 12);
   const adminUser = await db.user.upsert({
     where: { username: "admin" },
-    update: {},
+    update: { companyId: company.id },
     create: {
       username: "admin",
       email: "admin@company.local",
@@ -635,6 +635,7 @@ async function main() {
       passwordHash,
       isSystemUser: true,
       mustChangePassword: true,
+      companyId: company.id,
     },
   });
 

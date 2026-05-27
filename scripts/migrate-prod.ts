@@ -282,6 +282,14 @@ async function run() {
     )`
   );
 
+  // Users: companyId column (Company Isolation)
+  await addColumnIfMissing(
+    "users",
+    "companyId",
+    "TEXT",
+    "Add companyId column to users"
+  );
+
   // Daily truck movement entries (vehicle usage lines)
   await createTableIfMissing(
     "daily_truck_movement_entries",

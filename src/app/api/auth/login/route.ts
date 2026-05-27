@@ -38,9 +38,18 @@ export async function POST(request: NextRequest) {
       expires: result.expiresAt,
     });
 
-    const company = await db.company.findFirst({ select: { id: true } });
-    if (company) {
-      cookieStore.set("erp_company_id", company.id, {
+    // Resolve the company for this user: prefer user's assigned companyId,
+    // fall back to the first company in the database (for system/admin users).
+    const loggedInUser = await db.user.findUnique({
+      where: { id: result.userId },
+      select: { companyId: true },
+    });
+    const companyId =
+      loggedInUser?.companyId ??
+      (await db.company.findFirst({ select: { id: true } }))?.id ??
+      null;
+    if (companyId) {
+      cookieStore.set("erp_company_id", companyId, {
         ...cookieOptions,
         maxAge: 60 * 60 * 24 * 365,
       });

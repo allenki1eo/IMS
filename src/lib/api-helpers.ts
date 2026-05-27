@@ -58,12 +58,49 @@ export function getRequestMeta(request: NextRequest) {
 }
 
 export async function getCompanyId(request?: NextRequest): Promise<string | null> {
-  if (request) {
-    const companyId = request.headers.get("x-company-id");
-    if (companyId) return companyId;
-  }
   try {
     const { db } = await import("./db");
+
+    if (request) {
+      const userId = request.headers.get("x-user-id");
+
+      if (userId) {
+        // Look up the user's assigned company
+        const user = await db.user.findUnique({
+          where: { id: userId },
+          select: { companyId: true, isSystemUser: true },
+        });
+
+        if (user) {
+          // System users and super admins can switch company via cookie
+          if (user.isSystemUser) {
+            const cookieCompanyId = request.headers.get("x-company-id");
+            if (cookieCompanyId) return cookieCompanyId;
+          }
+
+          // Check for company:switch permission (allows cookie override)
+          const authUser = await getAuthUser(userId);
+          if (authUser) {
+            const canSwitch =
+              authUser.permissions.includes("*") ||
+              authUser.permissions.includes("company:company:switch");
+            if (canSwitch) {
+              const cookieCompanyId = request.headers.get("x-company-id");
+              if (cookieCompanyId) return cookieCompanyId;
+            }
+          }
+
+          // Enforce user's assigned company
+          if (user.companyId) return user.companyId;
+        }
+      }
+
+      // Fall back to cookie header (no authenticated user context)
+      const cookieCompanyId = request.headers.get("x-company-id");
+      if (cookieCompanyId) return cookieCompanyId;
+    }
+
+    // Last resort: first company in the database
     const company = await db.company.findFirst({ select: { id: true } });
     return company?.id ?? null;
   } catch {

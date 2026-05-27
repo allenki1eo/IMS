@@ -19,6 +19,7 @@ export interface AuthUser {
   avatarPath: string | null;
   isSystemUser: boolean;
   mustChangePassword: boolean;
+  companyId: string | null;
   roles: string[];
   permissions: string[];
   companies?: CompanySummary[];
