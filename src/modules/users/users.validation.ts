@@ -15,6 +15,7 @@ export const createUserSchema = z.object({
     .regex(/[A-Z]/, "Must contain at least one uppercase letter")
     .regex(/[0-9]/, "Must contain at least one number"),
   employeeId: z.string().optional(),
+  companyId: z.string().optional().nullable(),
   mustChangePassword: z.boolean().optional().default(true),
 });
 
@@ -23,6 +24,7 @@ export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional().nullable(),
   employeeId: z.string().optional().nullable(),
+  companyId: z.string().optional().nullable(),
 });
 
 export const assignRoleSchema = z.object({

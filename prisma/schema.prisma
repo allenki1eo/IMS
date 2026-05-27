@@ -40,6 +40,7 @@ model Company {
   salesOrders SalesOrder[]
   salesKpis   SalesKPI[]
   dailyMovements DailyTruckMovement[]
+  users       User[]
 
   @@map("companies")
 }
@@ -102,6 +103,7 @@ model Department {
 model User {
   id                 String    @id @default(cuid())
   employeeId         String?
+  companyId          String?
   username           String    @unique
   email              String    @unique
   passwordHash       String
@@ -120,8 +122,10 @@ model User {
   roles    UserRole[]
   sessions Session[]
   employee Employee? @relation(fields: [employeeId], references: [id])
+  company  Company?  @relation(fields: [companyId], references: [id])
 
   @@index([isActive])
+  @@index([companyId])
   @@map("users")
 }
 

@@ -73,6 +73,7 @@ export async function getUserById(id: string) {
       createdAt: true,
       updatedAt: true,
       employeeId: true,
+      companyId: true,
       roles: {
         include: {
           role: { select: { id: true, name: true, code: true } },
@@ -93,6 +94,7 @@ export async function createUser(params: {
   phone?: string | null;
   password: string;
   employeeId?: string;
+  companyId?: string | null;
   mustChangePassword?: boolean;
   createdById: string;
   userName: string;
@@ -106,6 +108,7 @@ export async function createUser(params: {
     phone,
     password,
     employeeId,
+    companyId,
     mustChangePassword = true,
     createdById,
     userName,
@@ -123,6 +126,7 @@ export async function createUser(params: {
       phone,
       passwordHash,
       employeeId,
+      companyId: companyId ?? null,
       mustChangePassword,
       createdById,
     },
@@ -147,7 +151,7 @@ export async function createUser(params: {
 
 export async function updateUser(params: {
   id: string;
-  data: { fullName?: string; email?: string; phone?: string | null; employeeId?: string | null };
+  data: { fullName?: string; email?: string; phone?: string | null; employeeId?: string | null; companyId?: string | null };
   updatedById: string;
   userName: string;
   ipAddress?: string;

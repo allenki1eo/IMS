@@ -120,6 +120,7 @@ export async function getAuthUser(userId: string): Promise<AuthUser | null> {
         },
       },
     },
+    // companyId is selected via the top-level model fields
   });
 
   if (!user) return null;
@@ -149,6 +150,7 @@ export async function getAuthUser(userId: string): Promise<AuthUser | null> {
     avatarPath: user.avatarPath,
     isSystemUser: user.isSystemUser,
     mustChangePassword: user.mustChangePassword,
+    companyId: user.companyId ?? null,
     roles,
     permissions: Array.from(permissions),
   };
