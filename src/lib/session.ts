@@ -101,34 +101,51 @@ export async function revokeAllUserSessions(userId: string, reason = "force_logo
   for (const s of sessions) cache.invalidateExact(cacheKey.session(s.tokenHash));
 }
 
-export async function getAuthUser(userId: string): Promise<AuthUser | null> {
-  const user = await db.user.findUnique({
+async function loadUserWithRoles(userId: string) {
+  return db.user.findUnique({
     where: { id: userId, isActive: true },
     include: {
       roles: {
-        where: {
-          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-        },
-        include: {
-          role: {
-            include: {
-              permissions: {
-                include: { permission: true },
-              },
-            },
-          },
-        },
+        where: { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+        include: { role: { include: { permissions: { include: { permission: true } } } } },
       },
     },
-    // companyId is selected via the top-level model fields
   });
+}
+
+export async function getAuthUser(userId: string): Promise<AuthUser | null> {
+  let user: Awaited<ReturnType<typeof loadUserWithRoles>> = null;
+
+  try {
+    user = await loadUserWithRoles(userId);
+  } catch (err: any) {
+    // If companyId column hasn't been migrated yet, retry using only a select
+    // that excludes it so login still works before the migration runs.
+    if (/no such column.*companyId|companyId.*does not exist/i.test(err?.message ?? "")) {
+      // Column not yet migrated — fetch without companyId, return null for it
+      user = await db.user.findUnique({
+        where: { id: userId, isActive: true },
+        select: {
+          id: true, username: true, email: true, fullName: true,
+          avatarPath: true, isSystemUser: true, mustChangePassword: true,
+          isActive: true,
+          roles: {
+            where: { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+            include: { role: { include: { permissions: { include: { permission: true } } } } },
+          },
+        },
+      }) as any;
+    } else {
+      throw err;
+    }
+  }
 
   if (!user) return null;
 
   const permissions = new Set<string>();
   const roles: string[] = [];
 
-  for (const userRole of user.roles) {
+  for (const userRole of (user.roles ?? [])) {
     roles.push(userRole.role.code);
     for (const rp of userRole.role.permissions) {
       const { module, resource, action } = rp.permission;
@@ -136,8 +153,6 @@ export async function getAuthUser(userId: string): Promise<AuthUser | null> {
     }
   }
 
-  // System users and super admins get all permissions.
-  // This also keeps the seeded admin usable if role assignment data is repaired separately.
   if (user.isSystemUser || roles.includes("SUPER_ADMIN")) {
     permissions.add("*");
   }
@@ -150,7 +165,7 @@ export async function getAuthUser(userId: string): Promise<AuthUser | null> {
     avatarPath: user.avatarPath,
     isSystemUser: user.isSystemUser,
     mustChangePassword: user.mustChangePassword,
-    companyId: user.companyId ?? null,
+    companyId: (user as any).companyId ?? null,
     roles,
     permissions: Array.from(permissions),
   };
