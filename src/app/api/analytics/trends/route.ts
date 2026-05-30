@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getMonthlyTrends } from "@/modules/analytics/analytics.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
@@ -27,6 +27,6 @@ export async function GET(request: NextRequest) {
     return success(trends);
   } catch (err) {
     console.error("[Analytics trends]", err);
-    return badRequest("Failed to load trends");
+    return handleError(err);
   }
 }
