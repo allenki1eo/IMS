@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
 import { success, badRequest } from "@/lib/response";
 import { db } from "@/lib/db";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "users:user:read");
@@ -9,6 +10,9 @@ export async function GET(request: NextRequest) {
 
   const companyId = await getCompanyId(request);
   if (!companyId) return badRequest("Company not configured");
+
+  const cached = cache.get(cacheKey.stats(companyId));
+  if (cached) return success(cached);
 
   try {
     const [
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
       db.payment.count({ where: { companyId, status: "PENDING" } as any }),
     ]);
 
-    return success({
+    const data = {
       userCount,
       employeeCount,
       branchCount,
@@ -76,7 +80,9 @@ export async function GET(request: NextRequest) {
       bankAccountCount,
       pendingApprovals,
       pendingPayments: pendingPaymentsCount,
-    });
+    };
+    cache.set(cacheKey.stats(companyId), data, TTL.STATS);
+    return success(data);
   } catch (err) {
     console.error("[Dashboard Stats Error]", err);
     return success({

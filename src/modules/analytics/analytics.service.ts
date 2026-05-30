@@ -97,47 +97,53 @@ export async function getExecutiveKPIs(companyId: string) {
 export async function getMonthlyTrends(companyId: string, months = 6) {
   months = normalizeMonths(months);
   const now = new Date();
-  const result: any[] = [];
 
-  for (let i = months - 1; i >= 0; i--) {
-    const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+  const monthRanges = Array.from({ length: months }, (_, i) => {
+    const idx = months - 1 - i;
+    const start = new Date(now.getFullYear(), now.getMonth() - idx, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() - idx + 1, 0, 23, 59, 59);
     const label = start.toLocaleString("default", { month: "short", year: "2-digit" });
+    return { start, end, label };
+  });
 
-    const [
-      grns,
-      trips,
-      fuelIssues,
-      workOrders,
-      purchaseOrders,
-      batches,
-      dispatchOrders,
-      journalEntries,
-    ] = await Promise.all([
-      db.goodsReceivedNote.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
-      db.tripOrder.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
-      db.fuelIssue.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
-      db.workOrder.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
-      db.purchaseOrder.aggregate({ where: { companyId, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true } }),
-      db.productionBatch.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
-      db.dispatchOrder.count({ where: { companyId, createdAt: { gte: start, lte: end } } as any }),
-      db.journalEntry.aggregate({ where: { companyId, entryDate: { gte: start, lte: end }, status: "POSTED" }, _sum: { totalDebit: true } }),
-    ]);
+  // Run all months in parallel instead of sequentially
+  const results = await Promise.all(
+    monthRanges.map(async ({ start, end, label }) => {
+      const [
+        grns,
+        trips,
+        fuelIssues,
+        workOrders,
+        purchaseOrders,
+        batches,
+        dispatchOrders,
+        journalEntries,
+      ] = await Promise.all([
+        db.goodsReceivedNote.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
+        db.tripOrder.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
+        db.fuelIssue.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
+        db.workOrder.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
+        db.purchaseOrder.aggregate({ where: { companyId, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true } }),
+        db.productionBatch.count({ where: { companyId, createdAt: { gte: start, lte: end } } }),
+        db.dispatchOrder.count({ where: { companyId, createdAt: { gte: start, lte: end } } as any }),
+        db.journalEntry.aggregate({ where: { companyId, entryDate: { gte: start, lte: end }, status: "POSTED" }, _sum: { totalDebit: true } }),
+      ]);
 
-    result.push({
-      month: label,
-      grns,
-      trips,
-      fuelIssues,
-      workOrders,
-      purchaseOrders: purchaseOrders._sum.totalAmount || 0,
-      batches,
-      dispatchOrders: dispatchOrders || 0,
-      journalActivity: journalEntries._sum.totalDebit || 0,
-    });
-  }
+      return {
+        month: label,
+        grns,
+        trips,
+        fuelIssues,
+        workOrders,
+        purchaseOrders: purchaseOrders._sum.totalAmount || 0,
+        batches,
+        dispatchOrders: dispatchOrders || 0,
+        journalActivity: journalEntries._sum.totalDebit || 0,
+      };
+    })
+  );
 
-  return result;
+  return results;
 }
 
 export async function getOperationalMetrics(companyId: string) {

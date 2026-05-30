@@ -44,7 +44,8 @@ export const TTL = {
   SETTINGS:     10 * 60 * 1000,   // 10 min  — system settings
   PERMISSIONS:   2 * 60 * 1000,   //  2 min  — user permissions (security-sensitive)
   REFERENCE:     5 * 60 * 1000,   //  5 min  — categories, UOMs, warehouses, vehicles, suppliers
-  STATS:         1 * 60 * 1000,   //  1 min  — dashboard stats
+  STATS:         2 * 60 * 1000,   //  2 min  — dashboard stats
+  TRENDS:       10 * 60 * 1000,   // 10 min  — monthly trend charts (slow aggregations)
   SESSION:       5 * 60 * 1000,   //  5 min  — session validation
 } as const;
 
@@ -60,5 +61,6 @@ export const cacheKey = {
   drivers:     (companyId: string) => `drivers:${companyId}`,
   suppliers:   (companyId: string) => `suppliers:${companyId}`,
   stats:       (companyId: string) => `stats:${companyId}`,
+  trends:      (companyId: string, months: number) => `trends:${companyId}:${months}`,
   session:     (tokenHash: string) => `session:${tokenHash}`,
 };
