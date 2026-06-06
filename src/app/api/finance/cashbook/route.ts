@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { bankAccountId, date, type, category, reference, description, counterparty, amount, transferToId, notes } = body;
+  const { bankAccountId, date, type, category, reference, description, counterparty, amount, transferToId, notes, paymentMethod, chequeRef } = body;
 
   if (!bankAccountId) return badRequest("bankAccountId is required");
   if (!date) return badRequest("date is required");
@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
       companyId, bankAccountId, date: new Date(date), type, category: category ?? type,
       reference, description, counterparty, amount: Number(amount),
       transferToId: transferToId ?? null, notes,
+      paymentMethod: paymentMethod ?? "CASH",
+      chequeRef: chequeRef ?? null,
       createdById: auth.user.id, userName: auth.user.fullName, ipAddress, userAgent,
     });
     return created(entry);

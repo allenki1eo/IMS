@@ -196,6 +196,7 @@ const NAV_GROUPS: NavGroup[] = [
         children: [
           { label: "Overview", href: "/finance", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
           { label: "Cashbook", href: "/finance/cashbook", icon: <BookMarked className="h-4 w-4" />, permission: "finance:cashbook:read" },
+          { label: "Expense Summary", href: "/finance/cashbook/expense-summary", icon: <FileText className="h-4 w-4" />, permission: "finance:cashbook:read" },
           { label: "Daily Summary", href: "/finance/cashbook/summary", icon: <FileText className="h-4 w-4" />, permission: "finance:cashbook:read" },
           { label: "Director View", href: "/finance/cashbook/director", icon: <LineChart className="h-4 w-4" />, permission: "finance:cashbook:director" },
           { label: "Chart of Accounts", href: "/finance/accounts", icon: <ScrollText className="h-4 w-4" />, permission: "finance:account:read" },

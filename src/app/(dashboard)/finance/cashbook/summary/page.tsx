@@ -19,6 +19,10 @@ interface CashbookEntryRow {
   amount: number;
   bankAccountId: string;
   transferToId: string | null;
+  paymentMethod: string;
+  chequeRef: string | null;
+  pvNumber: number | null;
+  category: string;
 }
 
 interface AccountSummary {
@@ -40,6 +44,14 @@ interface AccountSummary {
 
 function fmtAmount(amount: number) {
   return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function chequeOrRef(entry: CashbookEntryRow): string {
+  if (entry.chequeRef) return entry.chequeRef;
+  if (entry.paymentMethod === "CHEQUE") return "Cheque";
+  if (entry.paymentMethod === "ONLINE") return "Online";
+  if (entry.paymentMethod === "BANK_TRANSFER") return "Bank";
+  return entry.paymentMethod;
 }
 
 export default function CashbookSummaryPage() {
@@ -69,11 +81,15 @@ export default function CashbookSummaryPage() {
   }, [date]);
 
   const displayDate = new Date(date + "T00:00:00").toLocaleDateString("en-GB", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric"
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 
   const grandTotalReceipts = summaries.reduce((s, x) => s + x.totalReceipts, 0);
   const grandTotalPayments = summaries.reduce((s, x) => s + x.totalPayments, 0);
+  const grandOpeningBalance = summaries.reduce((s, x) => s + x.openingBalance, 0);
+  const grossClosingBalance = grandOpeningBalance + grandTotalReceipts - grandTotalPayments;
 
   return (
     <>
@@ -82,16 +98,17 @@ export default function CashbookSummaryPage() {
         @media print {
           .no-print { display: none !important; }
           body { background: white; }
-          .print-container { padding: 0; }
-          .print-header { margin-bottom: 24px; }
-          table { font-size: 11px; }
+          .print-container { padding: 20px; }
+          table { font-size: 11px; border-collapse: collapse; }
+          th, td { border: 1px solid #000; padding: 3px 6px; }
+          .sig-section { margin-top: 40px; }
         }
       `}</style>
 
       <div className="space-y-6 print-container">
         {/* Controls — hidden on print */}
         <div className="no-print flex items-center justify-between flex-wrap gap-3">
-          <PageHeader title="Daily Summary" description="Print-ready daily cashbook summary by bank account" />
+          <PageHeader title="Daily Summary" description="Print-ready daily cashbook summary matching consolidated multi-account format" />
           <div className="flex items-center gap-3">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Date</Label>
@@ -104,16 +121,10 @@ export default function CashbookSummaryPage() {
           </div>
         </div>
 
-        {/* Print header */}
-        <div className="print-header text-center hidden print:block">
-          <h1 className="text-2xl font-bold">{companyName}</h1>
-          <h2 className="text-lg font-semibold mt-1">Daily Cashbook Summary</h2>
-          <p className="text-sm text-muted-foreground mt-1">{displayDate}</p>
-        </div>
-
-        {/* Screen date header */}
-        <div className="no-print">
-          <p className="text-muted-foreground text-sm">{displayDate}</p>
+        {/* Document Title */}
+        <div className="text-center mb-2">
+          <h1 className="text-xl font-bold uppercase tracking-wider">SUMMARY</h1>
+          <h2 className="text-base font-semibold mt-1 uppercase">REQUEST FOR: {displayDate}</h2>
         </div>
 
         {loading ? (
@@ -121,130 +132,152 @@ export default function CashbookSummaryPage() {
         ) : summaries.length === 0 ? (
           <EmptyState title="No bank accounts" description="No active bank accounts found." />
         ) : (
-          <div className="space-y-8">
-            {summaries.map((s) => (
-              <div key={s.account.id} className="border rounded-lg overflow-hidden">
-                {/* Account Header */}
-                <div className="bg-muted/50 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <h3 className="font-semibold text-base">
-                      {s.account.name}{s.account.bankName ? ` — ${s.account.bankName}` : ""}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">{s.account.currency}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Opening Balance</p>
-                    <p className="font-semibold">{fmtAmount(s.openingBalance)}</p>
-                  </div>
+          <>
+            {/* Main consolidated table */}
+            <table className="w-full border-collapse border border-black text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-black px-3 py-2 text-left font-bold">DESCRIPTION</th>
+                  <th className="border border-black px-3 py-2 text-left font-bold w-32">CHEQUE NO. / REF</th>
+                  <th className="border border-black px-3 py-2 text-right font-bold w-36">PETTY CASH</th>
+                  <th className="border border-black px-3 py-2 text-right font-bold w-36">EXPENSES</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Opening Balance */}
+                <tr className="font-semibold bg-gray-50">
+                  <td className="border border-black px-3 py-2" colSpan={2}>OPENING BALANCE</td>
+                  <td className="border border-black px-3 py-2 text-right">{fmtAmount(grandOpeningBalance)}</td>
+                  <td className="border border-black px-3 py-2" />
+                </tr>
+
+                {/* Per-account (company) sections */}
+                {summaries.map((s) => (
+                  <>
+                    {/* Account section header */}
+                    <tr key={`hdr-${s.account.id}`} className="bg-blue-50">
+                      <td
+                        colSpan={4}
+                        className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide"
+                      >
+                        {s.account.name}{s.account.bankName ? ` — ${s.account.bankName}` : ""}
+                      </td>
+                    </tr>
+
+                    {/* Payment rows (outgoing) */}
+                    {s.payments.length > 0 ? (
+                      s.payments.map((entry) => (
+                        <tr key={entry.id}>
+                          <td className="border border-black px-3 py-1">
+                            {entry.description}
+                            {entry.counterparty ? ` — ${entry.counterparty}` : ""}
+                          </td>
+                          <td className="border border-black px-3 py-1 font-mono text-xs">
+                            {chequeOrRef(entry)}
+                          </td>
+                          <td className="border border-black px-3 py-1" />
+                          <td className="border border-black px-3 py-1 text-right">
+                            {fmtAmount(entry.amount)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr key={`empty-pmt-${s.account.id}`}>
+                        <td colSpan={4} className="border border-black px-3 py-1 text-muted-foreground italic text-xs">
+                          No payments
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Account subtotal */}
+                    <tr key={`sub-${s.account.id}`} className="font-semibold bg-gray-50">
+                      <td colSpan={2} className="border border-black px-3 py-1.5 text-right uppercase text-xs">
+                        TOTAL {s.account.name.toUpperCase()}:
+                      </td>
+                      <td className="border border-black px-3 py-1.5" />
+                      <td className="border border-black px-3 py-1.5 text-right">
+                        {fmtAmount(s.totalPayments)}
+                      </td>
+                    </tr>
+                  </>
+                ))}
+
+                {/* Cash Received section */}
+                <tr className="bg-green-50 font-semibold">
+                  <td colSpan={4} className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide">
+                    CASH RECEIVED
+                  </td>
+                </tr>
+                {summaries.flatMap((s) => s.receipts).length > 0 ? (
+                  summaries.flatMap((s) =>
+                    s.receipts.map((entry) => (
+                      <tr key={entry.id}>
+                        <td className="border border-black px-3 py-1">
+                          {entry.description}
+                          {entry.counterparty ? ` — ${entry.counterparty}` : ""}
+                        </td>
+                        <td className="border border-black px-3 py-1 font-mono text-xs">
+                          {chequeOrRef(entry)}
+                        </td>
+                        <td className="border border-black px-3 py-1 text-right text-green-700">
+                          {fmtAmount(entry.amount)}
+                        </td>
+                        <td className="border border-black px-3 py-1" />
+                      </tr>
+                    ))
+                  )
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="border border-black px-3 py-1 text-muted-foreground italic text-xs">
+                      No receipts
+                    </td>
+                  </tr>
+                )}
+
+                {/* Totals rows */}
+                <tr className="font-bold bg-gray-100">
+                  <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
+                    TOTAL PETTY CASH / CASH RECEIVED:
+                  </td>
+                  <td className="border border-black px-3 py-2 text-right">
+                    {fmtAmount(grandTotalReceipts)}
+                  </td>
+                  <td className="border border-black px-3 py-2" />
+                </tr>
+                <tr className="font-bold bg-gray-100">
+                  <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
+                    TOTAL EXPENSES:
+                  </td>
+                  <td className="border border-black px-3 py-2" />
+                  <td className="border border-black px-3 py-2 text-right">
+                    {fmtAmount(grandTotalPayments)}
+                  </td>
+                </tr>
+                <tr className="font-bold bg-yellow-50">
+                  <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
+                    GROSS CLOSING BALANCE:
+                  </td>
+                  <td className="border border-black px-3 py-2 text-right" colSpan={2}>
+                    {fmtAmount(grossClosingBalance)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Signature Lines */}
+            <div className="sig-section mt-12 grid grid-cols-2 gap-x-12 gap-y-10 pt-8">
+              {["Prepared By", "Approved By", "Checked By", "Authorized By"].map((label) => (
+                <div key={label}>
+                  <p className="text-sm font-medium mb-6">{label}:</p>
+                  <div
+                    className="border-b border-gray-400 w-full"
+                    style={{ borderBottomStyle: "dotted", borderBottomWidth: "2px" }}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Signature &amp; Date</p>
                 </div>
-
-                <div className="p-4 space-y-4">
-                  {/* Receipts */}
-                  {s.receipts.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-green-700 mb-2 text-sm uppercase tracking-wide">Receipts</h4>
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-1 font-medium text-muted-foreground">Description</th>
-                            <th className="text-left py-1 font-medium text-muted-foreground">From</th>
-                            <th className="text-left py-1 font-medium text-muted-foreground">Ref</th>
-                            <th className="text-right py-1 font-medium text-muted-foreground">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {s.receipts.map((e) => (
-                            <tr key={e.id} className="border-b border-muted">
-                              <td className="py-1">{e.description}</td>
-                              <td className="py-1 text-muted-foreground">{e.counterparty ?? "—"}</td>
-                              <td className="py-1 text-muted-foreground">{e.reference ?? "—"}</td>
-                              <td className="py-1 text-right text-green-600 font-medium">{fmtAmount(e.amount)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr>
-                            <td colSpan={3} className="py-2 font-semibold text-green-700">Total Receipts</td>
-                            <td className="py-2 text-right font-bold text-green-700">{fmtAmount(s.totalReceipts)}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  )}
-
-                  {s.receipts.length === 0 && (
-                    <p className="text-sm text-muted-foreground italic">No receipts today</p>
-                  )}
-
-                  {/* Payments */}
-                  {s.payments.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-red-700 mb-2 text-sm uppercase tracking-wide">Payments</h4>
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-1 font-medium text-muted-foreground">Description</th>
-                            <th className="text-left py-1 font-medium text-muted-foreground">To</th>
-                            <th className="text-left py-1 font-medium text-muted-foreground">Ref</th>
-                            <th className="text-right py-1 font-medium text-muted-foreground">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {s.payments.map((e) => (
-                            <tr key={e.id} className="border-b border-muted">
-                              <td className="py-1">{e.description}</td>
-                              <td className="py-1 text-muted-foreground">{e.counterparty ?? "—"}</td>
-                              <td className="py-1 text-muted-foreground">{e.reference ?? "—"}</td>
-                              <td className="py-1 text-right text-red-600 font-medium">{fmtAmount(e.amount)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr>
-                            <td colSpan={3} className="py-2 font-semibold text-red-700">Total Payments</td>
-                            <td className="py-2 text-right font-bold text-red-700">{fmtAmount(s.totalPayments)}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  )}
-
-                  {s.payments.length === 0 && (
-                    <p className="text-sm text-muted-foreground italic">No payments today</p>
-                  )}
-
-                  {/* Closing Balance */}
-                  <div className="border-t pt-3 flex justify-between items-center">
-                    <span className="font-semibold">Closing Balance</span>
-                    <span className={`font-bold text-lg ${s.closingBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
-                      {s.account.currency} {fmtAmount(s.closingBalance)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Grand Total */}
-            <div className="border-2 border-border rounded-lg p-4 bg-muted/30">
-              <h3 className="font-bold text-base mb-3">Grand Summary — All Accounts</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Total Receipts</p>
-                  <p className="font-bold text-green-700 text-lg">{fmtAmount(grandTotalReceipts)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Total Payments</p>
-                  <p className="font-bold text-red-700 text-lg">{fmtAmount(grandTotalPayments)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Net Movement</p>
-                  <p className={`font-bold text-lg ${grandTotalReceipts - grandTotalPayments >= 0 ? "text-green-700" : "text-red-700"}`}>
-                    {fmtAmount(grandTotalReceipts - grandTotalPayments)}
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
-          </div>
+          </>
         )}
       </div>
     </>

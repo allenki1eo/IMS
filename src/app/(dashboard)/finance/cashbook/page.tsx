@@ -40,6 +40,9 @@ interface CashbookEntry {
   counterparty: string | null;
   reference: string | null;
   amount: number;
+  pvNumber: number | null;
+  paymentMethod: string;
+  chequeRef: string | null;
   bankAccount: { id: string; name: string; bankName: string | null; currency: string; currentBalance: number };
   transferTo: { id: string; name: string; bankName: string | null } | null;
 }
@@ -50,6 +53,16 @@ function fmtAmount(amount: number) {
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function methodBadgeColor(method: string) {
+  switch (method) {
+    case "CHEQUE": return "bg-blue-100 text-blue-700";
+    case "ONLINE": return "bg-purple-100 text-purple-700";
+    case "BANK_TRANSFER": return "bg-indigo-100 text-indigo-700";
+    case "PETTY_CASH": return "bg-yellow-100 text-yellow-700";
+    default: return "bg-gray-100 text-gray-600";
+  }
 }
 
 export default function CashbookPage() {
@@ -221,27 +234,46 @@ export default function CashbookPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">PV No.</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Date</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Description</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Category</th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Counterparty</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Method</th>
                 <th className="text-right px-3 py-2 font-medium text-green-700">Receipt</th>
                 <th className="text-right px-3 py-2 font-medium text-red-700">Payment</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Bank Account</th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Type</th>
                 {canWrite && <th className="px-3 py-2" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {entries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-3 py-2">
+                    {entry.pvNumber != null ? (
+                      <span className="font-bold font-mono text-xs">{entry.pvNumber}</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(entry.date)}</td>
                   <td className="px-3 py-2 max-w-xs">
                     <span className="font-medium">{entry.description}</span>
-                    {entry.reference && <span className="text-xs text-muted-foreground ml-2">({entry.reference})</span>}
+                    {entry.counterparty && (
+                      <p className="text-xs text-muted-foreground">{entry.counterparty}</p>
+                    )}
+                    {entry.reference && (
+                      <p className="text-xs text-muted-foreground">Ref: {entry.reference}</p>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{entry.category}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{entry.counterparty ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${methodBadgeColor(entry.paymentMethod)}`}>
+                      {entry.paymentMethod === "BANK_TRANSFER" ? "BANK" : entry.paymentMethod}
+                    </span>
+                    {entry.chequeRef && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{entry.chequeRef}</p>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     {entry.type === "RECEIPT" ? (
                       <span className="font-medium text-green-600">{fmtAmount(entry.amount)}</span>
@@ -259,14 +291,6 @@ export default function CashbookPage() {
                     {entry.transferTo && (
                       <span className="text-xs"> → {entry.transferTo.name}</span>
                     )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge
-                      variant={entry.type === "RECEIPT" ? "default" : entry.type === "PAYMENT" ? "destructive" : "secondary"}
-                      className="text-xs"
-                    >
-                      {entry.type}
-                    </Badge>
                   </td>
                   {canWrite && (
                     <td className="px-3 py-2">
