@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Printer, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
+
+/* ─── Types ─────────────────────────────────────────────────────────────────── */
 
 interface BankAccountRow {
   id: string;
@@ -26,9 +29,63 @@ interface CompanySummary {
   periodPayments: number;
 }
 
+interface CashbookEntry {
+  id: string;
+  description: string;
+  counterparty: string | null;
+  chequeRef: string | null;
+  paymentMethod: string;
+  amount: number;
+  pvNumber: number | null;
+  type: string;
+  bankAccount?: { id: string; name: string; bankName: string | null };
+  transferTo?: { id: string; name: string; bankName: string | null } | null;
+}
+
+interface AccountSection {
+  account: BankAccountRow;
+  payments: CashbookEntry[];
+  receipts: CashbookEntry[];
+  totalPayments: number;
+  totalReceipts: number;
+}
+
+interface CompanyDailyData {
+  company: { id: string; name: string };
+  openingBalance: number;
+  accountSections: AccountSection[];
+  totalPayments: number;
+  totalReceipts: number;
+  grossClosingBalance: number;
+}
+
+interface DailySummary {
+  mode: "daily";
+  date: string;
+  companies: CompanyDailyData[];
+  grandTotal: {
+    openingBalance: number;
+    totalReceipts: number;
+    totalPayments: number;
+    grossClosingBalance: number;
+  };
+}
+
+/* ─── Helpers ───────────────────────────────────────────────────────────────── */
+
 function fmtAmount(amount: number) {
   return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+function chequeOrRef(entry: CashbookEntry): string {
+  if (entry.chequeRef) return entry.chequeRef;
+  if (entry.paymentMethod === "CHEQUE") return "Cheque";
+  if (entry.paymentMethod === "ONLINE") return "Online";
+  if (entry.paymentMethod === "BANK_TRANSFER") return "Bank";
+  return entry.paymentMethod;
+}
+
+/* ─── Period Summary Sub-components ─────────────────────────────────────────── */
 
 function CompanyCard({ summary }: { summary: CompanySummary }) {
   const [expanded, setExpanded] = useState(false);
@@ -109,7 +166,239 @@ function CompanyCard({ summary }: { summary: CompanySummary }) {
   );
 }
 
-export default function DirectorCashbookPage() {
+/* ─── Daily View ─────────────────────────────────────────────────────────────── */
+
+function DailyView() {
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [data, setData] = useState<DailySummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/finance/cashbook/director?date=${date}`);
+      const json = await res.json();
+      if (json.success) setData(json.data ?? null);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [date]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const displayDate = new Date(date + "T00:00:00").toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  return (
+    <>
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white; }
+          table { font-size: 11px; border-collapse: collapse; }
+          th, td { border: 1px solid #000; padding: 3px 6px; }
+          .sig-section { margin-top: 40px; }
+        }
+      `}</style>
+
+      <div className="space-y-4">
+        {/* Controls */}
+        <div className="no-print flex items-center gap-3 flex-wrap">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Date</Label>
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-40"
+            />
+          </div>
+          <Button variant="outline" className="mt-5" onClick={() => window.print()}>
+            <Printer className="mr-2 h-4 w-4" />
+            Print
+          </Button>
+        </div>
+
+        {loading ? (
+          <LoadingState text="Loading daily director view..." />
+        ) : !data || data.companies.length === 0 ? (
+          <EmptyState title="No data" description="No company data for this date." />
+        ) : (
+          <>
+            {/* Document title */}
+            <div className="text-center mb-2">
+              <h1 className="text-xl font-bold uppercase tracking-wider">SUMMARY REQUEST FOR: {displayDate}</h1>
+            </div>
+
+            <table className="w-full border-collapse border border-black text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-black px-3 py-2 text-left font-bold">PARTICULARS</th>
+                  <th className="border border-black px-3 py-2 text-left font-bold w-32">CHEQUE NO. / REF</th>
+                  <th className="border border-black px-3 py-2 text-right font-bold w-36">PETTY CASH</th>
+                  <th className="border border-black px-3 py-2 text-right font-bold w-36">EXPENSES</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Opening Balance */}
+                <tr className="font-semibold bg-gray-50">
+                  <td className="border border-black px-3 py-2" colSpan={2}>OPENING BALANCE</td>
+                  <td className="border border-black px-3 py-2 text-right">{fmtAmount(data.grandTotal.openingBalance)}</td>
+                  <td className="border border-black px-3 py-2" />
+                </tr>
+
+                {/* Per-company sections */}
+                {data.companies.map((companyData) => (
+                  <>
+                    {/* Company header */}
+                    <tr key={`company-hdr-${companyData.company.id}`} className="bg-blue-100">
+                      <td
+                        colSpan={3}
+                        className="border border-black px-3 py-2 font-bold uppercase text-xs tracking-wide"
+                      >
+                        {companyData.company.name}
+                      </td>
+                      <td className="border border-black px-3 py-2 text-right">
+                        <Link
+                          href={`/finance/cashbook/summary?date=${date}&companyId=${companyData.company.id}`}
+                          className="no-print text-blue-600 hover:text-blue-800 flex items-center justify-end gap-1 text-xs"
+                        >
+                          View Details
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      </td>
+                    </tr>
+
+                    {/* Per-account sub-sections */}
+                    {companyData.accountSections.map((section) => (
+                      <>
+                        {/* Account name row if multiple accounts */}
+                        {companyData.accountSections.length > 1 && (
+                          <tr key={`acct-hdr-${section.account.id}`} className="bg-gray-50">
+                            <td
+                              colSpan={4}
+                              className="border border-black px-3 py-1 text-xs font-semibold italic"
+                            >
+                              {section.account.name}{section.account.bankName ? ` — ${section.account.bankName}` : ""}
+                            </td>
+                          </tr>
+                        )}
+
+                        {/* Payment rows */}
+                        {section.payments.length > 0 ? (
+                          section.payments.map((entry) => (
+                            <tr key={entry.id}>
+                              <td className="border border-black px-3 py-1">
+                                {entry.description}
+                                {entry.counterparty ? ` — ${entry.counterparty}` : ""}
+                              </td>
+                              <td className="border border-black px-3 py-1 font-mono text-xs">
+                                {chequeOrRef(entry)}
+                              </td>
+                              <td className="border border-black px-3 py-1" />
+                              <td className="border border-black px-3 py-1 text-right">
+                                {fmtAmount(entry.amount)}
+                              </td>
+                            </tr>
+                          ))
+                        ) : null}
+
+                        {/* Receipt rows */}
+                        {section.receipts.length > 0
+                          ? section.receipts.map((entry) => (
+                              <tr key={entry.id}>
+                                <td className="border border-black px-3 py-1">
+                                  {entry.description}
+                                  {entry.counterparty ? ` — ${entry.counterparty}` : ""}
+                                </td>
+                                <td className="border border-black px-3 py-1 font-mono text-xs">
+                                  {chequeOrRef(entry)}
+                                </td>
+                                <td className="border border-black px-3 py-1 text-right text-green-700">
+                                  {fmtAmount(entry.amount)}
+                                </td>
+                                <td className="border border-black px-3 py-1" />
+                              </tr>
+                            ))
+                          : null}
+                      </>
+                    ))}
+
+                    {/* Company subtotal */}
+                    <tr key={`company-sub-${companyData.company.id}`} className="font-semibold bg-gray-100">
+                      <td colSpan={2} className="border border-black px-3 py-1.5 text-right uppercase text-xs">
+                        TOTAL {companyData.company.name.toUpperCase()}:
+                      </td>
+                      <td className="border border-black px-3 py-1.5 text-right text-green-700">
+                        {fmtAmount(companyData.totalReceipts)}
+                      </td>
+                      <td className="border border-black px-3 py-1.5 text-right">
+                        {fmtAmount(companyData.totalPayments)}
+                      </td>
+                    </tr>
+                  </>
+                ))}
+
+                {/* Grand totals */}
+                <tr className="font-bold bg-gray-100">
+                  <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
+                    TOTAL PETTY CASH / CASH RECEIVED:
+                  </td>
+                  <td className="border border-black px-3 py-2 text-right text-green-700">
+                    {fmtAmount(data.grandTotal.totalReceipts)}
+                  </td>
+                  <td className="border border-black px-3 py-2" />
+                </tr>
+                <tr className="font-bold bg-gray-100">
+                  <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
+                    TOTAL EXPENSES:
+                  </td>
+                  <td className="border border-black px-3 py-2" />
+                  <td className="border border-black px-3 py-2 text-right">
+                    {fmtAmount(data.grandTotal.totalPayments)}
+                  </td>
+                </tr>
+                <tr className="font-bold bg-yellow-50">
+                  <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
+                    GROSS CLOSING BALANCE:
+                  </td>
+                  <td className="border border-black px-3 py-2 text-right" colSpan={2}>
+                    {fmtAmount(data.grandTotal.grossClosingBalance)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Signature lines */}
+            <div className="sig-section mt-12 grid grid-cols-2 gap-x-12 gap-y-10 pt-8">
+              {["Prepared By", "Approved By", "Checked By", "Authorized By"].map((label) => (
+                <div key={label}>
+                  <p className="text-sm font-medium mb-6">{label}:</p>
+                  <div
+                    className="border-b border-gray-400 w-full"
+                    style={{ borderBottomStyle: "dotted", borderBottomWidth: "2px" }}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Signature &amp; Date</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ─── Period Summary View ────────────────────────────────────────────────────── */
+
+function PeriodSummaryView() {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
   const today = now.toISOString().slice(0, 10);
@@ -143,22 +432,16 @@ export default function DirectorCashbookPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <PageHeader
-          title="Director Cashbook View"
-          description="Cross-company cashbook overview with period-level summaries"
-        />
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">From</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-36" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">To</Label>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-36" />
-          </div>
-          <Button variant="outline" onClick={loadData}>Apply</Button>
+      <div className="flex items-end gap-3 flex-wrap">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">From</Label>
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-36" />
         </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">To</Label>
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-36" />
+        </div>
+        <Button variant="outline" onClick={loadData}>Apply</Button>
       </div>
 
       {loading ? (
@@ -167,14 +450,12 @@ export default function DirectorCashbookPage() {
         <EmptyState title="No companies found" description="No company data available." />
       ) : (
         <>
-          {/* Company Cards */}
           <div className="grid grid-cols-1 gap-4">
             {summaries.map((s) => (
               <CompanyCard key={s.company.id} summary={s} />
             ))}
           </div>
 
-          {/* Grand Total */}
           <Card className="border-2">
             <CardHeader>
               <CardTitle className="text-base">Grand Total — All Companies</CardTitle>
@@ -206,6 +487,52 @@ export default function DirectorCashbookPage() {
           </Card>
         </>
       )}
+    </div>
+  );
+}
+
+/* ─── Main Page ──────────────────────────────────────────────────────────────── */
+
+type ViewMode = "daily" | "period";
+
+export default function DirectorCashbookPage() {
+  const [mode, setMode] = useState<ViewMode>("daily");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <PageHeader
+          title="Director Cashbook View"
+          description="Cross-company cashbook overview"
+        />
+        {/* Mode toggle */}
+        <div className="flex gap-2 mt-1">
+          <button
+            type="button"
+            onClick={() => setMode("daily")}
+            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+              mode === "daily"
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-border bg-background text-muted-foreground hover:border-muted-foreground"
+            }`}
+          >
+            Daily View
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("period")}
+            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+              mode === "period"
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-border bg-background text-muted-foreground hover:border-muted-foreground"
+            }`}
+          >
+            Period Summary
+          </button>
+        </div>
+      </div>
+
+      {mode === "daily" ? <DailyView /> : <PeriodSummaryView />}
     </div>
   );
 }
