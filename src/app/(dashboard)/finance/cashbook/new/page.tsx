@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CASHBOOK_CATEGORIES } from "@/modules/finance/cashbook.service";
+import { CASHBOOK_CATEGORIES, PAYMENT_METHODS } from "@/modules/finance/cashbook.service";
 
 type EntryType = "RECEIPT" | "PAYMENT" | "TRANSFER";
 
@@ -26,6 +26,12 @@ interface BankAccount {
   bankName: string | null;
   currency: string;
   currentBalance: number;
+}
+
+function chequeRefLabel(method: string): string | null {
+  if (method === "CHEQUE") return "Cheque No.";
+  if (method === "ONLINE" || method === "BANK_TRANSFER") return "Reference No.";
+  return null;
 }
 
 export default function NewCashbookEntryPage() {
@@ -43,6 +49,8 @@ export default function NewCashbookEntryPage() {
   const [transferToId, setTransferToId] = useState("");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [chequeRef, setChequeRef] = useState("");
 
   useEffect(() => {
     fetch("/api/finance/bank-accounts?isActive=true&pageSize=100")
@@ -57,6 +65,7 @@ export default function NewCashbookEntryPage() {
   }, [type]);
 
   const categories = CASHBOOK_CATEGORIES[type] as readonly string[];
+  const refLabel = chequeRefLabel(paymentMethod);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,11 +92,18 @@ export default function NewCashbookEntryPage() {
           transferToId: type === "TRANSFER" ? transferToId : null,
           reference: reference.trim() || null,
           notes: notes.trim() || null,
+          paymentMethod,
+          chequeRef: chequeRef.trim() || null,
         }),
       });
       const json = await res.json();
       if (res.ok) {
-        toast.success("Cashbook entry saved");
+        const pvNumber = json.data?.pvNumber ?? json.pvNumber;
+        toast.success(
+          pvNumber
+            ? `Cashbook entry saved — PV #${pvNumber}`
+            : "Cashbook entry saved"
+        );
         router.push("/finance/cashbook");
       } else {
         toast.error(json.error ?? "Failed to save entry");
@@ -202,6 +218,36 @@ export default function NewCashbookEntryPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Payment Method + Cheque/Ref */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>Payment Method *</Label>
+                <Select value={paymentMethod} onValueChange={(v) => { setPaymentMethod(v); setChequeRef(""); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m === "BANK_TRANSFER" ? "Bank Transfer" : m.charAt(0) + m.slice(1).toLowerCase().replace("_", " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {refLabel && (
+                <div className="space-y-1">
+                  <Label>{refLabel}</Label>
+                  <Input
+                    value={chequeRef}
+                    onChange={(e) => setChequeRef(e.target.value)}
+                    placeholder={paymentMethod === "CHEQUE" ? "e.g. 001621" : "e.g. 14000"}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Description */}

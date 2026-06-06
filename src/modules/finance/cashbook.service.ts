@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+export const PAYMENT_METHODS = ["CASH", "CHEQUE", "ONLINE", "BANK_TRANSFER", "PETTY_CASH"] as const;
+
 export const CASHBOOK_CATEGORIES = {
   RECEIPT: ["Customer Payment", "Loan Received", "Owner Deposit", "Tax Refund", "Investment Income", "Other Income"],
   PAYMENT: ["Rent", "Salaries", "Fuel", "Utilities", "Supplier Payment", "Tax Payment", "Loan Repayment", "Office Supplies", "Equipment", "Transport", "Other Expense"],
@@ -57,6 +59,8 @@ export async function createCashbookEntry(params: {
   amount: number;
   transferToId?: string | null;
   notes?: string | null;
+  paymentMethod?: string;
+  chequeRef?: string | null;
   createdById: string;
   userName: string;
   ipAddress?: string;
@@ -76,6 +80,14 @@ export async function createCashbookEntry(params: {
 
   // Create entry and update bank balance in a transaction
   const entry = await db.$transaction(async (tx) => {
+    // Get next PV number for this company
+    const pvSeq = await tx.pVSequence.upsert({
+      where: { companyId: data.companyId },
+      create: { companyId: data.companyId, lastPV: 1 },
+      update: { lastPV: { increment: 1 } },
+    });
+    const pvNumber = pvSeq.lastPV;
+
     const created = await tx.cashbookEntry.create({
       data: {
         companyId: data.companyId,
@@ -89,6 +101,9 @@ export async function createCashbookEntry(params: {
         amount: data.amount,
         transferToId: data.transferToId ?? null,
         notes: data.notes ?? null,
+        pvNumber,
+        paymentMethod: data.paymentMethod ?? "CASH",
+        chequeRef: data.chequeRef ?? null,
         createdById,
       },
       include: {
@@ -222,6 +237,62 @@ export async function getDailySummary(companyId: string, date: Date) {
   );
 
   return summaries;
+}
+
+// Helper: format [17745, 17746, 17747, 17750] → "17745-17747,17750"
+function formatPVRange(pvs: number[]): string {
+  if (!pvs.length) return "";
+  const sorted = [...pvs].sort((a, b) => a - b);
+  const ranges: string[] = [];
+  let start = sorted[0], end = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === end + 1) {
+      end = sorted[i];
+    } else {
+      ranges.push(start === end ? String(start) : `${start}-${end}`);
+      start = end = sorted[i];
+    }
+  }
+  ranges.push(start === end ? String(start) : `${start}-${end}`);
+  return ranges.join(",");
+}
+
+// Returns entries grouped by category for the company expense summary (Document 1 format)
+export async function getCompanyExpenseSummary(companyId: string, date: Date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+
+  const entries = await db.cashbookEntry.findMany({
+    where: { companyId, date: { gte: start, lte: end } },
+    orderBy: { pvNumber: "asc" },
+    include: { bankAccount: { select: { name: true, bankName: true } } },
+  });
+
+  // Group by category
+  const byCategory = new Map<string, typeof entries>();
+  for (const entry of entries) {
+    const cat = entry.category;
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat)!.push(entry);
+  }
+
+  const grouped = Array.from(byCategory.entries()).map(([category, items]) => ({
+    category,
+    pvNumbers: items.map((e) => e.pvNumber).filter(Boolean),
+    pvDisplay: formatPVRange(items.map((e) => e.pvNumber).filter(Boolean) as number[]),
+    items,
+    total: items.reduce((s, e) => s + e.amount, 0),
+  }));
+
+  return {
+    date,
+    companyId,
+    entries,
+    grouped,
+    grandTotal: entries.reduce((s, e) => s + e.amount, 0),
+  };
 }
 
 export async function getDirectorSummary(dateFrom: Date, dateTo: Date) {

@@ -335,6 +335,22 @@ async function run() {
     "Create cashbook_entries table"
   );
 
+  // Cashbook: pvNumber, paymentMethod, chequeRef columns
+  await addColumnIfMissing("cashbook_entries", "pvNumber", "INTEGER", "Add pvNumber to cashbook_entries");
+  await addColumnIfMissing("cashbook_entries", "paymentMethod", "TEXT NOT NULL DEFAULT 'CASH'", "Add paymentMethod to cashbook_entries");
+  await addColumnIfMissing("cashbook_entries", "chequeRef", "TEXT", "Add chequeRef to cashbook_entries");
+
+  // PV sequences table
+  await createTableIfMissing(
+    "pv_sequences",
+    `CREATE TABLE "pv_sequences" (
+      "id"        TEXT NOT NULL PRIMARY KEY,
+      "companyId" TEXT NOT NULL UNIQUE,
+      "lastPV"    INTEGER NOT NULL DEFAULT 0
+    )`,
+    "Create pv_sequences table"
+  );
+
   console.log(`\nDone — ${applied} applied, ${alreadyPresent} already present.`);
   db.close();
 }

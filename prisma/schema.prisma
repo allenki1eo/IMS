@@ -42,6 +42,7 @@ model Company {
   dailyMovements  DailyTruckMovement[]
   users           User[]
   cashbookEntries CashbookEntry[]
+  pvSequence      PVSequence?
 
   @@map("companies")
 }
@@ -1714,6 +1715,9 @@ model CashbookEntry {
   amount        Float
   transferToId  String?
   notes         String?
+  pvNumber      Int?     // Payment Voucher number (auto-assigned per company)
+  paymentMethod String   @default("CASH") // CASH | CHEQUE | ONLINE | BANK_TRANSFER | PETTY_CASH
+  chequeRef     String?  // cheque number or online payment reference
   createdById   String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1726,6 +1730,16 @@ model CashbookEntry {
   @@index([bankAccountId])
   @@index([date])
   @@map("cashbook_entries")
+}
+
+model PVSequence {
+  id        String @id @default(cuid())
+  companyId String @unique
+  lastPV    Int    @default(0)
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("pv_sequences")
 }
 
 model BankTransaction {
