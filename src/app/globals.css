@@ -48,13 +48,13 @@
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 95%;
     --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 55%;
+    --muted-foreground: 0 0% 68%;  /* was 55% — better readability */
     --accent: 0 0% 15%;
     --accent-foreground: 0 0% 95%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
     --ring: 0 0% 80%;
 
     --sidebar-background: 0 0% 7%;
@@ -65,6 +65,8 @@
     --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 0 0% 80%;
+
+    color-scheme: dark;
   }
 }
 
@@ -90,35 +92,92 @@
   .no-print { display: none !important; }
   .print-only { display: block !important; }
 
+  /* Force light color scheme for print regardless of OS/app dark mode setting */
+  :root { color-scheme: light !important; }
+
   /* Hide navigation chrome */
   aside, header, nav, footer,
   [data-sidebar], [data-navbar] { display: none !important; }
 
+  /* White background + black text on ALL content elements */
+  html, body { background: white !important; color: #000 !important; }
+  body, main, div, section, article, p, span,
+  h1, h2, h3, h4, h5, h6, ul, ol, li,
+  table, thead, tbody, tfoot, tr, th, td {
+    background-color: white !important;
+    color: #000 !important;
+  }
+
+  /* Restore subtle header rows */
+  thead tr, thead tr th { background-color: #f3f4f6 !important; }
+
   /* Reset layout for print */
-  body { background: white !important; font-size: 12px; }
   main { padding: 0 !important; overflow: visible !important; }
   .p-6 { padding: 0 !important; }
-
-  /* Show borders on cards */
   .rounded-lg, .rounded-md { border-radius: 0 !important; }
   .shadow-sm, .shadow-md { box-shadow: none !important; }
 
   /* Table readability */
   table { border-collapse: collapse !important; width: 100% !important; }
-  th, td { border: 1px solid #e5e7eb !important; padding: 6px 10px !important; font-size: 11px; }
-  thead { background: #f9fafb !important; }
+  th, td { border: 1px solid #000 !important; padding: 6px 10px !important; font-size: 11px !important; }
+  .border-black, th, td { border-color: #000 !important; }
 
   /* Page breaks */
   .print-break-before { page-break-before: always; }
   .print-break-avoid { page-break-inside: avoid; }
 
-  /* Force black text */
-  * { color: #000 !important; -webkit-print-color-adjust: exact; }
-
-  /* Truck control sheet: tight cells override the default padding */
+  /* Truck control sheet: tight cells */
   .print-only table th,
   .print-only table td { padding: 2px 4px !important; font-size: 10px !important; }
 
-  /* Hide the screen-only content when printing (summary bars, editable table) */
-  .no-print { display: none !important; }
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
+
+/* ─── Dark mode: adapt hardcoded light colors used in print-style tables ─── */
+
+/* Table row backgrounds */
+.dark table tr.bg-gray-50 { background-color: hsl(0 0% 12%) !important; }
+.dark table tr.bg-gray-100,
+.dark table thead tr { background-color: hsl(0 0% 16%) !important; }
+.dark table tr.bg-blue-50,
+.dark table tr.bg-blue-100 { background-color: hsl(215 30% 14%) !important; }
+.dark table tr.bg-green-50 { background-color: hsl(142 25% 11%) !important; }
+.dark table tr.bg-yellow-50 { background-color: hsl(45 25% 10%) !important; }
+
+/* border-black → visible in dark mode, black on print */
+.dark .border-black { border-color: hsl(0 0% 38%) !important; }
+
+/* Colored text: lighten in dark mode for contrast */
+.dark .text-green-700 { color: hsl(142 60% 52%) !important; }
+.dark .text-green-600 { color: hsl(142 55% 50%) !important; }
+.dark .text-red-700   { color: hsl(0 68% 62%) !important; }
+.dark .text-red-600   { color: hsl(0 65% 60%) !important; }
+.dark .text-amber-700 { color: hsl(32 90% 60%) !important; }
+.dark .text-blue-700  { color: hsl(214 75% 68%) !important; }
+.dark .text-blue-600  { color: hsl(214 72% 65%) !important; }
+
+/* Colored badge backgrounds in dark mode */
+.dark .bg-green-100 { background-color: hsl(142 30% 14%) !important; }
+.dark .bg-red-100   { background-color: hsl(0 30% 16%) !important; }
+.dark .bg-amber-100 { background-color: hsl(32 30% 14%) !important; }
+.dark .bg-blue-100  { background-color: hsl(215 30% 16%) !important; }
+.dark .bg-blue-50   { background-color: hsl(215 25% 13%) !important; }
+.dark .bg-green-50  { background-color: hsl(142 20% 11%) !important; }
+.dark .bg-yellow-50 { background-color: hsl(45 20% 10%) !important; }
+.dark .bg-purple-100  { background-color: hsl(270 30% 16%) !important; }
+.dark .bg-indigo-100  { background-color: hsl(235 30% 16%) !important; }
+.dark .bg-yellow-100  { background-color: hsl(45 25% 12%) !important; }
+.dark .bg-gray-100    { background-color: hsl(0 0% 16%) !important; }
+.dark .bg-gray-50     { background-color: hsl(0 0% 12%) !important; }
+
+.dark .text-purple-700 { color: hsl(270 65% 72%) !important; }
+.dark .text-indigo-700 { color: hsl(235 65% 72%) !important; }
+.dark .text-yellow-700 { color: hsl(45 85% 62%) !important; }
+.dark .text-gray-600   { color: hsl(0 0% 70%) !important; }
+
+/* Badge border colors in dark mode */
+.dark .border-green-300 { border-color: hsl(142 40% 30%) !important; }
+.dark .border-red-300   { border-color: hsl(0 40% 35%) !important; }
+.dark .border-amber-300 { border-color: hsl(32 50% 35%) !important; }
+.dark .border-blue-300  { border-color: hsl(214 50% 38%) !important; }

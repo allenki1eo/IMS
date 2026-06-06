@@ -320,7 +320,7 @@ function CashbookSummaryInner() {
                       s.payments.map((entry) => (
                         <tr
                           key={entry.id}
-                          className="cursor-pointer hover:bg-yellow-50 no-print-hover"
+                          className="cursor-pointer hover:bg-yellow-50 dark:hover:bg-zinc-700/50 no-print-hover"
                           onClick={() => handleEntryClick(entry, s.account.name)}
                         >
                           <td className="border border-black px-3 py-1">
@@ -368,7 +368,7 @@ function CashbookSummaryInner() {
                     s.receipts.map((entry) => (
                       <tr
                         key={entry.id}
-                        className="cursor-pointer hover:bg-yellow-50"
+                        className="cursor-pointer hover:bg-yellow-50 dark:hover:bg-zinc-700/50"
                         onClick={() => handleEntryClick(entry, s.account.name)}
                       >
                         <td className="border border-black px-3 py-1">

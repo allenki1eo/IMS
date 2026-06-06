@@ -512,7 +512,7 @@ export default function DirectorCashbookPage() {
             onClick={() => setMode("daily")}
             className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
               mode === "daily"
-                ? "border-blue-500 bg-blue-50 text-blue-700"
+                ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400"
                 : "border-border bg-background text-muted-foreground hover:border-muted-foreground"
             }`}
           >
@@ -523,7 +523,7 @@ export default function DirectorCashbookPage() {
             onClick={() => setMode("period")}
             className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
               mode === "period"
-                ? "border-blue-500 bg-blue-50 text-blue-700"
+                ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400"
                 : "border-border bg-background text-muted-foreground hover:border-muted-foreground"
             }`}
           >
