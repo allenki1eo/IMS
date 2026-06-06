@@ -312,6 +312,29 @@ async function run() {
     "Create daily_truck_movement_entries table (vehicle usage lines)"
   );
 
+  // Cashbook entries table (Finance – cashbook module)
+  await createTableIfMissing(
+    "cashbook_entries",
+    `CREATE TABLE "cashbook_entries" (
+      "id"            TEXT NOT NULL PRIMARY KEY,
+      "companyId"     TEXT NOT NULL,
+      "bankAccountId" TEXT NOT NULL,
+      "date"          TIMESTAMPTZ NOT NULL,
+      "type"          TEXT NOT NULL DEFAULT 'PAYMENT',
+      "category"      TEXT NOT NULL,
+      "reference"     TEXT,
+      "description"   TEXT NOT NULL,
+      "counterparty"  TEXT,
+      "amount"        REAL NOT NULL,
+      "transferToId"  TEXT,
+      "notes"         TEXT,
+      "createdById"   TEXT NOT NULL,
+      "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt"     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    "Create cashbook_entries table"
+  );
+
   console.log(`\nDone — ${applied} applied, ${alreadyPresent} already present.`);
   db.close();
 }
