@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Printer } from "lucide-react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Printer, ArrowLeft, X } from "lucide-react";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface CashbookEntryRow {
   id: string;
@@ -54,31 +58,159 @@ function chequeOrRef(entry: CashbookEntryRow): string {
   return entry.paymentMethod;
 }
 
-export default function CashbookSummaryPage() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+function typeBadge(type: string) {
+  if (type === "RECEIPT") return <Badge className="bg-green-100 text-green-700 border-green-300">Receipt</Badge>;
+  if (type === "PAYMENT") return <Badge className="bg-red-100 text-red-700 border-red-300">Payment</Badge>;
+  return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Transfer</Badge>;
+}
+
+/* ─── Entry Detail Sheet ─────────────────────────────────────────────────────── */
+
+function EntryDetailSheet({
+  entry,
+  accountName,
+  onClose,
+}: {
+  entry: CashbookEntryRow | null;
+  accountName: string;
+  onClose: () => void;
+}) {
+  if (!entry) return null;
+
+  const entryDate = new Date(entry.date + "T00:00:00").toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <Sheet open={!!entry} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Entry Detail</SheetTitle>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-5">
+          {/* PV Number */}
+          {entry.pvNumber && (
+            <div className="text-center py-3 bg-muted rounded-lg">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">PV Number</p>
+              <p className="text-3xl font-bold">#{entry.pvNumber}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Date</p>
+              <p className="font-medium">{entryDate}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Type</p>
+              {typeBadge(entry.type)}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Category</p>
+            <p className="text-sm font-medium">{entry.category}</p>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Description</p>
+            <p className="text-sm font-medium">{entry.description}</p>
+          </div>
+
+          {entry.counterparty && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">
+                {entry.type === "RECEIPT" ? "Received From" : entry.type === "PAYMENT" ? "Paid To" : "Initiated By"}
+              </p>
+              <p className="text-sm font-medium">{entry.counterparty}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Payment Method</p>
+              <p className="font-medium">{entry.paymentMethod}</p>
+            </div>
+            {entry.chequeRef && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Cheque / Ref</p>
+                <p className="font-medium font-mono">{entry.chequeRef}</p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Bank Account</p>
+            <p className="text-sm font-medium">{accountName}</p>
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-xs text-muted-foreground mb-1">Amount</p>
+            <p className={`text-2xl font-bold ${entry.type === "RECEIPT" ? "text-green-700" : entry.type === "PAYMENT" ? "text-red-700" : "text-amber-700"}`}>
+              TZS {fmtAmount(entry.amount)}
+            </p>
+          </div>
+
+          <Button variant="outline" className="w-full mt-4" onClick={onClose}>
+            <X className="h-4 w-4 mr-2" />
+            Close
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* ─── Inner page (uses searchParams) ────────────────────────────────────────── */
+
+function CashbookSummaryInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const urlDate = searchParams.get("date");
+  const urlCompanyId = searchParams.get("companyId");
+
+  const [date, setDate] = useState(() => urlDate ?? new Date().toISOString().slice(0, 10));
   const [summaries, setSummaries] = useState<AccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState("Company");
+  const [selectedEntry, setSelectedEntry] = useState<CashbookEntryRow | null>(null);
+  const [selectedAccountName, setSelectedAccountName] = useState("");
 
+  // Fetch company name for drill-down
   useEffect(() => {
-    fetch("/api/company")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.data?.name) setCompanyName(d.data.name);
-      })
-      .catch(() => {});
-  }, []);
+    if (urlCompanyId) {
+      fetch(`/api/company?companyId=${urlCompanyId}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.data?.name) setCompanyName(d.data.name);
+        })
+        .catch(() => {});
+    } else {
+      fetch("/api/company")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.data?.name) setCompanyName(d.data.name);
+        })
+        .catch(() => {});
+    }
+  }, [urlCompanyId]);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/finance/cashbook/summary?date=${date}`)
+    const params = new URLSearchParams({ date });
+    if (urlCompanyId) params.set("companyId", urlCompanyId);
+    fetch(`/api/finance/cashbook/summary?${params}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setSummaries(d.data ?? []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [date]);
+  }, [date, urlCompanyId]);
 
   const displayDate = new Date(date + "T00:00:00").toLocaleDateString("en-GB", {
     day: "numeric",
@@ -90,6 +222,11 @@ export default function CashbookSummaryPage() {
   const grandTotalPayments = summaries.reduce((s, x) => s + x.totalPayments, 0);
   const grandOpeningBalance = summaries.reduce((s, x) => s + x.openingBalance, 0);
   const grossClosingBalance = grandOpeningBalance + grandTotalReceipts - grandTotalPayments;
+
+  const handleEntryClick = (entry: CashbookEntryRow, accountName: string) => {
+    setSelectedEntry(entry);
+    setSelectedAccountName(accountName);
+  };
 
   return (
     <>
@@ -106,9 +243,22 @@ export default function CashbookSummaryPage() {
       `}</style>
 
       <div className="space-y-6 print-container">
-        {/* Controls — hidden on print */}
+        {/* Controls */}
         <div className="no-print flex items-center justify-between flex-wrap gap-3">
-          <PageHeader title="Daily Summary" description="Print-ready daily cashbook summary matching consolidated multi-account format" />
+          <div className="flex items-center gap-3">
+            {urlCompanyId && (
+              <Link href="/finance/cashbook/director">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="mr-1 h-4 w-4" />
+                  Back to Director View
+                </Button>
+              </Link>
+            )}
+            <PageHeader
+              title={urlCompanyId ? `Daily Summary — ${companyName}` : "Daily Summary"}
+              description="Print-ready daily cashbook summary"
+            />
+          </div>
           <div className="flex items-center gap-3">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Date</Label>
@@ -124,6 +274,7 @@ export default function CashbookSummaryPage() {
         {/* Document Title */}
         <div className="text-center mb-2">
           <h1 className="text-xl font-bold uppercase tracking-wider">SUMMARY</h1>
+          {urlCompanyId && <p className="text-base font-semibold text-muted-foreground">{companyName}</p>}
           <h2 className="text-base font-semibold mt-1 uppercase">REQUEST FOR: {displayDate}</h2>
         </div>
 
@@ -151,7 +302,7 @@ export default function CashbookSummaryPage() {
                   <td className="border border-black px-3 py-2" />
                 </tr>
 
-                {/* Per-account (company) sections */}
+                {/* Per-account sections */}
                 {summaries.map((s) => (
                   <>
                     {/* Account section header */}
@@ -167,7 +318,11 @@ export default function CashbookSummaryPage() {
                     {/* Payment rows (outgoing) */}
                     {s.payments.length > 0 ? (
                       s.payments.map((entry) => (
-                        <tr key={entry.id}>
+                        <tr
+                          key={entry.id}
+                          className="cursor-pointer hover:bg-yellow-50 no-print-hover"
+                          onClick={() => handleEntryClick(entry, s.account.name)}
+                        >
                           <td className="border border-black px-3 py-1">
                             {entry.description}
                             {entry.counterparty ? ` — ${entry.counterparty}` : ""}
@@ -211,7 +366,11 @@ export default function CashbookSummaryPage() {
                 {summaries.flatMap((s) => s.receipts).length > 0 ? (
                   summaries.flatMap((s) =>
                     s.receipts.map((entry) => (
-                      <tr key={entry.id}>
+                      <tr
+                        key={entry.id}
+                        className="cursor-pointer hover:bg-yellow-50"
+                        onClick={() => handleEntryClick(entry, s.account.name)}
+                      >
                         <td className="border border-black px-3 py-1">
                           {entry.description}
                           {entry.counterparty ? ` — ${entry.counterparty}` : ""}
@@ -280,6 +439,23 @@ export default function CashbookSummaryPage() {
           </>
         )}
       </div>
+
+      {/* Entry Detail Sheet */}
+      <EntryDetailSheet
+        entry={selectedEntry}
+        accountName={selectedAccountName}
+        onClose={() => setSelectedEntry(null)}
+      />
     </>
+  );
+}
+
+/* ─── Exported Page (wraps in Suspense for useSearchParams) ──────────────────── */
+
+export default function CashbookSummaryPage() {
+  return (
+    <Suspense fallback={<LoadingState text="Loading..." />}>
+      <CashbookSummaryInner />
+    </Suspense>
   );
 }

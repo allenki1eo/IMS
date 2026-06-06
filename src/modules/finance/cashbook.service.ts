@@ -295,6 +295,194 @@ export async function getCompanyExpenseSummary(companyId: string, date: Date) {
   };
 }
 
+export async function createBatchCashbookEntries(params: {
+  companyId: string;
+  entries: Array<{
+    bankAccountId: string;
+    date: Date;
+    type: string;
+    category: string;
+    description: string;
+    counterparty?: string | null;
+    reference?: string | null;
+    notes?: string | null;
+    paymentMethod?: string;
+    chequeRef?: string | null;
+    amount: number;
+    transferToId?: string | null;
+  }>;
+  createdById: string;
+  userName: string;
+  ipAddress?: string;
+  userAgent?: string;
+}) {
+  const { companyId, entries, createdById, userName, ipAddress, userAgent } = params;
+
+  // Validate all bank accounts belong to companyId
+  const uniqueBankAccountIds = [...new Set(entries.map((e) => e.bankAccountId))];
+  const bankAccounts = await db.bankAccount.findMany({
+    where: { id: { in: uniqueBankAccountIds } },
+    select: { id: true, companyId: true },
+  });
+  const invalidAccounts = bankAccounts.filter((a) => a.companyId !== companyId);
+  if (invalidAccounts.length > 0) throw new Error("Some bank accounts do not belong to this company");
+  if (bankAccounts.length !== uniqueBankAccountIds.length) throw new Error("Some bank accounts not found");
+
+  // Run one transaction
+  const created = await db.$transaction(async (tx) => {
+    const results = [];
+    for (const entry of entries) {
+      const pvSeq = await tx.pVSequence.upsert({
+        where: { companyId },
+        create: { companyId, lastPV: 1 },
+        update: { lastPV: { increment: 1 } },
+      });
+      const pvNumber = pvSeq.lastPV;
+
+      const cashbookEntry = await tx.cashbookEntry.create({
+        data: {
+          companyId,
+          bankAccountId: entry.bankAccountId,
+          date: entry.date,
+          type: entry.type,
+          category: entry.category,
+          reference: entry.reference ?? null,
+          description: entry.description,
+          counterparty: entry.counterparty ?? null,
+          amount: entry.amount,
+          transferToId: entry.transferToId ?? null,
+          notes: entry.notes ?? null,
+          pvNumber,
+          paymentMethod: entry.paymentMethod ?? "CASH",
+          chequeRef: entry.chequeRef ?? null,
+          createdById,
+        },
+      });
+
+      // Update bank balance
+      if (entry.type === "RECEIPT") {
+        await tx.bankAccount.update({
+          where: { id: entry.bankAccountId },
+          data: { currentBalance: { increment: entry.amount } },
+        });
+      } else if (entry.type === "PAYMENT") {
+        await tx.bankAccount.update({
+          where: { id: entry.bankAccountId },
+          data: { currentBalance: { decrement: entry.amount } },
+        });
+      } else if (entry.type === "TRANSFER" && entry.transferToId) {
+        await tx.bankAccount.update({
+          where: { id: entry.bankAccountId },
+          data: { currentBalance: { decrement: entry.amount } },
+        });
+        await tx.bankAccount.update({
+          where: { id: entry.transferToId },
+          data: { currentBalance: { increment: entry.amount } },
+        });
+      }
+
+      results.push(cashbookEntry);
+    }
+    return results;
+  });
+
+  // One audit log for the batch
+  const pvNumbers = created.map((e) => e.pvNumber).filter(Boolean) as number[];
+  const firstPV = pvNumbers.length ? Math.min(...pvNumbers) : null;
+  const lastPV = pvNumbers.length ? Math.max(...pvNumbers) : null;
+
+  await createAuditLog({
+    userId: createdById,
+    userName,
+    action: "CASHBOOK_BATCH_CREATE",
+    module: "finance",
+    resource: "cashbook",
+    recordId: created[0]?.id ?? "batch",
+    newValue: { count: created.length, firstPV, lastPV },
+    description: `Batch of ${created.length} cashbook entries (PV #${firstPV}–#${lastPV})`,
+    ipAddress,
+    userAgent,
+    companyId,
+  });
+
+  return { entries: created, count: created.length, firstPV, lastPV };
+}
+
+export async function getDirectorDailySummary(date: Date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+
+  const companies = await db.company.findMany({ select: { id: true, name: true } });
+
+  const companiesData = await Promise.all(
+    companies.map(async (company) => {
+      const bankAccounts = await db.bankAccount.findMany({
+        where: { companyId: company.id, isActive: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, bankName: true, currency: true, currentBalance: true },
+      });
+
+      const accountSections = await Promise.all(
+        bankAccounts.map(async (account) => {
+          const todayEntries = await db.cashbookEntry.findMany({
+            where: { bankAccountId: account.id, date: { gte: start, lte: end } },
+            orderBy: { createdAt: "asc" },
+            include: {
+              bankAccount: { select: { id: true, name: true, bankName: true, currency: true, currentBalance: true } },
+              transferTo: { select: { id: true, name: true, bankName: true } },
+            },
+          });
+
+          const payments = todayEntries.filter(
+            (e) => e.type === "PAYMENT" || (e.type === "TRANSFER" && e.bankAccountId === account.id)
+          );
+          const receipts = todayEntries.filter(
+            (e) => e.type === "RECEIPT" || (e.type === "TRANSFER" && e.transferToId === account.id)
+          );
+
+          const totalPayments = payments.reduce((s, e) => s + e.amount, 0);
+          const totalReceipts = receipts.reduce((s, e) => s + e.amount, 0);
+
+          return {
+            account,
+            payments,
+            receipts,
+            totalPayments,
+            totalReceipts,
+          };
+        })
+      );
+
+      const totalPayments = accountSections.reduce((s, a) => s + a.totalPayments, 0);
+      const totalReceipts = accountSections.reduce((s, a) => s + a.totalReceipts, 0);
+      const currentBalance = bankAccounts.reduce((s, a) => s + a.currentBalance, 0);
+      // Opening balance = current balance minus today's net movement
+      const openingBalance = currentBalance - totalReceipts + totalPayments;
+      const grossClosingBalance = openingBalance + totalReceipts - totalPayments;
+
+      return {
+        company,
+        openingBalance,
+        accountSections,
+        totalPayments,
+        totalReceipts,
+        grossClosingBalance,
+      };
+    })
+  );
+
+  const grandTotal = {
+    openingBalance: companiesData.reduce((s, c) => s + c.openingBalance, 0),
+    totalReceipts: companiesData.reduce((s, c) => s + c.totalReceipts, 0),
+    totalPayments: companiesData.reduce((s, c) => s + c.totalPayments, 0),
+    grossClosingBalance: companiesData.reduce((s, c) => s + c.grossClosingBalance, 0),
+  };
+
+  return { date, companies: companiesData, grandTotal };
+}
+
 export async function getDirectorSummary(dateFrom: Date, dateTo: Date) {
   const companies = await db.company.findMany({ select: { id: true, name: true } });
 

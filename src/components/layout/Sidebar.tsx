@@ -10,7 +10,7 @@ import {
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
   TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag,
-  Leaf, BookMarked, LineChart,
+  Leaf, BookMarked, LineChart, ListPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -196,6 +196,7 @@ const NAV_GROUPS: NavGroup[] = [
         children: [
           { label: "Overview", href: "/finance", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
           { label: "Cashbook", href: "/finance/cashbook", icon: <BookMarked className="h-4 w-4" />, permission: "finance:cashbook:read" },
+          { label: "Batch Entry", href: "/finance/cashbook/batch", icon: <ListPlus className="h-4 w-4" />, permission: "finance:cashbook:write" },
           { label: "Expense Summary", href: "/finance/cashbook/expense-summary", icon: <FileText className="h-4 w-4" />, permission: "finance:cashbook:read" },
           { label: "Daily Summary", href: "/finance/cashbook/summary", icon: <FileText className="h-4 w-4" />, permission: "finance:cashbook:read" },
           { label: "Director View", href: "/finance/cashbook/director", icon: <LineChart className="h-4 w-4" />, permission: "finance:cashbook:director" },
