@@ -10,7 +10,7 @@ import {
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
   TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag,
-  Leaf,
+  Leaf, BookMarked, LineChart,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -195,10 +195,11 @@ const NAV_GROUPS: NavGroup[] = [
         permission: "finance:account:read",
         children: [
           { label: "Overview", href: "/finance", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
+          { label: "Cashbook", href: "/finance/cashbook", icon: <BookMarked className="h-4 w-4" />, permission: "finance:cashbook:read" },
+          { label: "Daily Summary", href: "/finance/cashbook/summary", icon: <FileText className="h-4 w-4" />, permission: "finance:cashbook:read" },
+          { label: "Director View", href: "/finance/cashbook/director", icon: <LineChart className="h-4 w-4" />, permission: "finance:cashbook:director" },
           { label: "Chart of Accounts", href: "/finance/accounts", icon: <ScrollText className="h-4 w-4" />, permission: "finance:account:read" },
-          { label: "Journal Entries", href: "/finance/journal-entries", icon: <FileCheck className="h-4 w-4" />, permission: "finance:journal:read" },
           { label: "Bank Accounts", href: "/finance/bank-accounts", icon: <Landmark className="h-4 w-4" />, permission: "finance:bank:read" },
-          { label: "Payments", href: "/finance/payments", icon: <Receipt className="h-4 w-4" />, permission: "finance:payment:read" },
           { label: "Currency Converter", href: "/finance/converter", icon: <ArrowRightLeft className="h-4 w-4" />, permission: "finance:report:read" },
           { label: "Day Book", href: "/finance/day-book", icon: <BookOpen className="h-4 w-4" />, permission: "finance:journal:read" },
           { label: "Outstanding", href: "/finance/outstanding", icon: <CreditCard className="h-4 w-4" />, permission: "finance:payment:read" },

@@ -32,15 +32,16 @@ model Company {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  branches    Branch[]
-  departments Department[]
-  employees   Employee[]
-  settings    Setting[]
-  customers   Customer[]
-  salesOrders SalesOrder[]
-  salesKpis   SalesKPI[]
-  dailyMovements DailyTruckMovement[]
-  users       User[]
+  branches        Branch[]
+  departments     Department[]
+  employees       Employee[]
+  settings        Setting[]
+  customers       Customer[]
+  salesOrders     SalesOrder[]
+  salesKpis       SalesKPI[]
+  dailyMovements  DailyTruckMovement[]
+  users           User[]
+  cashbookEntries CashbookEntry[]
 
   @@map("companies")
 }
@@ -1690,12 +1691,41 @@ model BankAccount {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  transactions BankTransaction[]
-  payments     Payment[]
+  transactions      BankTransaction[]
+  payments          Payment[]
+  cashbookEntries   CashbookEntry[]
+  transfersReceived CashbookEntry[] @relation("CashbookTransferTo")
 
   @@index([companyId])
   @@index([isActive])
   @@map("bank_accounts")
+}
+
+model CashbookEntry {
+  id            String   @id @default(cuid())
+  companyId     String
+  bankAccountId String
+  date          DateTime
+  type          String   @default("PAYMENT") // RECEIPT | PAYMENT | TRANSFER
+  category      String
+  reference     String?
+  description   String
+  counterparty  String?
+  amount        Float
+  transferToId  String?
+  notes         String?
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  bankAccount BankAccount  @relation(fields: [bankAccountId], references: [id])
+  transferTo  BankAccount? @relation("CashbookTransferTo", fields: [transferToId], references: [id])
+
+  @@index([companyId])
+  @@index([bankAccountId])
+  @@index([date])
+  @@map("cashbook_entries")
 }
 
 model BankTransaction {
