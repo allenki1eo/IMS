@@ -38,24 +38,17 @@ interface CashbookEntry {
   amount: number;
   pvNumber: number | null;
   type: string;
-  bankAccount?: { id: string; name: string; bankName: string | null };
-  transferTo?: { id: string; name: string; bankName: string | null } | null;
-}
-
-interface AccountSection {
-  account: BankAccountRow;
-  payments: CashbookEntry[];
-  receipts: CashbookEntry[];
-  totalPayments: number;
-  totalReceipts: number;
 }
 
 interface CompanyDailyData {
   company: { id: string; name: string };
   openingBalance: number;
-  accountSections: AccountSection[];
-  totalPayments: number;
+  bankReceipts: CashbookEntry[];    // cheque/online/bank-transfer receipts
+  cashReceipts: CashbookEntry[];    // cash/petty-cash receipts
+  totalBankReceipts: number;
+  totalCashReceipts: number;
   totalReceipts: number;
+  totalExpenses: number;            // sum only — itemised in company summary
   grossClosingBalance: number;
 }
 
@@ -66,7 +59,7 @@ interface DailySummary {
   grandTotal: {
     openingBalance: number;
     totalReceipts: number;
-    totalPayments: number;
+    totalExpenses: number;
     grossClosingBalance: number;
   };
 }
@@ -234,147 +227,158 @@ function DailyView() {
           <>
             {/* Document title */}
             <div className="text-center mb-2">
-              <h1 className="text-xl font-bold uppercase tracking-wider">SUMMARY REQUEST FOR: {displayDate}</h1>
+              <h1 className="text-xl font-bold uppercase tracking-wider">SUMMARY</h1>
+              <h2 className="text-base font-semibold mt-0.5 uppercase">REQUEST FOR: {displayDate}</h2>
             </div>
 
             <table className="w-full border-collapse border border-black text-sm">
               <thead>
                 <tr className="bg-gray-100">
                   <th className="border border-black px-3 py-2 text-left font-bold">PARTICULARS</th>
-                  <th className="border border-black px-3 py-2 text-left font-bold w-32">CHEQUE NO. / REF</th>
+                  <th className="border border-black px-3 py-2 text-left font-bold w-36">CHEQUE NO. / REF</th>
                   <th className="border border-black px-3 py-2 text-right font-bold w-36">PETTY CASH</th>
                   <th className="border border-black px-3 py-2 text-right font-bold w-36">EXPENSES</th>
                 </tr>
               </thead>
               <tbody>
-                {/* Opening Balance */}
+                {/* ── Opening Balance ──────────────────────────────────────────── */}
                 <tr className="font-semibold bg-gray-50">
-                  <td className="border border-black px-3 py-2" colSpan={2}>OPENING BALANCE</td>
-                  <td className="border border-black px-3 py-2 text-right">{fmtAmount(data.grandTotal.openingBalance)}</td>
-                  <td className="border border-black px-3 py-2" />
+                  <td className="border border-black px-3 py-1.5" colSpan={2}>OPENING BALANCE</td>
+                  <td className="border border-black px-3 py-1.5 text-right">{fmtAmount(data.grandTotal.openingBalance)}</td>
+                  <td className="border border-black px-3 py-1.5" />
                 </tr>
 
-                {/* Per-company sections */}
-                {data.companies.map((companyData) => (
+                {/* ── Per-company bank receipt sections ───────────────────────── */}
+                {data.companies.map((cd) => (
                   <>
-                    {/* Company header */}
-                    <tr key={`company-hdr-${companyData.company.id}`} className="bg-blue-100">
+                    {/* Company section header with drill-down link */}
+                    <tr key={`hdr-${cd.company.id}`} className="bg-blue-100">
                       <td
                         colSpan={3}
-                        className="border border-black px-3 py-2 font-bold uppercase text-xs tracking-wide"
+                        className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide"
                       >
-                        {companyData.company.name}
+                        {cd.company.name}
                       </td>
-                      <td className="border border-black px-3 py-2 text-right">
+                      <td className="border border-black px-3 py-1.5 text-right no-print">
                         <Link
-                          href={`/finance/cashbook/summary?date=${date}&companyId=${companyData.company.id}`}
-                          className="no-print text-blue-600 hover:text-blue-800 flex items-center justify-end gap-1 text-xs"
+                          href={`/finance/cashbook/summary?date=${date}&companyId=${cd.company.id}`}
+                          className="text-blue-600 hover:text-blue-800 flex items-center justify-end gap-1 text-xs"
                         >
                           View Details
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       </td>
+                      {/* print-only: empty cell */}
+                      <td className="border border-black px-3 py-1.5 hidden print:table-cell" />
                     </tr>
 
-                    {/* Per-account sub-sections */}
-                    {companyData.accountSections.map((section) => (
-                      <>
-                        {/* Account name row if multiple accounts */}
-                        {companyData.accountSections.length > 1 && (
-                          <tr key={`acct-hdr-${section.account.id}`} className="bg-gray-50">
-                            <td
-                              colSpan={4}
-                              className="border border-black px-3 py-1 text-xs font-semibold italic"
-                            >
-                              {section.account.name}{section.account.bankName ? ` — ${section.account.bankName}` : ""}
-                            </td>
-                          </tr>
-                        )}
-
-                        {/* Payment rows */}
-                        {section.payments.length > 0 ? (
-                          section.payments.map((entry) => (
-                            <tr key={entry.id}>
-                              <td className="border border-black px-3 py-1">
-                                {entry.description}
-                                {entry.counterparty ? ` — ${entry.counterparty}` : ""}
-                              </td>
-                              <td className="border border-black px-3 py-1 font-mono text-xs">
-                                {chequeOrRef(entry)}
-                              </td>
-                              <td className="border border-black px-3 py-1" />
-                              <td className="border border-black px-3 py-1 text-right">
-                                {fmtAmount(entry.amount)}
-                              </td>
-                            </tr>
-                          ))
-                        ) : null}
-
-                        {/* Receipt rows */}
-                        {section.receipts.length > 0
-                          ? section.receipts.map((entry) => (
-                              <tr key={entry.id}>
-                                <td className="border border-black px-3 py-1">
-                                  {entry.description}
-                                  {entry.counterparty ? ` — ${entry.counterparty}` : ""}
-                                </td>
-                                <td className="border border-black px-3 py-1 font-mono text-xs">
-                                  {chequeOrRef(entry)}
-                                </td>
-                                <td className="border border-black px-3 py-1 text-right text-green-700">
-                                  {fmtAmount(entry.amount)}
-                                </td>
-                                <td className="border border-black px-3 py-1" />
-                              </tr>
-                            ))
-                          : null}
-                      </>
+                    {/* Bank receipt rows (cheque / online / bank transfer) */}
+                    {cd.bankReceipts.map((entry) => (
+                      <tr key={entry.id}>
+                        <td className="border border-black px-3 py-1">
+                          {entry.description}
+                          {entry.counterparty ? ` — ${entry.counterparty}` : ""}
+                        </td>
+                        <td className="border border-black px-3 py-1 font-mono text-xs">
+                          {chequeOrRef(entry)}
+                        </td>
+                        <td className="border border-black px-3 py-1 text-right">
+                          {fmtAmount(entry.amount)}
+                        </td>
+                        <td className="border border-black px-3 py-1" />
+                      </tr>
                     ))}
 
-                    {/* Company subtotal */}
-                    <tr key={`company-sub-${companyData.company.id}`} className="font-semibold bg-gray-100">
-                      <td colSpan={2} className="border border-black px-3 py-1.5 text-right uppercase text-xs">
-                        TOTAL {companyData.company.name.toUpperCase()}:
+                    {/* Company bank-receipt subtotal */}
+                    <tr key={`sub-${cd.company.id}`} className="font-semibold bg-gray-50">
+                      <td colSpan={2} className="border border-black px-3 py-1 text-right text-xs uppercase">
+                        TOTAL CHEQUE {cd.company.name.toUpperCase()}
                       </td>
-                      <td className="border border-black px-3 py-1.5 text-right text-green-700">
-                        {fmtAmount(companyData.totalReceipts)}
+                      <td className="border border-black px-3 py-1 text-right">
+                        {cd.totalBankReceipts > 0 ? fmtAmount(cd.totalBankReceipts) : ""}
                       </td>
-                      <td className="border border-black px-3 py-1.5 text-right">
-                        {fmtAmount(companyData.totalPayments)}
-                      </td>
+                      <td className="border border-black px-3 py-1" />
                     </tr>
                   </>
                 ))}
 
-                {/* Grand totals */}
+                {/* ── Cash Received section ────────────────────────────────────── */}
+                <tr className="bg-green-50 font-bold">
+                  <td colSpan={4} className="border border-black px-3 py-1.5 uppercase text-xs tracking-wide">
+                    CASH RECEIVED
+                  </td>
+                </tr>
+                {data.companies.map((cd) =>
+                  cd.cashReceipts.map((entry) => (
+                    <tr key={entry.id}>
+                      <td className="border border-black px-3 py-1">
+                        CASH RECEIVED({cd.company.name.toUpperCase()})
+                        {entry.counterparty ? ` — ${entry.counterparty}` : ""}
+                      </td>
+                      <td className="border border-black px-3 py-1 font-mono text-xs">
+                        {chequeOrRef(entry)}
+                      </td>
+                      <td className="border border-black px-3 py-1 text-right">
+                        {fmtAmount(entry.amount)}
+                      </td>
+                      <td className="border border-black px-3 py-1" />
+                    </tr>
+                  ))
+                )}
+                <tr className="font-semibold bg-gray-50">
+                  <td colSpan={2} className="border border-black px-3 py-1 text-right text-xs uppercase">
+                    TOTAL CASH RECEIVED
+                  </td>
+                  <td className="border border-black px-3 py-1 text-right">
+                    {fmtAmount(data.companies.reduce((s, c) => s + c.totalCashReceipts, 0))}
+                  </td>
+                  <td className="border border-black px-3 py-1" />
+                </tr>
+
+                {/* ── Per-company expense totals (right column) ────────────────── */}
+                {data.companies
+                  .filter((cd) => cd.totalExpenses > 0)
+                  .map((cd) => (
+                    <tr key={`exp-${cd.company.id}`}>
+                      <td className="border border-black px-3 py-1" colSpan={3}>
+                        {cd.company.name}
+                      </td>
+                      <td className="border border-black px-3 py-1 text-right">
+                        {fmtAmount(cd.totalExpenses)}
+                      </td>
+                    </tr>
+                  ))}
+
+                {/* ── Overall Total ────────────────────────────────────────────── */}
                 <tr className="font-bold bg-gray-100">
                   <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
-                    TOTAL PETTY CASH / CASH RECEIVED:
+                    OVERALL TOTAL
                   </td>
-                  <td className="border border-black px-3 py-2 text-right text-green-700">
+                  <td className="border border-black px-3 py-2 text-right">
                     {fmtAmount(data.grandTotal.totalReceipts)}
                   </td>
-                  <td className="border border-black px-3 py-2" />
-                </tr>
-                <tr className="font-bold bg-gray-100">
-                  <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
-                    TOTAL EXPENSES:
-                  </td>
-                  <td className="border border-black px-3 py-2" />
                   <td className="border border-black px-3 py-2 text-right">
-                    {fmtAmount(data.grandTotal.totalPayments)}
-                  </td>
-                </tr>
-                <tr className="font-bold bg-yellow-50">
-                  <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
-                    GROSS CLOSING BALANCE:
-                  </td>
-                  <td className="border border-black px-3 py-2 text-right" colSpan={2}>
-                    {fmtAmount(data.grandTotal.grossClosingBalance)}
+                    {fmtAmount(data.grandTotal.totalExpenses)}
                   </td>
                 </tr>
               </tbody>
             </table>
+
+            {/* Below-table summary (matches physical doc) */}
+            <div className="mt-4 text-sm space-y-1">
+              <div className="flex justify-between border-b pb-1">
+                <span className="font-medium uppercase text-xs tracking-wide">Total Petty Cash / Cheque / Cash Received</span>
+                <span className="font-semibold">{fmtAmount(data.grandTotal.totalReceipts)}</span>
+              </div>
+              <div className="flex justify-between border-b pb-1">
+                <span className="font-medium uppercase text-xs tracking-wide">Total Expenses</span>
+                <span className="font-semibold">{fmtAmount(data.grandTotal.totalExpenses)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-base pt-1">
+                <span className="uppercase tracking-wide">Gross Closing Balance</span>
+                <span>{fmtAmount(data.grandTotal.grossClosingBalance)}</span>
+              </div>
+            </div>
 
             {/* Signature lines */}
             <div className="sig-section mt-12 grid grid-cols-2 gap-x-12 gap-y-10 pt-8">
