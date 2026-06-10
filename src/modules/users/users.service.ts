@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/crypto";
 import { createAuditLog } from "@/lib/audit";
+import { invalidateAuthUser } from "@/lib/session";
 
 export async function listUsers(params: {
   page: number;
@@ -167,6 +168,7 @@ export async function updateUser(params: {
     data,
     select: { id: true, username: true, email: true, fullName: true, updatedAt: true },
   });
+  invalidateAuthUser(id);
 
   await createAuditLog({
     userId: updatedById,
@@ -200,6 +202,7 @@ export async function setUserStatus(params: {
   if (existing.isSystemUser && !isActive) throw new Error("Cannot deactivate system user");
 
   await db.user.update({ where: { id }, data: { isActive } });
+  invalidateAuthUser(id);
 
   await createAuditLog({
     userId: updatedById,
@@ -229,6 +232,7 @@ export async function resetUserPassword(params: {
     where: { id },
     data: { passwordHash, mustChangePassword: true },
   });
+  invalidateAuthUser(id);
 
   await createAuditLog({
     userId: resetById,
@@ -258,6 +262,7 @@ export async function assignRole(params: {
     data: { userId, roleId, branchId: branchId ?? null, assignedById },
     include: { role: { select: { name: true } } },
   });
+  invalidateAuthUser(userId);
 
   await createAuditLog({
     userId: assignedById,
@@ -291,6 +296,7 @@ export async function removeRole(params: {
   if (!userRole) throw new Error("Role assignment not found");
 
   await db.userRole.delete({ where: { id: userRoleId } });
+  invalidateAuthUser(userRole.userId);
 
   await createAuditLog({
     userId: removedById,
