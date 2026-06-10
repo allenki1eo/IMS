@@ -408,13 +408,19 @@ export async function createBatchCashbookEntries(params: {
   return { entries: created, count: created.length, firstPV, lastPV };
 }
 
+const BANK_METHODS = new Set(["CHEQUE", "ONLINE", "BANK_TRANSFER"]);
+const CASH_METHODS = new Set(["CASH", "PETTY_CASH"]);
+
 export async function getDirectorDailySummary(date: Date) {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
   const end = new Date(date);
   end.setHours(23, 59, 59, 999);
 
-  const companies = await db.company.findMany({ select: { id: true, name: true } });
+  const companies = await db.company.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 
   const companiesData = await Promise.all(
     companies.map(async (company) => {
@@ -424,63 +430,60 @@ export async function getDirectorDailySummary(date: Date) {
         select: { id: true, name: true, bankName: true, currency: true, currentBalance: true },
       });
 
-      const accountSections = await Promise.all(
-        bankAccounts.map(async (account) => {
-          const todayEntries = await db.cashbookEntry.findMany({
-            where: { bankAccountId: account.id, date: { gte: start, lte: end } },
-            orderBy: { createdAt: "asc" },
-            include: {
-              bankAccount: { select: { id: true, name: true, bankName: true, currency: true, currentBalance: true } },
-              transferTo: { select: { id: true, name: true, bankName: true } },
-            },
-          });
+      const allEntries = await db.cashbookEntry.findMany({
+        where: { companyId: company.id, date: { gte: start, lte: end } },
+        orderBy: [{ pvNumber: "asc" }],
+      });
 
-          const payments = todayEntries.filter(
-            (e) => e.type === "PAYMENT" || (e.type === "TRANSFER" && e.bankAccountId === account.id)
-          );
-          const receipts = todayEntries.filter(
-            (e) => e.type === "RECEIPT" || (e.type === "TRANSFER" && e.transferToId === account.id)
-          );
-
-          const totalPayments = payments.reduce((s, e) => s + e.amount, 0);
-          const totalReceipts = receipts.reduce((s, e) => s + e.amount, 0);
-
-          return {
-            account,
-            payments,
-            receipts,
-            totalPayments,
-            totalReceipts,
-          };
-        })
+      // Bank receipts = money received via cheque/online/bank transfer (goes in PETTY CASH column top section)
+      const bankReceipts = allEntries.filter(
+        (e) => e.type === "RECEIPT" && BANK_METHODS.has(e.paymentMethod)
+      );
+      // Cash receipts = money received in physical cash (goes in CASH RECEIVED section)
+      const cashReceipts = allEntries.filter(
+        (e) => e.type === "RECEIPT" && CASH_METHODS.has(e.paymentMethod)
       );
 
-      const totalPayments = accountSections.reduce((s, a) => s + a.totalPayments, 0);
-      const totalReceipts = accountSections.reduce((s, a) => s + a.totalReceipts, 0);
+      const totalBankReceipts = bankReceipts.reduce((s, e) => s + e.amount, 0);
+      const totalCashReceipts = cashReceipts.reduce((s, e) => s + e.amount, 0);
+      const totalReceipts = totalBankReceipts + totalCashReceipts;
+
+      // Expenses = PAYMENT entries (itemised in company summary, only totalled here)
+      const totalExpenses = allEntries
+        .filter((e) => e.type === "PAYMENT")
+        .reduce((s, e) => s + e.amount, 0);
+
       const currentBalance = bankAccounts.reduce((s, a) => s + a.currentBalance, 0);
-      // Opening balance = current balance minus today's net movement
-      const openingBalance = currentBalance - totalReceipts + totalPayments;
-      const grossClosingBalance = openingBalance + totalReceipts - totalPayments;
+      const openingBalance = currentBalance - totalReceipts + totalExpenses;
 
       return {
         company,
         openingBalance,
-        accountSections,
-        totalPayments,
-        totalReceipts,
-        grossClosingBalance,
+        bankReceipts,       // shown per-row in company section (PETTY CASH column)
+        cashReceipts,       // shown per-row in CASH RECEIVED section (PETTY CASH column)
+        totalBankReceipts,
+        totalCashReceipts,
+        totalReceipts,      // bank + cash
+        totalExpenses,      // shown as one line in EXPENSES column
+        grossClosingBalance: openingBalance + totalReceipts - totalExpenses,
       };
     })
   );
 
-  const grandTotal = {
-    openingBalance: companiesData.reduce((s, c) => s + c.openingBalance, 0),
-    totalReceipts: companiesData.reduce((s, c) => s + c.totalReceipts, 0),
-    totalPayments: companiesData.reduce((s, c) => s + c.totalPayments, 0),
-    grossClosingBalance: companiesData.reduce((s, c) => s + c.grossClosingBalance, 0),
-  };
+  const grandTotalReceipts = companiesData.reduce((s, c) => s + c.totalReceipts, 0);
+  const grandTotalExpenses = companiesData.reduce((s, c) => s + c.totalExpenses, 0);
+  const grandOpeningBalance = companiesData.reduce((s, c) => s + c.openingBalance, 0);
 
-  return { date, companies: companiesData, grandTotal };
+  return {
+    date,
+    companies: companiesData,
+    grandTotal: {
+      openingBalance: grandOpeningBalance,
+      totalReceipts: grandTotalReceipts,
+      totalExpenses: grandTotalExpenses,
+      grossClosingBalance: grandOpeningBalance + grandTotalReceipts - grandTotalExpenses,
+    },
+  };
 }
 
 export async function getDirectorSummary(dateFrom: Date, dateTo: Date) {

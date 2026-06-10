@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { hashToken } from "./crypto";
-import { cache, cacheKey } from "./cache";
+import { cache, cacheKey, TTL } from "./cache";
 import type { AuthUser } from "@/types/auth";
 
 export async function createSession(params: {
@@ -114,6 +114,11 @@ async function loadUserWithRoles(userId: string) {
 }
 
 export async function getAuthUser(userId: string): Promise<AuthUser | null> {
+  // Short-lived cache: the roles→permissions join is the most expensive query
+  // on the request path and runs on every API call otherwise.
+  const cached = cache.get<AuthUser>(cacheKey.permissions(userId));
+  if (cached) return cached;
+
   let user: Awaited<ReturnType<typeof loadUserWithRoles>> = null;
 
   try {
@@ -157,7 +162,7 @@ export async function getAuthUser(userId: string): Promise<AuthUser | null> {
     permissions.add("*");
   }
 
-  return {
+  const authUser: AuthUser = {
     id: user.id,
     username: user.username,
     email: user.email,
@@ -169,4 +174,12 @@ export async function getAuthUser(userId: string): Promise<AuthUser | null> {
     roles,
     permissions: Array.from(permissions),
   };
+
+  cache.set(cacheKey.permissions(userId), authUser, TTL.PERMISSIONS);
+  return authUser;
+}
+
+/** Call after role assignment, deactivation, or password reset so the change takes effect immediately. */
+export function invalidateAuthUser(userId: string): void {
+  cache.invalidateExact(cacheKey.permissions(userId));
 }

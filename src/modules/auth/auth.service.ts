@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { signToken, signLongToken, getSessionExpiry } from "@/lib/auth";
-import { createSession } from "@/lib/session";
+import { createSession, invalidateAuthUser } from "@/lib/session";
 import { createAuditLog } from "@/lib/audit";
 
 export interface LoginParams {
@@ -141,6 +141,7 @@ export async function changePasswordService(params: {
       passwordChangedAt: new Date(),
     },
   });
+  invalidateAuthUser(userId);
 
   await createAuditLog({
     userId,
