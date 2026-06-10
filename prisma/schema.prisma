@@ -1355,6 +1355,10 @@ model ProductionBatch {
   recipe    ProductionRecipe? @relation(fields: [recipeId], references: [id])
   materials BatchMaterial[]
   qualityTests QualityTest[]
+  brewingSessions    BrewingSession[]
+  brewMaterialUsages BrewMaterialUsage[]
+  unitankAnalyses    UnitankAnalysis[]
+  bbtAnalyses        BBTAnalysis[]
 
   @@index([companyId])
   @@index([status])
@@ -2269,4 +2273,258 @@ model CottonInvoice {
   @@index([contractId])
   @@index([status])
   @@map("cotton_invoices")
+}
+
+// ─── Brewery Records ──────────────────────────────────────────────────────────
+
+model BrewingSession {
+  id          String    @id @default(cuid())
+  companyId   String
+  batchId     String?
+  reference   String    @unique
+  brewDate    DateTime
+  brand       String
+  brewNumber  String?
+  status      String    @default("IN_PROGRESS")
+  notes       String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  batch      ProductionBatch? @relation(fields: [batchId], references: [id])
+  activities BrewingActivity[]
+
+  @@index([companyId])
+  @@index([batchId])
+  @@index([brewDate])
+  @@map("brewing_sessions")
+}
+
+model BrewingActivity {
+  id            String    @id @default(cuid())
+  sessionId     String
+  section       String
+  activity      String
+  unit          String?
+  target        String?
+  startTime     String?
+  endTime       String?
+  actual        String?
+  reasonOutSpec String?
+  sortOrder     Int       @default(0)
+
+  session BrewingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("brewing_activities")
+}
+
+model BrewMaterialUsage {
+  id          String    @id @default(cuid())
+  companyId   String
+  batchId     String?
+  reference   String    @unique
+  brewDate    DateTime
+  brand       String
+  notes       String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  batch ProductionBatch?  @relation(fields: [batchId], references: [id])
+  items BrewMaterialItem[]
+
+  @@index([companyId])
+  @@index([batchId])
+  @@index([brewDate])
+  @@map("brew_material_usages")
+}
+
+model BrewMaterialItem {
+  id             String  @id @default(cuid())
+  usageId        String
+  section        String
+  itemName       String
+  uom            String?
+  targetQty      Float?
+  actualQty      Float?
+  additionalQty  Float?
+  recommendedQty Float?
+  notes          String?
+  sortOrder      Int     @default(0)
+
+  usage BrewMaterialUsage @relation(fields: [usageId], references: [id], onDelete: Cascade)
+
+  @@index([usageId])
+  @@map("brew_material_items")
+}
+
+model CIPRecord {
+  id             String    @id @default(cuid())
+  companyId      String
+  vessel         String
+  cipDate        DateTime
+  startTime      String?
+  endTime        String?
+  causticTemp    Float?
+  causticHL      Float?
+  causticTimeMin Float?
+  causticCondition String?
+  pushWaterHL    Float?
+  nitricAcidPct  Float?
+  nitricHL       Float?
+  nitricTimeMin  Float?
+  rinsingWaterHL Float?
+  rinsingTimeMin Float?
+  carryOver      String?
+  operatorSign   String?
+  notes          String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([cipDate])
+  @@index([vessel])
+  @@map("cip_records")
+}
+
+// ─── Lab / QC Specialist Records ─────────────────────────────────────────────
+
+model UnitankAnalysis {
+  id          String    @id @default(cuid())
+  companyId   String
+  batchId     String?
+  tankNumber  String
+  brand       String
+  stage       String
+  sampleDate  DateTime
+  sampleTime  String?
+  alc         Float?
+  oe          Float?
+  pg          Float?
+  ph          Float?
+  fg          Float?
+  col         Float?
+  bu          Float?
+  adf         Float?
+  analystId   String?
+  notes       String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  batch ProductionBatch? @relation(fields: [batchId], references: [id])
+
+  @@index([companyId])
+  @@index([batchId])
+  @@index([sampleDate])
+  @@map("unitank_analyses")
+}
+
+model BBTAnalysis {
+  id             String    @id @default(cuid())
+  companyId      String
+  batchId        String?
+  fromTankNumber String?
+  bbtNumber      String
+  brand          String
+  sampleDate     DateTime
+  sampleTime     String?
+  pg             Float?
+  og             Float?
+  alc            Float?
+  haze           Float?
+  ph             Float?
+  col            Float?
+  dissolvedO2    Float?
+  bitterness     Float?
+  bbtTemp        Float?
+  adf            Float?
+  analystId      String?
+  notes          String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  batch ProductionBatch? @relation(fields: [batchId], references: [id])
+
+  @@index([companyId])
+  @@index([batchId])
+  @@index([sampleDate])
+  @@map("bbt_analyses")
+}
+
+model MicroReport {
+  id          String    @id @default(cuid())
+  companyId   String
+  reference   String    @unique
+  reportDate  DateTime
+  analystId   String?
+  notes       String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  samples MicroReportSample[]
+
+  @@index([companyId])
+  @@index([reportDate])
+  @@map("micro_reports")
+}
+
+model MicroReportSample {
+  id               String   @id @default(cuid())
+  reportId         String
+  sampleType       String
+  sampleSource     String?
+  brand            String?
+  desiredDetection String?
+  incubation       String?
+  media            String?
+  result           String?
+  isInSpec         Boolean?
+  actual           String?
+  remarks          String?
+  sortOrder        Int      @default(0)
+
+  report MicroReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@map("micro_report_samples")
+}
+
+model ProductSpec {
+  id          String    @id @default(cuid())
+  companyId   String
+  brand       String
+  productCode String?
+  isActive    Boolean   @default(true)
+  version     String    @default("1")
+  notes       String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  parameters ProductSpecParameter[]
+
+  @@index([companyId])
+  @@map("product_specs")
+}
+
+model ProductSpecParameter {
+  id        String  @id @default(cuid())
+  specId    String
+  paramName String
+  unit      String?
+  target    String?
+  rangeMin  String?
+  rangeMax  String?
+  notes     String?
+  sortOrder Int     @default(0)
+
+  spec ProductSpec @relation(fields: [specId], references: [id], onDelete: Cascade)
+
+  @@index([specId])
+  @@map("product_spec_parameters")
 }

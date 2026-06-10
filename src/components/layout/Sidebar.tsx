@@ -10,7 +10,7 @@ import {
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
   TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag,
-  Leaf, BookMarked, LineChart, ListPlus,
+  Leaf, BookMarked, LineChart, ListPlus, Droplets, TestTube, Beaker, Microscope,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -130,6 +130,9 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Lines", href: "/production/lines", icon: <Factory className="h-4 w-4" />, permission: "production:line:read" },
           { label: "Daystore", href: "/production/daystore", icon: <Package className="h-4 w-4" />, permission: "production:batch:read" },
           { label: "Daily Report", href: "/production/daily-report", icon: <FileText className="h-4 w-4" />, permission: "production:report:read" },
+          { label: "Brew Sessions", href: "/production/brewing/sessions", icon: <FlaskConical className="h-4 w-4" />, permission: "brewing:session:read" },
+          { label: "Material Usage", href: "/production/brewing/material-usage", icon: <Package className="h-4 w-4" />, permission: "brewing:material:read" },
+          { label: "CIP Records", href: "/production/brewing/cip", icon: <Droplets className="h-4 w-4" />, permission: "brewing:cip:read" },
         ],
       },
       {
@@ -141,6 +144,10 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Standards", href: "/qc/standards", icon: <FileCheck className="h-4 w-4" />, permission: "qc:standard:read" },
           { label: "Lab Tests", href: "/qc/tests", icon: <FileSearch className="h-4 w-4" />, permission: "qc:test:read" },
           { label: "Non-Conformances", href: "/qc/ncr", icon: <XCircle className="h-4 w-4" />, permission: "qc:ncr:read" },
+          { label: "Unitank Analysis", href: "/qc/lab/unitank", icon: <TestTube className="h-4 w-4" />, permission: "lab:unitank:read" },
+          { label: "BBT Analysis", href: "/qc/lab/bbt", icon: <Beaker className="h-4 w-4" />, permission: "lab:bbt:read" },
+          { label: "Micro Reports", href: "/qc/lab/micro", icon: <Microscope className="h-4 w-4" />, permission: "lab:micro:read" },
+          { label: "Product Specs", href: "/qc/lab/specs", icon: <ClipboardList className="h-4 w-4" />, permission: "lab:spec:read" },
         ],
       },
       {

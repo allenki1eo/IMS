@@ -230,6 +230,22 @@ const PERMISSIONS = [
   { module: "cotton", resource: "invoice", action: "read", description: "View cotton invoices" },
   { module: "cotton", resource: "invoice", action: "create", description: "Create cotton invoices" },
   { module: "cotton", resource: "invoice", action: "update", description: "Update cotton invoices" },
+  // Brewing Records
+  { module: "brewing", resource: "session", action: "read", description: "View mashing/brewing session records" },
+  { module: "brewing", resource: "session", action: "write", description: "Create/edit mashing/brewing session records" },
+  { module: "brewing", resource: "material", action: "read", description: "View brewhouse material usage records" },
+  { module: "brewing", resource: "material", action: "write", description: "Create/edit brewhouse material usage records" },
+  { module: "brewing", resource: "cip", action: "read", description: "View CIP cleaning records" },
+  { module: "brewing", resource: "cip", action: "write", description: "Create/edit CIP cleaning records" },
+  // Lab Records
+  { module: "lab", resource: "unitank", action: "read", description: "View unitank analysis records" },
+  { module: "lab", resource: "unitank", action: "write", description: "Create/edit unitank analysis records" },
+  { module: "lab", resource: "bbt", action: "read", description: "View BBT analysis records" },
+  { module: "lab", resource: "bbt", action: "write", description: "Create/edit BBT analysis records" },
+  { module: "lab", resource: "micro", action: "read", description: "View daily micro reports" },
+  { module: "lab", resource: "micro", action: "write", description: "Create/edit daily micro reports" },
+  { module: "lab", resource: "spec", action: "read", description: "View packaged product specs" },
+  { module: "lab", resource: "spec", action: "write", description: "Create/edit packaged product specs" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -240,6 +256,8 @@ const ROLES = [
   { name: "Department Head", code: "DEPT_HEAD", description: "Manages department, approval authority", isSystemRole: true },
   { name: "Management", code: "MANAGEMENT", description: "Read-only analytics and approvals", isSystemRole: true },
   { name: "Auditor", code: "AUDITOR", description: "Read-only audit access", isSystemRole: true },
+  { name: "Brew Operator", code: "BREW_OPERATOR", description: "Records brewing process, material usage, and CIP records", isSystemRole: true },
+  { name: "Lab Technician", code: "LAB_TECHNICIAN", description: "Records unitank/BBT analyses, micro reports, and product specs", isSystemRole: true },
 ];
 
 // Role → Permission matrix
@@ -315,6 +333,13 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "cotton:buyer:read", "cotton:buyer:create", "cotton:buyer:update",
     "cotton:contract:read", "cotton:contract:create", "cotton:contract:update",
     "cotton:invoice:read", "cotton:invoice:create", "cotton:invoice:update",
+    "brewing:session:read", "brewing:session:write",
+    "brewing:material:read", "brewing:material:write",
+    "brewing:cip:read", "brewing:cip:write",
+    "lab:unitank:read", "lab:unitank:write",
+    "lab:bbt:read", "lab:bbt:write",
+    "lab:micro:read", "lab:micro:write",
+    "lab:spec:read", "lab:spec:write",
   ],
   BRANCH_MANAGER: [
     "auth:session:create",
@@ -457,6 +482,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "tra-stamps:stamp:read",
     "cotton:season:read", "cotton:bale:read", "cotton:lot:read",
     "cotton:buyer:read", "cotton:contract:read", "cotton:invoice:read",
+    "brewing:session:read", "brewing:material:read", "brewing:cip:read",
+    "lab:unitank:read", "lab:bbt:read", "lab:micro:read", "lab:spec:read",
   ],
   AUDITOR: [
     "auth:session:create",
@@ -490,6 +517,26 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "tra-stamps:stamp:read",
     "cotton:season:read", "cotton:bale:read", "cotton:lot:read",
     "cotton:buyer:read", "cotton:contract:read", "cotton:invoice:read",
+  ],
+  BREW_OPERATOR: [
+    "auth:session:create",
+    "production:line:read", "production:recipe:read",
+    "production:batch:read", "production:batch:create", "production:batch:update", "production:batch:start", "production:batch:complete",
+    "brewing:session:read", "brewing:session:write",
+    "brewing:material:read", "brewing:material:write",
+    "brewing:cip:read", "brewing:cip:write",
+    "warehouse:item:read", "warehouse:stock:read",
+  ],
+  LAB_TECHNICIAN: [
+    "auth:session:create",
+    "production:batch:read", "production:line:read", "production:recipe:read",
+    "qc:standard:read",
+    "qc:test:read", "qc:test:create", "qc:test:update", "qc:test:complete",
+    "qc:ncr:read", "qc:ncr:create",
+    "lab:unitank:read", "lab:unitank:write",
+    "lab:bbt:read", "lab:bbt:write",
+    "lab:micro:read", "lab:micro:write",
+    "lab:spec:read", "lab:spec:write",
   ],
 };
 
