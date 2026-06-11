@@ -37,7 +37,7 @@ export default function BrewMaterialUsagePage() {
       key: "actions", header: "",
       cell: (row: UsageRow) => (
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/api/brewing/material-usage/${row.id}`}>View</Link>
+          <Link href={`/production/brewing/material-usage/${row.id}`}>View</Link>
         </Button>
       ),
     },

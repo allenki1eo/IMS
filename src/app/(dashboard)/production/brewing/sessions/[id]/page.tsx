@@ -2,8 +2,10 @@
 
 import { use } from "react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FlaskConical, Printer } from "lucide-react";
+import { toast } from "sonner";
+import { CheckCircle, Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,14 +47,35 @@ const SECTION_LABELS: Record<string, string> = {
 
 export default function BrewingSessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/brewing/sessions/${id}`)
       .then((r) => r.json())
       .then((d) => { setSession(d.data); setLoading(false); });
   }, [id]);
+
+  async function handleComplete() {
+    setCompleting(true);
+    try {
+      const res = await fetch(`/api/brewing/sessions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "COMPLETED" }),
+      });
+      if (!res.ok) throw new Error("Failed to complete session");
+      toast.success("Session marked as completed");
+      router.refresh();
+      setSession((prev) => prev ? { ...prev, status: "COMPLETED" } : prev);
+    } catch {
+      toast.error("Failed to complete session");
+    } finally {
+      setCompleting(false);
+    }
+  }
 
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;
   if (!session) return <div className="p-8 text-red-500">Session not found</div>;
@@ -66,9 +89,16 @@ export default function BrewingSessionDetailPage({ params }: { params: Promise<{
         description={`${session.brand}${session.brewNumber ? ` • Brew #${session.brewNumber}` : ""}`}
         
         actions={
-          <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="mr-2 h-4 w-4" /> Print
-          </Button>
+          <div className="flex gap-2">
+            {session.status === "IN_PROGRESS" && (
+              <Button variant="default" onClick={handleComplete} disabled={completing}>
+                <CheckCircle className="mr-2 h-4 w-4" /> {completing ? "Completing..." : "Complete Session"}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer className="mr-2 h-4 w-4" /> Print
+            </Button>
+          </div>
         }
       />
 

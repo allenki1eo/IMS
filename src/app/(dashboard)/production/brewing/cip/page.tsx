@@ -44,7 +44,7 @@ export default function CIPRecordsPage() {
       key: "actions", header: "",
       cell: (row: CIPRow) => (
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/api/brewing/cip/${row.id}`}>View</Link>
+          <Link href={`/production/brewing/cip/${row.id}`}>View</Link>
         </Button>
       ),
     },

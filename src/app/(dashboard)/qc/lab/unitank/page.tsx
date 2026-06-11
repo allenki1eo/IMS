@@ -48,6 +48,14 @@ export default function UnitankAnalysisPage() {
     { key: "pg", header: "P.G.", cell: (row: UTRow) => row.pg?.toFixed(3) ?? "-" },
     { key: "ph", header: "pH", cell: (row: UTRow) => row.ph?.toFixed(2) ?? "-" },
     { key: "adf", header: "ADF %", cell: (row: UTRow) => row.adf?.toFixed(1) ?? "-" },
+    {
+      key: "actions", header: "",
+      cell: (row: UTRow) => (
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/qc/lab/unitank/${row.id}`}>View</Link>
+        </Button>
+      ),
+    },
   ];
 
   return (
