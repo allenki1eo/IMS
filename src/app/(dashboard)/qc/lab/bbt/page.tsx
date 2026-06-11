@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { usePagedData } from "@/hooks/usePagedData";
 import { format } from "date-fns";
 
