@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { usePagedData } from "@/hooks/usePagedData";
 import { format } from "date-fns";
 
@@ -44,6 +45,14 @@ export default function BBTAnalysisPage() {
     { key: "ph", header: "pH", cell: (row: BBTRow) => row.ph?.toFixed(2) ?? "-" },
     { key: "haze", header: "Haze", cell: (row: BBTRow) => row.haze?.toFixed(2) ?? "-" },
     { key: "dissolvedO2", header: "D.O.", cell: (row: BBTRow) => row.dissolvedO2?.toFixed(2) ?? "-" },
+    {
+      key: "actions", header: "",
+      cell: (row: BBTRow) => (
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/qc/lab/bbt/${row.id}`}>View</Link>
+        </Button>
+      ),
+    },
   ];
 
   return (

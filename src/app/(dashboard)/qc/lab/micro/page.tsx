@@ -40,7 +40,7 @@ export default function MicroReportsPage() {
       key: "actions", header: "",
       cell: (row: MicroRow) => (
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/api/lab/micro/${row.id}`}>View</Link>
+          <Link href={`/qc/lab/micro/${row.id}`}>View</Link>
         </Button>
       ),
     },
