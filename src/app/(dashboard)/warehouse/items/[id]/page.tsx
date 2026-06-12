@@ -34,6 +34,9 @@ interface Item {
   minStock: number | null;
   maxStock: number | null;
   reorderPoint: number | null;
+  projectedWeeklyUsage: number | null;
+  leadTimeWeeks: number | null;
+  confirmationNote: string | null;
   category?: { id: string; name: string } | null;
   uom?: { id: string; name: string; symbol: string } | null;
 }
@@ -91,6 +94,9 @@ export default function ItemDetailPage() {
     minStock: "",
     maxStock: "",
     reorderPoint: "",
+    projectedWeeklyUsage: "",
+    leadTimeWeeks: "",
+    confirmationNote: "",
   });
 
   const fetchItem = useCallback(async () => {
@@ -108,6 +114,9 @@ export default function ItemDetailPage() {
         minStock: it.minStock != null ? String(it.minStock) : "",
         maxStock: it.maxStock != null ? String(it.maxStock) : "",
         reorderPoint: it.reorderPoint != null ? String(it.reorderPoint) : "",
+        projectedWeeklyUsage: it.projectedWeeklyUsage != null ? String(it.projectedWeeklyUsage) : "",
+        leadTimeWeeks: it.leadTimeWeeks != null ? String(it.leadTimeWeeks) : "",
+        confirmationNote: it.confirmationNote ?? "",
       });
     } catch {
       toast.error("Failed to load item");
@@ -160,6 +169,9 @@ export default function ItemDetailPage() {
           minStock: form.minStock ? Number(form.minStock) : undefined,
           maxStock: form.maxStock ? Number(form.maxStock) : undefined,
           reorderPoint: form.reorderPoint ? Number(form.reorderPoint) : undefined,
+          projectedWeeklyUsage: form.projectedWeeklyUsage ? Number(form.projectedWeeklyUsage) : null,
+          leadTimeWeeks: form.leadTimeWeeks ? Number(form.leadTimeWeeks) : null,
+          confirmationNote: form.confirmationNote || null,
         }),
       });
       const json = await res.json();
@@ -307,6 +319,44 @@ export default function ItemDetailPage() {
                       min="0"
                       value={form.reorderPoint}
                       onChange={(e) => setForm((p) => ({ ...p, reorderPoint: e.target.value }))}
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="projectedWeeklyUsage">Weekly Usage</Label>
+                    <Input
+                      id="projectedWeeklyUsage"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.projectedWeeklyUsage}
+                      onChange={(e) => setForm((p) => ({ ...p, projectedWeeklyUsage: e.target.value }))}
+                      placeholder="Units / week"
+                      disabled={saving}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="leadTimeWeeks">Lead Time (weeks)</Label>
+                    <Input
+                      id="leadTimeWeeks"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.leadTimeWeeks}
+                      onChange={(e) => setForm((p) => ({ ...p, leadTimeWeeks: e.target.value }))}
+                      disabled={saving}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="confirmationNote">Confirmation Note</Label>
+                    <Input
+                      id="confirmationNote"
+                      value={form.confirmationNote}
+                      onChange={(e) => setForm((p) => ({ ...p, confirmationNote: e.target.value }))}
+                      placeholder='e.g. "ORDERED"'
                       disabled={saving}
                     />
                   </div>

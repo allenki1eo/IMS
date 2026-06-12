@@ -31,7 +31,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { code, name, description, categoryId, uomId, itemType, minStock, maxStock, reorderPoint } = body;
+  const { code, name, description, categoryId, uomId, itemType, minStock, maxStock, reorderPoint, projectedWeeklyUsage, leadTimeWeeks, confirmationNote } = body;
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
@@ -48,6 +48,9 @@ export async function PATCH(
         ...(minStock !== undefined ? { minStock } : {}),
         ...(maxStock !== undefined ? { maxStock } : {}),
         ...(reorderPoint !== undefined ? { reorderPoint } : {}),
+        ...(projectedWeeklyUsage !== undefined ? { projectedWeeklyUsage } : {}),
+        ...(leadTimeWeeks !== undefined ? { leadTimeWeeks } : {}),
+        ...(confirmationNote !== undefined ? { confirmationNote } : {}),
       },
       updatedById: auth.user.id,
       userName: auth.user.fullName,

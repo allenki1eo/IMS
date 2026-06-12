@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { code, name, description, categoryId, uomId, itemType, minStock, maxStock, reorderPoint } = body;
+  const { code, name, description, categoryId, uomId, itemType, minStock, maxStock, reorderPoint, projectedWeeklyUsage, leadTimeWeeks, confirmationNote } = body;
 
   if (!code || typeof code !== "string") return badRequest("code is required");
   if (!name || typeof name !== "string") return badRequest("name is required");
@@ -65,6 +65,9 @@ export async function POST(request: NextRequest) {
       minStock: minStock ?? 0,
       maxStock: maxStock ?? null,
       reorderPoint: reorderPoint ?? null,
+      projectedWeeklyUsage: projectedWeeklyUsage ?? null,
+      leadTimeWeeks: leadTimeWeeks ?? null,
+      confirmationNote: confirmationNote ?? null,
       createdById: auth.user.id,
       userName: auth.user.fullName,
       ipAddress,
