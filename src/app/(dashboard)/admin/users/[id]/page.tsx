@@ -163,10 +163,8 @@ export default function UserDetailPage() {
   async function removeRole(roleId: string) {
     setRemovingRole(roleId);
     try {
-      const res = await fetch(`/api/users/${id}/roles`, {
+      const res = await fetch(`/api/users/${id}/roles?roleId=${roleId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleId }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to remove role"); return; }

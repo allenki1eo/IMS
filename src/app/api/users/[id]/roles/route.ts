@@ -63,15 +63,20 @@ export async function DELETE(
   const auth = await requirePermission(request, "users:user:assign_role");
   if ("error" in auth) return auth.error;
 
+  const { id: userId } = await params;
   const { searchParams } = new URL(request.url);
-  const userRoleId = searchParams.get("userRoleId");
-  if (!userRoleId) return badRequest("userRoleId query param required");
+  const roleId = searchParams.get("roleId");
+  if (!roleId) return badRequest("roleId query param required");
+
+  // Find the UserRole record by userId + roleId
+  const userRole = await db.userRole.findFirst({ where: { userId, roleId } });
+  if (!userRole) return notFound("Role not assigned to this user");
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
   try {
     await removeRole({
-      userRoleId,
+      userRoleId: userRole.id,
       removedById: auth.user.id,
       userName: auth.user.fullName,
       ipAddress,
