@@ -74,7 +74,11 @@ export function CompanySwitcher() {
     }
   }
 
-  if (companies.length <= 1) {
+  const canSwitch = user?.permissions?.includes("company:company:switch") ||
+    user?.permissions?.includes("*") || user?.isSystemUser;
+
+  // Always show a static label if user can't switch or only has one company
+  if (!canSwitch || companies.length <= 1) {
     return (
       <div className="px-3 py-2">
         <div className="w-full flex items-center gap-2 rounded-md border border-sidebar-border bg-muted/40 px-3 py-2 text-sm text-sidebar-foreground">
