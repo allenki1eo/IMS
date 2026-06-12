@@ -230,6 +230,8 @@ const PERMISSIONS = [
   { module: "cotton", resource: "invoice", action: "read", description: "View cotton invoices" },
   { module: "cotton", resource: "invoice", action: "create", description: "Create cotton invoices" },
   { module: "cotton", resource: "invoice", action: "update", description: "Update cotton invoices" },
+  // Company switching
+  { module: "company", resource: "company", action: "switch", description: "Switch between companies" },
   // Brewing Records
   { module: "brewing", resource: "session", action: "read", description: "View mashing/brewing session records" },
   { module: "brewing", resource: "session", action: "write", description: "Create/edit mashing/brewing session records" },
@@ -269,7 +271,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "users:user:reset_password", "users:user:assign_role",
     "roles:role:create", "roles:role:read", "roles:role:update", "roles:role:deactivate",
     "roles:permission:assign",
-    "company:company:create", "company:company:read", "company:company:update",
+    "company:company:create", "company:company:read", "company:company:update", "company:company:switch",
     "company:branch:create", "company:branch:read", "company:branch:update", "company:branch:deactivate",
     "company:department:create", "company:department:read", "company:department:update", "company:department:deactivate",
     "employees:employee:create", "employees:employee:read", "employees:employee:update", "employees:employee:deactivate",
@@ -345,7 +347,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "auth:session:create",
     "users:user:read",
     "roles:role:read",
-    "company:company:read", "company:branch:read", "company:branch:update",
+    "company:company:read", "company:company:switch", "company:branch:read", "company:branch:update",
     "company:department:create", "company:department:read", "company:department:update", "company:department:deactivate",
     "employees:employee:create", "employees:employee:read", "employees:employee:update",
     "approvals:request:approve", "approvals:request:read",

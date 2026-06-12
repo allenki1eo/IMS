@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { getCompanyById } from "@/modules/company/company.service";
-import { requireAuth } from "@/lib/api-helpers";
+import { requirePermission } from "@/lib/api-helpers";
 import { success, badRequest, notFound } from "@/lib/response";
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth(request);
+  const auth = await requirePermission(request, "company:company:switch");
   if ("error" in auth) return auth.error;
 
   const body = await request.json();
