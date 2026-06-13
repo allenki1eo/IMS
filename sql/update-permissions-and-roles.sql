@@ -171,3 +171,63 @@ FROM roles r
 LEFT JOIN role_permissions rp ON rp."roleId" = r.id
 GROUP BY r.code
 ORDER BY r.code;
+
+
+-- =============================================================================
+-- STORE ISSUES & DAILY STORE REPORT (procurement flow)
+-- =============================================================================
+
+-- New planning columns on items
+ALTER TABLE items ADD COLUMN IF NOT EXISTS "projectedWeeklyUsage" DOUBLE PRECISION;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS "leadTimeWeeks" DOUBLE PRECISION;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS "confirmationNote" TEXT;
+
+-- Store issues (issue to production / returns / other movements)
+CREATE TABLE IF NOT EXISTS store_issues (
+  id          TEXT PRIMARY KEY,
+  "companyId"   TEXT NOT NULL,
+  "warehouseId" TEXT NOT NULL REFERENCES warehouses(id),
+  reference   TEXT NOT NULL UNIQUE,
+  "issueType"   TEXT NOT NULL,
+  "issueDate"   TIMESTAMP(3) NOT NULL,
+  destination TEXT,
+  notes       TEXT,
+  "createdById" TEXT NOT NULL,
+  "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "store_issues_companyId_issueDate_idx" ON store_issues("companyId", "issueDate");
+CREATE INDEX IF NOT EXISTS "store_issues_warehouseId_idx" ON store_issues("warehouseId");
+CREATE INDEX IF NOT EXISTS "store_issues_issueType_idx" ON store_issues("issueType");
+
+CREATE TABLE IF NOT EXISTS store_issue_lines (
+  id       TEXT PRIMARY KEY,
+  "issueId"  TEXT NOT NULL REFERENCES store_issues(id) ON DELETE CASCADE,
+  "itemId"   TEXT NOT NULL REFERENCES items(id),
+  quantity DOUBLE PRECISION NOT NULL,
+  notes    TEXT
+);
+CREATE INDEX IF NOT EXISTS "store_issue_lines_issueId_idx" ON store_issue_lines("issueId");
+CREATE INDEX IF NOT EXISTS "store_issue_lines_itemId_idx" ON store_issue_lines("itemId");
+
+-- Store issue permissions
+INSERT INTO permissions (id, module, resource, action, description)
+VALUES
+  (gen_random_uuid(), 'warehouse', 'issue', 'read',   'View store issues and returns'),
+  (gen_random_uuid(), 'warehouse', 'issue', 'create', 'Issue items to production / record returns')
+ON CONFLICT (module, resource, action) DO NOTHING;
+
+-- Grant read+create to admin/manager/dept-head + SUPER_ADMIN
+INSERT INTO role_permissions ("roleId", "permissionId", "grantedById", "grantedAt")
+SELECT r.id, p.id, 'system', NOW()
+FROM roles r, permissions p
+WHERE r.code IN ('SUPER_ADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER', 'DEPT_HEAD')
+  AND p.module = 'warehouse' AND p.resource = 'issue' AND p.action IN ('read', 'create')
+ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+-- Grant read-only to MANAGEMENT and AUDITOR
+INSERT INTO role_permissions ("roleId", "permissionId", "grantedById", "grantedAt")
+SELECT r.id, p.id, 'system', NOW()
+FROM roles r, permissions p
+WHERE r.code IN ('MANAGEMENT', 'AUDITOR')
+  AND p.module = 'warehouse' AND p.resource = 'issue' AND p.action = 'read'
+ON CONFLICT ("roleId", "permissionId") DO NOTHING;

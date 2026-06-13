@@ -40,6 +40,8 @@ interface FormState {
   minStock: string;
   maxStock: string;
   reorderPoint: string;
+  projectedWeeklyUsage: string;
+  leadTimeWeeks: string;
 }
 
 const DEFAULT: FormState = {
@@ -52,6 +54,8 @@ const DEFAULT: FormState = {
   minStock: "",
   maxStock: "",
   reorderPoint: "",
+  projectedWeeklyUsage: "",
+  leadTimeWeeks: "",
 };
 
 export default function NewItemPage() {
@@ -99,6 +103,8 @@ export default function NewItemPage() {
           minStock: form.minStock ? Number(form.minStock) : undefined,
           maxStock: form.maxStock ? Number(form.maxStock) : undefined,
           reorderPoint: form.reorderPoint ? Number(form.reorderPoint) : undefined,
+          projectedWeeklyUsage: form.projectedWeeklyUsage ? Number(form.projectedWeeklyUsage) : undefined,
+          leadTimeWeeks: form.leadTimeWeeks ? Number(form.leadTimeWeeks) : undefined,
         }),
       });
       const json = await res.json();
@@ -269,6 +275,38 @@ export default function NewItemPage() {
                   value={form.reorderPoint}
                   onChange={handleChange}
                   placeholder="0"
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="projectedWeeklyUsage">Projected Weekly Usage</Label>
+                <Input
+                  id="projectedWeeklyUsage"
+                  name="projectedWeeklyUsage"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={form.projectedWeeklyUsage}
+                  onChange={handleChange}
+                  placeholder="Units used per week"
+                  disabled={submitting}
+                />
+                <p className="text-xs text-muted-foreground">Drives the weeks-to-depletion column on the Daily Store Report</p>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="leadTimeWeeks">Supplier Lead Time (weeks)</Label>
+                <Input
+                  id="leadTimeWeeks"
+                  name="leadTimeWeeks"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={form.leadTimeWeeks}
+                  onChange={handleChange}
+                  placeholder="e.g. 2"
                   disabled={submitting}
                 />
               </div>

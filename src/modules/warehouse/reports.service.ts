@@ -176,3 +176,179 @@ export function getTxnDirection(
   };
   return map[transactionType] || "NEUTRAL";
 }
+
+// ─── Daily Store Report ───────────────────────────────────────────────────────
+// Mirrors the physical "Movement of Stock as on <date>" sheet:
+// Opening | Received from Supplier | Returned to Supplier | Issued to Production |
+// Return from Production | Other +/- | Closing | Stock Take | Confirmation |
+// Weekly Usage | UoM | Lead Time | Weeks to Depletion — grouped by category.
+
+const RECEIVE_TYPES = ["RECEIPT"];
+const RETURN_TO_SUPPLIER_TYPES = ["RETURN_TO_SUPPLIER"];
+const ISSUE_TO_PRODUCTION_TYPES = ["ISSUE_TO_PRODUCTION"];
+const RETURN_FROM_PRODUCTION_TYPES = ["RETURN_FROM_PRODUCTION"];
+const OTHER_TYPES = ["ADJUSTMENT_IN", "ADJUSTMENT_OUT", "TRANSFER_IN", "TRANSFER_OUT", "OTHER_ADDITION", "OTHER_DEDUCTION"];
+
+export interface DailyStoreReportRow {
+  itemId: string;
+  code: string;
+  name: string;
+  categoryName: string;
+  uomSymbol: string;
+  opening: number;
+  receivedFromSupplier: number;
+  returnedToSupplier: number;
+  issuedToProduction: number;
+  returnedFromProduction: number;
+  otherMovement: number;
+  closing: number;
+  stockTakeQty: number | null;
+  confirmation: string | null;
+  projectedWeeklyUsage: number | null;
+  leadTimeWeeks: number | null;
+  weeksToDepletion: number | null;
+}
+
+export async function getDailyStoreReport(params: {
+  companyId: string;
+  date: Date;
+  warehouseId?: string;
+}) {
+  const { companyId, date, warehouseId } = params;
+
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(date);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  const warehouseFilter = warehouseId ? { warehouseId } : {};
+
+  const [items, dayLedger, currentBalances, latestEntries, stockTakes] = await Promise.all([
+    db.item.findMany({
+      where: { companyId, isActive: true },
+      select: {
+        id: true, code: true, name: true,
+        projectedWeeklyUsage: true, leadTimeWeeks: true, confirmationNote: true,
+        category: { select: { name: true } },
+        uom: { select: { symbol: true } },
+      },
+      orderBy: [{ categoryId: "asc" }, { name: "asc" }],
+    }),
+    // All movements on the report day
+    db.stockLedger.findMany({
+      where: { companyId, ...warehouseFilter, createdAt: { gte: dayStart, lte: dayEnd } },
+      select: { itemId: true, transactionType: true, quantity: true },
+    }),
+    db.stockBalance.findMany({
+      where: { item: { companyId }, ...warehouseFilter },
+      select: { itemId: true, quantity: true },
+    }),
+    // Latest ledger entry per item up to end of day → closing balance as of that date
+    db.stockLedger.findMany({
+      where: { companyId, ...warehouseFilter, createdAt: { lte: dayEnd } },
+      orderBy: { createdAt: "desc" },
+      select: { itemId: true, warehouseId: true, balanceAfter: true, createdAt: true },
+    }),
+    // Stock take counts applied on the report day
+    db.stockAdjustmentLine.findMany({
+      where: {
+        adjustment: {
+          companyId, ...warehouseFilter,
+          status: "APPLIED",
+          appliedAt: { gte: dayStart, lte: dayEnd },
+        },
+      },
+      select: { itemId: true, countedQty: true },
+    }),
+  ]);
+
+  // Movements after the report day — subtracted from current balance when the
+  // item has no ledger history (static balances) to reconstruct historic closing
+  const movementByItem = new Map<string, Record<string, number>>();
+  for (const entry of dayLedger) {
+    const rec = movementByItem.get(entry.itemId) ?? {};
+    rec[entry.transactionType] = (rec[entry.transactionType] ?? 0) + entry.quantity;
+    movementByItem.set(entry.itemId, rec);
+  }
+
+  // Closing per item: latest balanceAfter ≤ dayEnd per item+warehouse, summed.
+  // Items with no ledger entries fall back to the current static balance.
+  const seenItemWarehouse = new Set<string>();
+  const closingByItem = new Map<string, number>();
+  const itemsWithLedger = new Set<string>();
+  for (const entry of latestEntries) {
+    const key = `${entry.itemId}:${entry.warehouseId}`;
+    if (seenItemWarehouse.has(key)) continue;
+    seenItemWarehouse.add(key);
+    itemsWithLedger.add(entry.itemId);
+    closingByItem.set(entry.itemId, (closingByItem.get(entry.itemId) ?? 0) + entry.balanceAfter);
+  }
+  const currentByItem = new Map<string, number>();
+  for (const b of currentBalances) {
+    currentByItem.set(b.itemId, (currentByItem.get(b.itemId) ?? 0) + b.quantity);
+  }
+
+  const stockTakeByItem = new Map<string, number>();
+  for (const st of stockTakes) {
+    stockTakeByItem.set(st.itemId, (stockTakeByItem.get(st.itemId) ?? 0) + st.countedQty);
+  }
+
+  const sumTypes = (rec: Record<string, number> | undefined, types: string[]) =>
+    types.reduce((acc, t) => acc + Math.abs(rec?.[t] ?? 0), 0);
+  const netTypes = (rec: Record<string, number> | undefined, types: string[]) =>
+    types.reduce((acc, t) => acc + (rec?.[t] ?? 0), 0);
+
+  const rows: DailyStoreReportRow[] = items.map((item) => {
+    const rec = movementByItem.get(item.id);
+    const receivedFromSupplier = sumTypes(rec, RECEIVE_TYPES);
+    const returnedToSupplier = sumTypes(rec, RETURN_TO_SUPPLIER_TYPES);
+    const issuedToProduction = sumTypes(rec, ISSUE_TO_PRODUCTION_TYPES);
+    const returnedFromProduction = sumTypes(rec, RETURN_FROM_PRODUCTION_TYPES);
+    const otherMovement = netTypes(rec, OTHER_TYPES);
+
+    const closing = itemsWithLedger.has(item.id)
+      ? closingByItem.get(item.id) ?? 0
+      : currentByItem.get(item.id) ?? 0;
+
+    const netDay = receivedFromSupplier - returnedToSupplier - issuedToProduction + returnedFromProduction + otherMovement;
+    const opening = closing - netDay;
+
+    const usage = item.projectedWeeklyUsage;
+    const weeksToDepletion = usage && usage > 0 ? Math.round((closing / usage) * 10) / 10 : null;
+
+    return {
+      itemId: item.id,
+      code: item.code,
+      name: item.name,
+      categoryName: item.category?.name ?? "Uncategorised",
+      uomSymbol: item.uom.symbol,
+      opening,
+      receivedFromSupplier,
+      returnedToSupplier,
+      issuedToProduction,
+      returnedFromProduction,
+      otherMovement,
+      closing,
+      stockTakeQty: stockTakeByItem.get(item.id) ?? null,
+      confirmation: item.confirmationNote,
+      projectedWeeklyUsage: item.projectedWeeklyUsage,
+      leadTimeWeeks: item.leadTimeWeeks,
+      weeksToDepletion,
+    };
+  });
+
+  // Group rows by category, preserving item order
+  const groups: Array<{ category: string; rows: DailyStoreReportRow[] }> = [];
+  const groupIndex = new Map<string, number>();
+  for (const row of rows) {
+    let idx = groupIndex.get(row.categoryName);
+    if (idx === undefined) {
+      idx = groups.length;
+      groupIndex.set(row.categoryName, idx);
+      groups.push({ category: row.categoryName, rows: [] });
+    }
+    groups[idx].rows.push(row);
+  }
+
+  return { date: dayStart.toISOString(), warehouseId: warehouseId ?? null, groups };
+}

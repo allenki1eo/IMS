@@ -416,6 +416,7 @@ model Warehouse {
   fromTransfers StockTransfer[]     @relation("TransferFrom")
   toTransfers   StockTransfer[]     @relation("TransferTo")
   adjustments   StockAdjustment[]
+  storeIssues   StoreIssue[]
   fgLots        FGLot[]
 
   @@unique([companyId, code])
@@ -495,6 +496,9 @@ model Item {
   minStock     Float    @default(0)
   maxStock     Float?
   reorderPoint Float?
+  projectedWeeklyUsage Float?   // units consumed per week — drives weeks-to-depletion
+  leadTimeWeeks        Float?   // supplier lead time in weeks
+  confirmationNote     String?  // e.g. "ORDERED" — shown in daily store report
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -507,6 +511,7 @@ model Item {
   grnLines        GRNLine[]
   transferLines   StockTransferLine[]
   adjustmentLines StockAdjustmentLine[]
+  storeIssueLines StoreIssueLine[]
   qualityStandards QualityStandard[]
   qualityTests    QualityTest[]
 
@@ -682,6 +687,42 @@ model StockAdjustmentLine {
   location   StorageLocation?   @relation(fields: [locationId], references: [id])
 
   @@map("stock_adjustment_lines")
+}
+
+model StoreIssue {
+  id          String   @id @default(cuid())
+  companyId   String
+  warehouseId String
+  reference   String   @unique
+  issueType   String   // ISSUE_TO_PRODUCTION | RETURN_FROM_PRODUCTION | RETURN_TO_SUPPLIER | OTHER_ADDITION | OTHER_DEDUCTION
+  issueDate   DateTime
+  destination String?  // production line, department, or supplier name
+  notes       String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  warehouse Warehouse        @relation(fields: [warehouseId], references: [id])
+  lines     StoreIssueLine[]
+
+  @@index([companyId, issueDate])
+  @@index([warehouseId])
+  @@index([issueType])
+  @@map("store_issues")
+}
+
+model StoreIssueLine {
+  id       String  @id @default(cuid())
+  issueId  String
+  itemId   String
+  quantity Float
+  notes    String?
+
+  issue StoreIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  item  Item       @relation(fields: [itemId], references: [id])
+
+  @@index([issueId])
+  @@index([itemId])
+  @@map("store_issue_lines")
 }
 
 // ─────────────────────────────────────────────
