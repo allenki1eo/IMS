@@ -75,6 +75,9 @@ export async function createItem(params: {
   minStock?: number;
   maxStock?: number | null;
   reorderPoint?: number | null;
+  projectedWeeklyUsage?: number | null;
+  leadTimeWeeks?: number | null;
+  confirmationNote?: string | null;
   createdById: string;
   userName: string;
   ipAddress?: string;
@@ -94,6 +97,9 @@ export async function createItem(params: {
       minStock: data.minStock ?? 0,
       maxStock: data.maxStock ?? null,
       reorderPoint: data.reorderPoint ?? null,
+      projectedWeeklyUsage: data.projectedWeeklyUsage ?? null,
+      leadTimeWeeks: data.leadTimeWeeks ?? null,
+      confirmationNote: data.confirmationNote ?? null,
       createdById,
     },
   });
@@ -127,6 +133,9 @@ export async function updateItem(params: {
     minStock?: number;
     maxStock?: number | null;
     reorderPoint?: number | null;
+    projectedWeeklyUsage?: number | null;
+    leadTimeWeeks?: number | null;
+    confirmationNote?: string | null;
   };
   updatedById: string;
   userName: string;

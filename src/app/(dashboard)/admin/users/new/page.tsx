@@ -11,7 +11,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
+
+interface CompanyOption {
+  id: string;
+  name: string;
+}
 
 interface FormData {
   fullName: string;
@@ -19,6 +31,7 @@ interface FormData {
   email: string;
   phone: string;
   password: string;
+  companyId: string;
 }
 
 const DEFAULT_FORM: FormData = {
@@ -27,6 +40,7 @@ const DEFAULT_FORM: FormData = {
   email: "",
   phone: "",
   password: "",
+  companyId: "",
 };
 
 export default function NewUserPage() {
@@ -34,13 +48,27 @@ export default function NewUserPage() {
   const { draft, saveDraft, clearDraft } = useLocalDraft<FormData>("new-user", DEFAULT_FORM);
   const [form, setForm] = useState<FormData>(draft);
   const [submitting, setSubmitting] = useState(false);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
 
   useEffect(() => {
     setForm(draft);
   }, [draft]);
 
+  useEffect(() => {
+    fetch("/api/companies")
+      .then((r) => r.json())
+      .then((d) => setCompanies(d.data ?? []))
+      .catch(() => {});
+  }, []);
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const updated = { ...form, [e.target.name]: e.target.value };
+    setForm(updated);
+    saveDraft(updated);
+  }
+
+  function handleCompanyChange(value: string) {
+    const updated = { ...form, companyId: value === "__none" ? "" : value };
     setForm(updated);
     saveDraft(updated);
   }
@@ -62,6 +90,7 @@ export default function NewUserPage() {
           email: form.email,
           phone: form.phone || undefined,
           password: form.password,
+          companyId: form.companyId || undefined,
         }),
       });
       const json = await res.json();
@@ -172,6 +201,29 @@ export default function NewUserPage() {
                 disabled={submitting}
               />
             </div>
+
+            {companies.length > 0 && (
+              <div className="space-y-1">
+                <Label htmlFor="companyId">Company (optional)</Label>
+                <Select
+                  value={form.companyId || "__none"}
+                  onValueChange={handleCompanyChange}
+                  disabled={submitting}
+                >
+                  <SelectTrigger id="companyId">
+                    <SelectValue placeholder="Select company..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">No company assigned</SelectItem>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex gap-2 pt-2">
               <Button type="submit" disabled={submitting}>

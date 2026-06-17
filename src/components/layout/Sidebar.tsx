@@ -10,7 +10,7 @@ import {
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
   TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag,
-  Leaf,
+  Leaf, BookMarked, LineChart, ListPlus, Droplets, TestTube, Beaker, Microscope,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -62,6 +62,8 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Items", href: "/warehouse/items", icon: <Package className="h-4 w-4" />, permission: "warehouse:item:read" },
           { label: "Stock", href: "/warehouse/stock", icon: <BarChart3 className="h-4 w-4" />, permission: "warehouse:stock:read" },
           { label: "GRN", href: "/warehouse/grn", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:grn:read" },
+          { label: "Store Issues", href: "/warehouse/store-issues", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:issue:read" },
+          { label: "Daily Store Report", href: "/warehouse/reports/daily-store", icon: <BarChart3 className="h-4 w-4" />, permission: "warehouse:stock:read" },
           { label: "Transfers", href: "/warehouse/transfers", icon: <Truck className="h-4 w-4" />, permission: "warehouse:transfer:read" },
           { label: "Adjustments", href: "/warehouse/adjustments", icon: <ClipboardList className="h-4 w-4" />, permission: "warehouse:adjustment:read" },
           { label: "Categories", href: "/warehouse/categories", icon: <Layers className="h-4 w-4" />, permission: "warehouse:category:read" },
@@ -130,6 +132,9 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Lines", href: "/production/lines", icon: <Factory className="h-4 w-4" />, permission: "production:line:read" },
           { label: "Daystore", href: "/production/daystore", icon: <Package className="h-4 w-4" />, permission: "production:batch:read" },
           { label: "Daily Report", href: "/production/daily-report", icon: <FileText className="h-4 w-4" />, permission: "production:report:read" },
+          { label: "Brew Sessions", href: "/production/brewing/sessions", icon: <FlaskConical className="h-4 w-4" />, permission: "brewing:session:read" },
+          { label: "Material Usage", href: "/production/brewing/material-usage", icon: <Package className="h-4 w-4" />, permission: "brewing:material:read" },
+          { label: "CIP Records", href: "/production/brewing/cip", icon: <Droplets className="h-4 w-4" />, permission: "brewing:cip:read" },
         ],
       },
       {
@@ -141,6 +146,10 @@ const NAV_GROUPS: NavGroup[] = [
           { label: "Standards", href: "/qc/standards", icon: <FileCheck className="h-4 w-4" />, permission: "qc:standard:read" },
           { label: "Lab Tests", href: "/qc/tests", icon: <FileSearch className="h-4 w-4" />, permission: "qc:test:read" },
           { label: "Non-Conformances", href: "/qc/ncr", icon: <XCircle className="h-4 w-4" />, permission: "qc:ncr:read" },
+          { label: "Unitank Analysis", href: "/qc/lab/unitank", icon: <TestTube className="h-4 w-4" />, permission: "lab:unitank:read" },
+          { label: "BBT Analysis", href: "/qc/lab/bbt", icon: <Beaker className="h-4 w-4" />, permission: "lab:bbt:read" },
+          { label: "Micro Reports", href: "/qc/lab/micro", icon: <Microscope className="h-4 w-4" />, permission: "lab:micro:read" },
+          { label: "Product Specs", href: "/qc/lab/specs", icon: <ClipboardList className="h-4 w-4" />, permission: "lab:spec:read" },
         ],
       },
       {
@@ -195,10 +204,13 @@ const NAV_GROUPS: NavGroup[] = [
         permission: "finance:account:read",
         children: [
           { label: "Overview", href: "/finance", icon: <BarChart3 className="h-4 w-4" />, permission: "finance:report:read" },
+          { label: "Cashbook", href: "/finance/cashbook", icon: <BookMarked className="h-4 w-4" />, permission: "finance:cashbook:read" },
+          { label: "Batch Entry", href: "/finance/cashbook/batch", icon: <ListPlus className="h-4 w-4" />, permission: "finance:cashbook:write" },
+          { label: "Expense Summary", href: "/finance/cashbook/expense-summary", icon: <FileText className="h-4 w-4" />, permission: "finance:cashbook:read" },
+          { label: "Daily Summary", href: "/finance/cashbook/summary", icon: <FileText className="h-4 w-4" />, permission: "finance:cashbook:read" },
+          { label: "Director View", href: "/finance/cashbook/director", icon: <LineChart className="h-4 w-4" />, permission: "finance:cashbook:director" },
           { label: "Chart of Accounts", href: "/finance/accounts", icon: <ScrollText className="h-4 w-4" />, permission: "finance:account:read" },
-          { label: "Journal Entries", href: "/finance/journal-entries", icon: <FileCheck className="h-4 w-4" />, permission: "finance:journal:read" },
           { label: "Bank Accounts", href: "/finance/bank-accounts", icon: <Landmark className="h-4 w-4" />, permission: "finance:bank:read" },
-          { label: "Payments", href: "/finance/payments", icon: <Receipt className="h-4 w-4" />, permission: "finance:payment:read" },
           { label: "Currency Converter", href: "/finance/converter", icon: <ArrowRightLeft className="h-4 w-4" />, permission: "finance:report:read" },
           { label: "Day Book", href: "/finance/day-book", icon: <BookOpen className="h-4 w-4" />, permission: "finance:journal:read" },
           { label: "Outstanding", href: "/finance/outstanding", icon: <CreditCard className="h-4 w-4" />, permission: "finance:payment:read" },

@@ -38,9 +38,24 @@ export async function POST(request: NextRequest) {
       expires: result.expiresAt,
     });
 
-    const company = await db.company.findFirst({ select: { id: true } });
-    if (company) {
-      cookieStore.set("erp_company_id", company.id, {
+    // Resolve the company for this user: prefer user's assigned companyId,
+    // fall back to the first company in the database.
+    // Wrapped in try/catch in case the companyId column hasn't been migrated yet.
+    let companyId: string | null = null;
+    try {
+      const loggedInUser = await db.user.findUnique({
+        where: { id: result.userId },
+        select: { companyId: true },
+      });
+      companyId = loggedInUser?.companyId ?? null;
+    } catch {
+      // column not yet migrated — fall through to findFirst below
+    }
+    if (!companyId) {
+      companyId = (await db.company.findFirst({ select: { id: true } }))?.id ?? null;
+    }
+    if (companyId) {
+      cookieStore.set("erp_company_id", companyId, {
         ...cookieOptions,
         maxAge: 60 * 60 * 24 * 365,
       });

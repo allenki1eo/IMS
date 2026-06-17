@@ -16,14 +16,27 @@ export async function GET(request: NextRequest) {
   const itemId = searchParams.get("itemId") ?? undefined;
   const lowStockParam = searchParams.get("lowStock");
   const lowStock = lowStockParam === "true" ? true : undefined;
+  const page = parseInt(searchParams.get("page") ?? "1", 10);
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "100", 10), 500);
 
   try {
-    const balances = await getStockBalance(companyId, {
+    const result = await getStockBalance(companyId, {
       warehouseId,
       itemId,
       lowStock,
+      page,
+      limit,
     });
-    return NextResponse.json({ success: true, data: balances, meta: { total: balances.length, page: 1, pageSize: balances.length, totalPages: 1 } });
+    return NextResponse.json({
+      success: true,
+      data: result.items,
+      meta: {
+        total: result.total,
+        page: result.page,
+        pageSize: result.limit,
+        totalPages: result.totalPages,
+      },
+    });
   } catch (err) {
     return handleError(err);
   }

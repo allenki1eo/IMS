@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/crypto";
 import { createAuditLog } from "@/lib/audit";
+import { invalidateAuthUser } from "@/lib/session";
 
 export async function listUsers(params: {
   page: number;
@@ -73,6 +74,7 @@ export async function getUserById(id: string) {
       createdAt: true,
       updatedAt: true,
       employeeId: true,
+      companyId: true,
       roles: {
         include: {
           role: { select: { id: true, name: true, code: true } },
@@ -93,6 +95,7 @@ export async function createUser(params: {
   phone?: string | null;
   password: string;
   employeeId?: string;
+  companyId?: string | null;
   mustChangePassword?: boolean;
   createdById: string;
   userName: string;
@@ -106,6 +109,7 @@ export async function createUser(params: {
     phone,
     password,
     employeeId,
+    companyId,
     mustChangePassword = true,
     createdById,
     userName,
@@ -123,6 +127,7 @@ export async function createUser(params: {
       phone,
       passwordHash,
       employeeId,
+      companyId: companyId ?? null,
       mustChangePassword,
       createdById,
     },
@@ -147,7 +152,7 @@ export async function createUser(params: {
 
 export async function updateUser(params: {
   id: string;
-  data: { fullName?: string; email?: string; phone?: string | null; employeeId?: string | null };
+  data: { fullName?: string; email?: string; phone?: string | null; employeeId?: string | null; companyId?: string | null };
   updatedById: string;
   userName: string;
   ipAddress?: string;
@@ -163,6 +168,7 @@ export async function updateUser(params: {
     data,
     select: { id: true, username: true, email: true, fullName: true, updatedAt: true },
   });
+  invalidateAuthUser(id);
 
   await createAuditLog({
     userId: updatedById,
@@ -196,6 +202,7 @@ export async function setUserStatus(params: {
   if (existing.isSystemUser && !isActive) throw new Error("Cannot deactivate system user");
 
   await db.user.update({ where: { id }, data: { isActive } });
+  invalidateAuthUser(id);
 
   await createAuditLog({
     userId: updatedById,
@@ -225,6 +232,7 @@ export async function resetUserPassword(params: {
     where: { id },
     data: { passwordHash, mustChangePassword: true },
   });
+  invalidateAuthUser(id);
 
   await createAuditLog({
     userId: resetById,
@@ -254,6 +262,7 @@ export async function assignRole(params: {
     data: { userId, roleId, branchId: branchId ?? null, assignedById },
     include: { role: { select: { name: true } } },
   });
+  invalidateAuthUser(userId);
 
   await createAuditLog({
     userId: assignedById,
@@ -287,6 +296,7 @@ export async function removeRole(params: {
   if (!userRole) throw new Error("Role assignment not found");
 
   await db.userRole.delete({ where: { id: userRoleId } });
+  invalidateAuthUser(userRole.userId);
 
   await createAuditLog({
     userId: removedById,

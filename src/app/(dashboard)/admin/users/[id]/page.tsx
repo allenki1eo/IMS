@@ -38,12 +38,18 @@ interface UserRole {
   code: string;
 }
 
+interface CompanyOption {
+  id: string;
+  name: string;
+}
+
 interface UserDetail {
   id: string;
   fullName: string;
   username: string;
   email: string;
   phone: string | null;
+  companyId: string | null;
   status: string;
   lastLoginAt: string | null;
   createdAt: string;
@@ -73,13 +79,28 @@ export default function UserDetailPage() {
   const [newPassword, setNewPassword] = useState("");
   const [resettingPw, setResettingPw] = useState(false);
 
+  // Company assignment
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [savingCompany, setSavingCompany] = useState(false);
+
   useEffect(() => {
     fetch(`/api/users/${id}`)
       .then((r) => r.json())
-      .then((d) => setUser(d.data))
+      .then((d) => {
+        setUser(d.data);
+        setSelectedCompanyId(d.data?.companyId ?? "");
+      })
       .catch(() => toast.error("Failed to load user"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    fetch("/api/companies")
+      .then((r) => r.json())
+      .then((d) => setCompanies(d.data ?? []))
+      .catch(() => {});
+  }, []);
 
   async function toggleStatus() {
     if (!user) return;
@@ -142,10 +163,8 @@ export default function UserDetailPage() {
   async function removeRole(roleId: string) {
     setRemovingRole(roleId);
     try {
-      const res = await fetch(`/api/users/${id}/roles`, {
+      const res = await fetch(`/api/users/${id}/roles?roleId=${roleId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleId }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Failed to remove role"); return; }
@@ -155,6 +174,25 @@ export default function UserDetailPage() {
       toast.error("Network error");
     } finally {
       setRemovingRole(null);
+    }
+  }
+
+  async function saveCompany() {
+    setSavingCompany(true);
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId: selectedCompanyId || null }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Failed to update company"); return; }
+      setUser((u) => u ? { ...u, companyId: selectedCompanyId || null } : u);
+      toast.success("Company updated");
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setSavingCompany(false);
     }
   }
 
@@ -262,6 +300,44 @@ export default function UserDetailPage() {
               </CardContent>
             </Card>
           </PermissionGuard>
+
+          {companies.length > 0 && (
+            <PermissionGuard require="users:user:update">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Company Assignment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Select
+                    value={selectedCompanyId || "__none"}
+                    onValueChange={(v) => setSelectedCompanyId(v === "__none" ? "" : v)}
+                    disabled={savingCompany}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select company..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">No company assigned</SelectItem>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={saveCompany}
+                    disabled={savingCompany || selectedCompanyId === (user.companyId ?? "")}
+                  >
+                    {savingCompany && <LoadingSpinner className="mr-2" />}
+                    Save Company
+                  </Button>
+                </CardContent>
+              </Card>
+            </PermissionGuard>
+          )}
         </div>
       </div>
 

@@ -144,32 +144,48 @@ export async function bulkCreateBales(
   }>,
   userId: string
 ) {
-  const created = [];
   const errors: Array<{ baleNumber: string; error: string }> = [];
 
-  for (const b of bales) {
-    try {
-      const bale = await db.cottonBale.create({
-        data: {
-          companyId,
-          seasonId: b.seasonId,
-          baleNumber: b.baleNumber,
-          weight: b.weight,
-          grade: b.grade ?? "A",
-          ginnery: b.ginnery ?? null,
-          createdById: userId,
-        },
-      });
-      created.push(bale);
-    } catch (err) {
-      errors.push({
-        baleNumber: b.baleNumber,
-        error: err instanceof Error ? err.message : "Unknown error",
-      });
+  // Validate for duplicates against existing bale numbers in one query
+  const baleNumbers = bales.map((b) => b.baleNumber);
+  const existing = await db.cottonBale.findMany({
+    where: { companyId, baleNumber: { in: baleNumbers } },
+    select: { baleNumber: true },
+  });
+  const existingSet = new Set(existing.map((b) => b.baleNumber));
+
+  const validBales = bales.filter((b) => {
+    if (existingSet.has(b.baleNumber)) {
+      errors.push({ baleNumber: b.baleNumber, error: "Bale number already exists" });
+      return false;
     }
+    return true;
+  });
+
+  let createdCount = 0;
+  if (validBales.length > 0) {
+    // createMany with skipDuplicates is unsupported on SQLite; use Promise.all with upsert
+    await Promise.all(
+      validBales.map((b) =>
+        db.cottonBale.upsert({
+          where: { companyId_baleNumber: { companyId, baleNumber: b.baleNumber } },
+          create: {
+            companyId,
+            seasonId: b.seasonId,
+            baleNumber: b.baleNumber,
+            weight: b.weight,
+            grade: b.grade ?? "A",
+            ginnery: b.ginnery ?? null,
+            createdById: userId,
+          },
+          update: {},
+        })
+      )
+    );
+    createdCount = validBales.length;
   }
 
-  if (created.length > 0) {
+  if (createdCount > 0) {
     await createAuditLog({
       userId,
       userName: userId,
@@ -177,12 +193,12 @@ export async function bulkCreateBales(
       module: "cotton",
       resource: "bale",
       recordId: companyId,
-      newValue: { count: created.length },
-      description: `Bulk created ${created.length} cotton bales`,
+      newValue: { count: createdCount },
+      description: `Bulk created ${createdCount} cotton bales`,
     });
   }
 
-  return { created, errors };
+  return { created: createdCount, errors };
 }
 
 // ─── Lots ─────────────────────────────────────────────────
@@ -234,6 +250,7 @@ export async function getLot(companyId: string, lotId: string) {
       season: { select: { id: true, name: true } },
       bales: {
         orderBy: { baleNumber: "asc" },
+        take: 100, // safeguard: prevent loading thousands of bales at once
       },
       contractLines: {
         include: {
@@ -537,8 +554,14 @@ export async function getContract(companyId: string, contractId: string) {
       lines: {
         include: {
           lot: {
-            include: {
-              bales: true,
+            select: {
+              id: true,
+              lotNumber: true,
+              status: true,
+              totalWeight: true,
+              baleCount: true,
+              description: true,
+              // Omit bales: true — too heavy; use baleCount instead
               season: { select: { id: true, name: true } },
             },
           },
@@ -853,8 +876,13 @@ export async function getInvoice(companyId: string, invoiceId: string) {
           lines: {
             include: {
               lot: {
-                include: {
-                  bales: true,
+                select: {
+                  id: true,
+                  lotNumber: true,
+                  totalWeight: true,
+                  baleCount: true,
+                  status: true,
+                  // Omit bales: true — invoice only needs lot summary, not individual bale records
                 },
               },
             },

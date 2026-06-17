@@ -3,6 +3,7 @@ import { listDrivers, createDriver } from "@/modules/transport/drivers.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "transport:driver:read");
@@ -19,6 +20,13 @@ export async function GET(request: NextRequest) {
   const isAvailable =
     isAvailableParam === "true" ? true : isAvailableParam === "false" ? false : undefined;
 
+  // Only cache unfiltered list requests
+  const useCache = !search && !status && isAvailable === undefined;
+  if (useCache) {
+    const cached = cache.get<unknown[]>(cacheKey.drivers(companyId));
+    if (cached) return paginated(cached, buildMeta(cached.length, paginationParams));
+  }
+
   try {
     const { data, meta } = await listDrivers({
       companyId,
@@ -28,6 +36,7 @@ export async function GET(request: NextRequest) {
       page: paginationParams.page,
       pageSize: paginationParams.pageSize,
     });
+    if (useCache) cache.set(cacheKey.drivers(companyId), data, TTL.REFERENCE);
     return paginated(data, buildMeta(meta.total, paginationParams));
   } catch (err) {
     console.error("[API Error]", err);
@@ -79,6 +88,7 @@ export async function POST(request: NextRequest) {
       userName: auth.user.fullName,
       ipAddress,
     });
+    cache.invalidate(cacheKey.drivers(companyId));
     return created(driver);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";

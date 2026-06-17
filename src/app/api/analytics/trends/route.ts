@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { getMonthlyTrends } from "@/modules/analytics/analytics.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
+import { cache, cacheKey, TTL } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "analytics:dashboard:read");
@@ -16,11 +17,16 @@ export async function GET(request: NextRequest) {
     return badRequest("months must be between 1 and 24");
   }
 
+  const key = cacheKey.trends(companyId, months);
+  const cached = cache.get(key);
+  if (cached) return success(cached);
+
   try {
     const trends = await getMonthlyTrends(companyId, months);
+    cache.set(key, trends, TTL.TRENDS);
     return success(trends);
   } catch (err) {
     console.error("[Analytics trends]", err);
-    return badRequest("Failed to load trends");
+    return handleError(err);
   }
 }
