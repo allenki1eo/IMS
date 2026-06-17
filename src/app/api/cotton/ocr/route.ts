@@ -63,9 +63,7 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await imageFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const { createWorker } = await import("tesseract.js");
-
-    const { PSM } = await import("tesseract.js");
+    const { createWorker, PSM } = await import("tesseract.js");
     const worker = await createWorker("eng", 1, { logger: () => {} });
 
     await worker.setParameters({
@@ -79,10 +77,13 @@ export async function POST(request: NextRequest) {
     const text: string = data.text ?? "";
     const lotNumbers = extractLotNumbers(text);
 
-    // Also return per-word confidence so the UI can flag low-confidence reads
-    const lowConfidenceWords = (data.words ?? [])
-      .filter((w: { confidence: number; text: string }) => w.confidence < 60 && w.text.trim())
-      .map((w: { text: string; confidence: number }) => ({ text: w.text, confidence: Math.round(w.confidence) }));
+    // Also return per-word confidence so the UI can flag low-confidence reads.
+    // `words` is present at runtime but absent from the Page type definition.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const words: { confidence: number; text: string }[] = (data as any).words ?? [];
+    const lowConfidenceWords = words
+      .filter((w) => w.confidence < 60 && w.text.trim())
+      .map((w) => ({ text: w.text, confidence: Math.round(w.confidence) }));
 
     return success({
       lotNumbers,
