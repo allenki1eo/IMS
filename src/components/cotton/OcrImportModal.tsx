@@ -131,12 +131,11 @@ export function OcrImportModal({
 
       const text: string = data.text ?? "";
       const lotNumbers = extractLotNumbers(text);
-      const lowConf = (data.words ?? [])
-        .filter((w: { confidence: number; text: string }) => w.confidence < 60 && w.text.trim())
-        .map((w: { text: string; confidence: number }) => ({
-          text: w.text,
-          confidence: Math.round(w.confidence),
-        }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const words: { confidence: number; text: string }[] = (data as any).words ?? [];
+      const lowConf = words
+        .filter((w) => w.confidence < 60 && w.text.trim())
+        .map((w) => ({ text: w.text, confidence: Math.round(w.confidence) }));
 
       setRawText(text);
       setLowConfidence(lowConf);

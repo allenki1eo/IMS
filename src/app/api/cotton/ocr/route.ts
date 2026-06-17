@@ -63,8 +63,7 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await imageFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createWorker } = require("tesseract.js");
+    const { createWorker } = await import("tesseract.js");
 
     const worker = await createWorker("eng", 1, { logger: () => {} });
 
