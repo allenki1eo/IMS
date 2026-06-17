@@ -108,7 +108,7 @@ export function OcrImportModal({
     setProgress("Loading OCR engine...");
     try {
       // Run Tesseract in the browser — avoids Vercel serverless timeouts
-      const { createWorker } = await import("tesseract.js");
+      const { createWorker, PSM } = await import("tesseract.js");
       const worker = await createWorker("eng", 1, {
         logger: (m: { status: string; progress: number }) => {
           if (m.status === "recognizing text") {
@@ -120,10 +120,9 @@ export function OcrImportModal({
       });
 
       await worker.setParameters({
-        tessedit_pageseg_mode: "6" as never,
+        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
         tessedit_char_whitelist:
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-/#. \n",
-        preserve_interword_spaces: "1" as never,
       });
 
       const { data } = await worker.recognize(imageFile);

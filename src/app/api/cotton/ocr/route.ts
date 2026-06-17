@@ -65,14 +65,12 @@ export async function POST(request: NextRequest) {
 
     const { createWorker } = await import("tesseract.js");
 
+    const { PSM } = await import("tesseract.js");
     const worker = await createWorker("eng", 1, { logger: () => {} });
 
-    // PSM 6 = assume a single uniform block of text (better for lot sheets)
-    // Whitelist alphanumeric + common separators to reduce noise
     await worker.setParameters({
-      tessedit_pageseg_mode: "6",
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
       tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-/#. \n",
-      preserve_interword_spaces: "1",
     });
 
     const { data } = await worker.recognize(buffer);
