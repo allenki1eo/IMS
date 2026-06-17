@@ -45,6 +45,9 @@ export function OcrImportModal({
   const [extracting, setExtracting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lotEntries, setLotEntries] = useState<LotEntry[]>([]);
+  const [rawText, setRawText] = useState<string>("");
+  const [lowConfidence, setLowConfidence] = useState<{ text: string; confidence: number }[]>([]);
+  const [showRaw, setShowRaw] = useState(false);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -72,10 +75,13 @@ export function OcrImportModal({
         return;
       }
       const lotNumbers: string[] = d.data?.lotNumbers ?? [];
+      setRawText(d.data?.rawText ?? "");
+      setLowConfidence(d.data?.lowConfidenceWords ?? []);
+      setShowRaw(false);
       if (lotNumbers.length === 0) {
         toast.info("No lot numbers detected. You can add them manually below.");
       } else {
-        toast.success(`Detected ${lotNumbers.length} lot numbers`);
+        toast.success(`Detected ${lotNumbers.length} lot number${lotNumbers.length !== 1 ? "s" : ""}`);
       }
       setLotEntries(
         lotNumbers.map((n) => ({
@@ -147,6 +153,9 @@ export function OcrImportModal({
     setImageFile(null);
     setImagePreview(null);
     setLotEntries([]);
+    setRawText("");
+    setLowConfidence([]);
+    setShowRaw(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     onClose();
   }
@@ -187,6 +196,32 @@ export function OcrImportModal({
               </div>
             )}
           </div>
+
+          {/* OCR confidence warnings */}
+          {lowConfidence.length > 0 && (
+            <div className="rounded border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+              <p className="font-medium mb-1">Low-confidence words detected — review extracted numbers carefully:</p>
+              <p className="text-xs">{lowConfidence.map((w) => `"${w.text}" (${w.confidence}%)`).join(", ")}</p>
+            </div>
+          )}
+
+          {/* Raw OCR text toggle */}
+          {rawText && (
+            <div>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline"
+                onClick={() => setShowRaw((v) => !v)}
+              >
+                {showRaw ? "Hide" : "Show"} raw OCR text
+              </button>
+              {showRaw && (
+                <pre className="mt-1 max-h-32 overflow-y-auto rounded border bg-muted/30 p-2 text-xs whitespace-pre-wrap">
+                  {rawText}
+                </pre>
+              )}
+            </div>
+          )}
 
           {/* Lot entries */}
           <div>
