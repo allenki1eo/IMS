@@ -21,6 +21,7 @@ export default function AccountsPage() {
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:account:create");
+  const canDelete = usePermission("finance:account:deactivate");
   const currency = useCurrency();
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
@@ -68,11 +69,12 @@ export default function AccountsPage() {
     {
       key: "actions",
       header: "",
-      cell: (row: any) => (
-        <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      ),
+      cell: (row: any) =>
+        canDelete ? (
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null,
     },
   ];
 

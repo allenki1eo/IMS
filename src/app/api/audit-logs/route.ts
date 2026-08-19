@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       userId: searchParams.get("userId") ?? undefined,
       action: searchParams.get("action") ?? undefined,
       recordId: searchParams.get("recordId") ?? undefined,
+      search: searchParams.get("search") ?? undefined,
       from: fromParam ? new Date(fromParam) : undefined,
       to: toParam ? new Date(toParam) : undefined,
     });

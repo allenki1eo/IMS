@@ -56,6 +56,8 @@ export default function NewQcTestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefillStandardId = searchParams.get("standardId") ?? "";
+  const prefillBatchId = searchParams.get("batchId") ?? "";
+  const prefillBatchRef = searchParams.get("batchRef") ?? "";
 
   const [form, setForm] = useState<FormData>({
     testType: "WORT",
@@ -63,8 +65,8 @@ export default function NewQcTestPage() {
     samplePoint: "",
     standardId: prefillStandardId,
     itemId: "",
-    productionBatchId: "",
-    batchNumber: "",
+    productionBatchId: prefillBatchId,
+    batchNumber: prefillBatchRef,
     sampleQty: "",
     sampleUnit: "",
     notes: "",

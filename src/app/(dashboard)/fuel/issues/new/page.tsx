@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
@@ -67,7 +67,12 @@ const DEFAULT: FormData = {
 export default function NewIssuePage() {
   const currency = useCurrency();
   const router = useRouter();
-  const [form, setForm] = useState<FormData>(DEFAULT);
+  const searchParams = useSearchParams();
+  const [form, setForm] = useState<FormData>(() => ({
+    ...DEFAULT,
+    vehicleId: searchParams.get("vehicleId") ?? "",
+    tripRef: searchParams.get("tripRef") ?? "",
+  }));
   const [submitting, setSubmitting] = useState(false);
   const [tanks, setTanks] = useState<TankOption[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);

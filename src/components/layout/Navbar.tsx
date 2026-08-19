@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Menu, PanelLeftClose, PanelLeftOpen, Search, Sun, Moon, Inbox } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, Search, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SyncStatusIndicator } from "./SyncStatusIndicator";
 import { CommandPalette } from "./CommandPalette";
@@ -214,11 +214,6 @@ export function Navbar({ onMenuToggle, onCollapseToggle, collapsed }: NavbarProp
 
           {/* Notifications */}
           <NotificationBell />
-
-          {/* Messages */}
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Inbox className="h-4 w-4" />
-          </Button>
         </div>
       </header>
 

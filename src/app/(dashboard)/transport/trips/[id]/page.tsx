@@ -261,7 +261,7 @@ export default function TripDetailPage() {
         {trip.status === "COMPLETED" && trip.vehicle?.id && (
           <PermissionGuard require="fuel:issue:create">
             <Button size="sm" variant="outline" asChild>
-              <Link href={`/fuel/issues/create?vehicleId=${trip.vehicle.id}&tripRef=${encodeURIComponent(trip.reference)}`}>
+              <Link href={`/fuel/issues/new?vehicleId=${trip.vehicle.id}&tripRef=${encodeURIComponent(trip.reference)}`}>
                 <Fuel className="h-4 w-4 mr-2" />
                 Record Fuel
               </Link>

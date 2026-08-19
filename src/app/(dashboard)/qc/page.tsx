@@ -53,10 +53,16 @@ function resultBadge(result: string | null | undefined) {
 
 function testTypeBadge(type: string) {
   const colors: Record<string, string> = {
-    INCOMING: "bg-blue-100 text-blue-700",
-    IN_PROCESS: "bg-purple-100 text-purple-700",
-    FINAL: "bg-green-100 text-green-700",
-    PERIODIC: "bg-gray-100 text-gray-600",
+    RAW_MATERIAL: "bg-amber-100 text-amber-700",
+    WATER: "bg-sky-100 text-sky-700",
+    WORT: "bg-orange-100 text-orange-700",
+    FERMENTATION: "bg-purple-100 text-purple-700",
+    BRIGHT_BEER: "bg-green-100 text-green-700",
+    PACKAGING: "bg-blue-100 text-blue-700",
+    MICROBIOLOGY: "bg-red-100 text-red-700",
+    SENSORY: "bg-pink-100 text-pink-700",
+    RETAIN_SAMPLE: "bg-slate-100 text-slate-700",
+    CALIBRATION: "bg-gray-100 text-gray-600",
   };
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-600"}`}>

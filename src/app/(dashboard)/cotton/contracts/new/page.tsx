@@ -90,6 +90,8 @@ export default function NewContractPage() {
       } else {
         toast.error(d.error ?? "Failed to create contract");
       }
+    } catch {
+      toast.error("Failed to create contract");
     } finally {
       setSaving(false);
     }
