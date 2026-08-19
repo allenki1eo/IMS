@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,7 +47,9 @@ export default function BBTAnalysisDetailPage({ params }: { params: Promise<{ id
   useEffect(() => {
     fetch(`/api/lab/bbt/${id}`)
       .then((r) => r.json())
-      .then((d) => { setAnalysis(d.data); setLoading(false); });
+      .then((d) => setAnalysis(d.data ?? null))
+      .catch(() => toast.error("Failed to load BBT analysis"))
+      .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;

@@ -19,6 +19,7 @@ export default function JournalEntryDetailPage() {
   const router = useRouter();
   const [entry, setEntry] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const canPost = usePermission("finance:journal:post");
   const canReverse = usePermission("finance:journal:reverse");
   const currency = useCurrency();
@@ -44,6 +45,7 @@ export default function JournalEntryDetailPage() {
   }, [id]);
 
   async function postEntry() {
+    setSubmitting(true);
     try {
       const res = await fetch(`/api/finance/journal-entries/${id}/post`, { method: "POST" });
       const json = await res.json();
@@ -55,10 +57,13 @@ export default function JournalEntryDetailPage() {
       }
     } catch {
       toast.error("Failed to post journal entry");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function reverseEntry() {
+    setSubmitting(true);
     try {
       const res = await fetch(`/api/finance/journal-entries/${id}/reverse`, { method: "POST" });
       const json = await res.json();
@@ -70,6 +75,8 @@ export default function JournalEntryDetailPage() {
       }
     } catch {
       toast.error("Failed to reverse journal entry");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -88,13 +95,13 @@ export default function JournalEntryDetailPage() {
         <div className="flex gap-2">
           <PrintButton className="no-print" />
           {entry.status === "DRAFT" && canPost && (
-            <Button onClick={postEntry}>
+            <Button onClick={postEntry} disabled={submitting}>
               <CheckCircle className="mr-2 h-4 w-4" />
               Post
             </Button>
           )}
           {entry.status === "POSTED" && canReverse && (
-            <Button variant="destructive" onClick={reverseEntry}>
+            <Button variant="destructive" onClick={reverseEntry} disabled={submitting}>
               <RotateCcw className="mr-2 h-4 w-4" />
               Reverse
             </Button>

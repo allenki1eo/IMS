@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
   const isActiveParam = searchParams.get("isActive");
   const isActive =
     isActiveParam === "true" ? true : isActiveParam === "false" ? false : undefined;
+  const lowStock = searchParams.get("lowStock") === "true";
 
   try {
     const { items, total } = await listItems(companyId, {
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
       categoryId,
       itemType,
       isActive,
+      lowStock,
       page: paginationParams.page,
       pageSize: paginationParams.pageSize,
     });

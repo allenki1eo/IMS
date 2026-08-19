@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
@@ -8,14 +9,15 @@ export async function listItems(
     categoryId?: string;
     itemType?: string;
     isActive?: boolean;
+    lowStock?: boolean;
     page: number;
     pageSize: number;
   }
 ) {
-  const { search, categoryId, itemType, isActive, page, pageSize } = params;
+  const { search, categoryId, itemType, isActive, lowStock, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
-  const where = {
+  let where: Prisma.ItemWhereInput = {
     companyId,
     ...(search
       ? {
@@ -30,6 +32,27 @@ export async function listItems(
     ...(itemType ? { itemType } : {}),
     ...(isActive !== undefined ? { isActive } : {}),
   };
+
+  if (lowStock) {
+    // Items whose total stock balance is at or below their reorder threshold
+    const candidates = await db.item.findMany({
+      where,
+      select: { id: true, minStock: true, reorderPoint: true },
+    });
+    const sums = await db.stockBalance.groupBy({
+      by: ["itemId"],
+      where: { itemId: { in: candidates.map((c) => c.id) } },
+      _sum: { quantity: true },
+    });
+    const totals = new Map(sums.map((s) => [s.itemId, s._sum.quantity ?? 0]));
+    const lowIds = candidates
+      .filter((c) => {
+        const threshold = c.reorderPoint ?? c.minStock;
+        return threshold > 0 && (totals.get(c.id) ?? 0) <= threshold;
+      })
+      .map((c) => c.id);
+    where = { ...where, id: { in: lowIds } };
+  }
 
   const [items, total] = await Promise.all([
     db.item.findMany({

@@ -44,6 +44,7 @@ export default function AuditLogsPage() {
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), pageSize: "30" });
+    if (search) params.set("search", search);
     if (module !== "all") params.set("module", module);
     if (action !== "all") params.set("action", action);
     if (from) params.set("from", new Date(from).toISOString());
@@ -56,7 +57,7 @@ export default function AuditLogsPage() {
       setTotal(json.meta?.total ?? 0);
     } catch { toast.error("Failed to load audit logs"); }
     finally { setLoading(false); }
-  }, [page, module, action, from, to]);
+  }, [page, search, module, action, from, to]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
@@ -134,6 +135,12 @@ export default function AuditLogsPage() {
       <PageHeader title="Audit Logs" description="Complete record of all system actions" />
 
       <div className="flex flex-wrap gap-3 mb-4">
+        <SearchInput
+          value={search}
+          onChange={(v) => { setSearch(v); setPage(1); }}
+          placeholder="Search by user, action, or module..."
+          className="w-64"
+        />
         <div className="w-44">
           <Select value={module} onValueChange={(v) => { setModule(v); setPage(1); }}>
             <SelectTrigger>
@@ -162,7 +169,7 @@ export default function AuditLogsPage() {
           <Label className="text-sm">To</Label>
           <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-10 w-36" />
         </div>
-        <Button variant="outline" onClick={() => { setModule("all"); setAction("all"); setFrom(""); setTo(""); setPage(1); }}>
+        <Button variant="outline" onClick={() => { setSearch(""); setModule("all"); setAction("all"); setFrom(""); setTo(""); setPage(1); }}>
           Reset
         </Button>
       </div>
