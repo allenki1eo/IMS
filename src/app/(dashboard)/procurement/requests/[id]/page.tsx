@@ -12,6 +12,17 @@ import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ApprovalPanel } from "@/components/shared/ApprovalPanel";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { LoadingSpinner } from "@/components/shared/LoadingState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatMoney, formatNumber, priorityClass } from "../../_components/procurement-ui";
 
@@ -52,6 +63,7 @@ export default function PurchaseRequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"submit" | "approve" | "reject" | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const loadRequest = useCallback(() => {
     setLoading(true);
@@ -65,17 +77,22 @@ export default function PurchaseRequestDetailPage() {
   useEffect(() => { loadRequest(); }, [loadRequest]);
 
   async function handleAction(action: "submit" | "approve" | "reject") {
+    if (action === "reject" && !rejectReason.trim()) {
+      toast.error("A rejection reason is required");
+      return;
+    }
     setActionLoading(true);
     try {
       const res = await fetch(`/api/procurement/requests/${id}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: action === "reject" ? JSON.stringify({ reason: "Rejected from request detail" }) : undefined,
+        body: action === "reject" ? JSON.stringify({ reason: rejectReason.trim() }) : undefined,
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? `Failed to ${action} request`); return; }
       toast.success(`Purchase request ${action === "submit" ? "submitted" : action === "approve" ? "approved" : "rejected"}`);
       setConfirmAction(null);
+      setRejectReason("");
       loadRequest();
     } catch {
       toast.error("Network error");
@@ -215,15 +232,57 @@ export default function PurchaseRequestDetailPage() {
       </Card>
 
       <ConfirmDialog
-        open={confirmAction != null}
+        open={confirmAction === "submit" || confirmAction === "approve"}
         onOpenChange={(open) => !open && setConfirmAction(null)}
-        title={`${confirmAction === "submit" ? "Submit" : confirmAction === "approve" ? "Approve" : "Reject"} Purchase Request`}
+        title={`${confirmAction === "submit" ? "Submit" : "Approve"} Purchase Request`}
         description="This will update the request workflow status."
-        confirmLabel={confirmAction === "submit" ? "Submit" : confirmAction === "approve" ? "Approve" : "Reject"}
-        variant={confirmAction === "reject" ? "destructive" : "default"}
+        confirmLabel={confirmAction === "submit" ? "Submit" : "Approve"}
         loading={actionLoading}
         onConfirm={() => confirmAction && handleAction(confirmAction)}
       />
+
+      <Dialog
+        open={confirmAction === "reject"}
+        onOpenChange={(open) => {
+          if (!open) { setConfirmAction(null); setRejectReason(""); }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Purchase Request</DialogTitle>
+            <DialogDescription>Provide a reason for rejecting this request.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1">
+            <Label htmlFor="rejectReason">
+              Reason <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="rejectReason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Reason for rejection (required)..."
+              disabled={actionLoading}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setConfirmAction(null); setRejectReason(""); }}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => handleAction("reject")}
+              disabled={actionLoading || !rejectReason.trim()}
+            >
+              {actionLoading && <LoadingSpinner className="mr-2" />}
+              Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

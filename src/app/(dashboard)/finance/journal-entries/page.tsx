@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import { CheckCircle, Plus, RotateCcw, Trash2 } from "lucide-react";
@@ -21,13 +22,15 @@ function fmt(n: number) {
 const PAGE_SIZE = 20;
 
 export default function JournalEntriesPage() {
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [actionId, setActionId] = useState<string | null>(null);
-  const [status, setStatus] = useState("");
-  const [voucherType, setVoucherType] = useState("");
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
+  const [voucherType, setVoucherType] = useState(() => searchParams.get("voucherType") ?? "");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:journal:create");
   const canPost = usePermission("finance:journal:post");
+  const canDelete = usePermission("finance:journal:update");
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -137,11 +140,11 @@ export default function JournalEntriesPage() {
       key: "actions",
       header: "",
       cell: (row: any) => {
-        const deleteButton = (
+        const deleteButton = canDelete ? (
           <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)} className="h-7 gap-1 text-xs text-red-700 border-red-300 hover:bg-red-50">
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
-        );
+        ) : null;
         if (!canPost) return deleteButton;
         const busy = actionId === row.id;
         if (row.status === "DRAFT") {

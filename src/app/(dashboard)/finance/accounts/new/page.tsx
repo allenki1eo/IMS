@@ -33,6 +33,10 @@ export default function NewAccountPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.accountType) {
+      toast.error("Please select an account type");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/finance/accounts", {

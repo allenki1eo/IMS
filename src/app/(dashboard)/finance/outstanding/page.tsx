@@ -18,8 +18,6 @@ interface OutstandingPayment {
   counterparty: string | null;
   description: string | null;
   amount: number;
-  paidAmount: number;
-  outstanding: number;
   currency: string;
   bankAccount: string | null;
 }
@@ -159,9 +157,7 @@ export default function OutstandingPage() {
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">Due Date</th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">Age</th>
-                        <th className="px-4 py-3 text-right font-medium text-muted-foreground">Total Amount</th>
-                        <th className="px-4 py-3 text-right font-medium text-muted-foreground">Paid</th>
-                        <th className="px-4 py-3 text-right font-medium text-muted-foreground">Outstanding</th>
+                        <th className="px-4 py-3 text-right font-medium text-muted-foreground">Amount</th>
                         <th className="px-4 py-3 text-right font-medium text-muted-foreground"></th>
                       </tr>
                     </thead>
@@ -182,24 +178,18 @@ export default function OutstandingPage() {
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">{fmtDate(p.paymentDate)}</td>
                           <td className="px-4 py-3">{ageBadge(p.daysOverdue)}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">
-                            <span className="text-xs text-muted-foreground mr-1">{p.currency}</span>
-                            {fmt(p.amount)}
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
-                            {p.paidAmount > 0 ? fmt(p.paidAmount) : "—"}
-                          </td>
                           <td className={`px-4 py-3 text-right tabular-nums font-semibold ${isPayable ? "text-red-700" : "text-emerald-700"}`}>
-                            {fmt(p.outstanding)}
+                            <span className="text-xs font-normal text-muted-foreground mr-1">{p.currency}</span>
+                            {fmt(p.amount)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Button size="sm" variant="outline" asChild className="h-7 text-xs">
                                 <Link href={`/finance/payments/${p.id}`}>View</Link>
                               </Button>
-                              {isPayable && p.outstanding > 0 && (
+                              {isPayable && p.amount > 0 && (
                                 <Button size="sm" asChild className="h-7 text-xs">
-                                  <Link href={`/finance/payments/new?referenceId=${p.id}&amount=${p.outstanding}&counterparty=${encodeURIComponent(p.counterparty ?? "")}`}>
+                                  <Link href={`/finance/payments/new?referenceId=${p.id}&amount=${p.amount}&counterparty=${encodeURIComponent(p.counterparty ?? "")}`}>
                                     Pay Now
                                   </Link>
                                 </Button>
@@ -211,7 +201,7 @@ export default function OutstandingPage() {
                     </tbody>
                     <tfoot className="border-t bg-muted/30">
                       <tr>
-                        <td colSpan={6} className="px-4 py-3 text-right font-bold">Total Outstanding</td>
+                        <td colSpan={4} className="px-4 py-3 text-right font-bold">Total Pending</td>
                         <td className={`px-4 py-3 text-right tabular-nums font-bold ${isPayable ? "text-red-700" : "text-emerald-700"}`}>
                           {fmt(data.totalOutstanding)}
                         </td>

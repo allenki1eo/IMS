@@ -117,8 +117,8 @@ export default function AccountDetailPage() {
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Account Type</CardTitle></CardHeader><CardContent><Badge>{account.accountType}</Badge></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Opening Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {account.openingBalance.toLocaleString()}</div></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {account.currentBalance.toLocaleString()}</div></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Opening Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {(account.openingBalance ?? 0).toLocaleString()}</div></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {(account.currentBalance ?? 0).toLocaleString()}</div></CardContent></Card>
           </div>
 
           {account.children?.length > 0 && (

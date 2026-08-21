@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback } from "react";
 import { ChevronDown, ChevronRight, Printer, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -231,6 +231,7 @@ function DailyView() {
               <h2 className="text-base font-semibold mt-0.5 uppercase">REQUEST FOR: {displayDate}</h2>
             </div>
 
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-black text-sm">
               <thead>
                 <tr className="bg-gray-100">
@@ -250,9 +251,9 @@ function DailyView() {
 
                 {/* ── Per-company bank receipt sections ───────────────────────── */}
                 {data.companies.map((cd) => (
-                  <>
+                  <Fragment key={cd.company.id}>
                     {/* Company section header with drill-down link */}
-                    <tr key={`hdr-${cd.company.id}`} className="bg-blue-100">
+                    <tr className="bg-blue-100">
                       <td
                         colSpan={3}
                         className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide"
@@ -290,7 +291,7 @@ function DailyView() {
                     ))}
 
                     {/* Company bank-receipt subtotal */}
-                    <tr key={`sub-${cd.company.id}`} className="font-semibold bg-gray-50">
+                    <tr className="font-semibold bg-gray-50">
                       <td colSpan={2} className="border border-black px-3 py-1 text-right text-xs uppercase">
                         TOTAL CHEQUE {cd.company.name.toUpperCase()}
                       </td>
@@ -299,7 +300,7 @@ function DailyView() {
                       </td>
                       <td className="border border-black px-3 py-1" />
                     </tr>
-                  </>
+                  </Fragment>
                 ))}
 
                 {/* ── Cash Received section ────────────────────────────────────── */}
@@ -363,6 +364,7 @@ function DailyView() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             {/* Below-table summary (matches physical doc) */}
             <div className="mt-4 text-sm space-y-1">

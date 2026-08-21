@@ -129,7 +129,7 @@ export default function ProductionBatchDetailPage() {
             {batch.status === "COMPLETED" && (
               <PermissionGuard require="qc:test:create">
                 <Button className="w-full" variant="outline" asChild>
-                  <Link href={`/qc/tests/create?batchId=${batch.id}&batchRef=${encodeURIComponent(batch.reference)}`}>
+                  <Link href={`/qc/tests/new?batchId=${batch.id}&batchRef=${encodeURIComponent(batch.reference)}`}>
                     <FlaskConical className="h-4 w-4 mr-2" />
                     Create QC Test
                   </Link>

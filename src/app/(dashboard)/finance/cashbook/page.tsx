@@ -22,6 +22,7 @@ import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { usePermission } from "@/hooks/usePermission";
+import { formatMoney } from "@/lib/format";
 
 interface BankAccount {
   id: string;
@@ -45,10 +46,6 @@ interface CashbookEntry {
   chequeRef: string | null;
   bankAccount: { id: string; name: string; bankName: string | null; currency: string; currentBalance: number };
   transferTo: { id: string; name: string; bankName: string | null } | null;
-}
-
-function fmtAmount(amount: number) {
-  return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtDate(dateStr: string) {
@@ -132,10 +129,23 @@ export default function CashbookPage() {
     }
   }
 
-  // Summary calculations
-  const totalReceipts = entries.filter((e) => e.type === "RECEIPT").reduce((s, e) => s + e.amount, 0);
-  const totalPayments = entries.filter((e) => e.type === "PAYMENT").reduce((s, e) => s + e.amount, 0);
-  const netMovement = totalReceipts - totalPayments;
+  // Summary calculations — grouped per currency so mixed-currency amounts are never summed together
+  const totalsByCurrency = (() => {
+    const map = new Map<string, { receipts: number; payments: number }>();
+    for (const e of entries) {
+      const cur = e.bankAccount?.currency ?? "TZS";
+      const t = map.get(cur) ?? { receipts: 0, payments: 0 };
+      if (e.type === "RECEIPT") t.receipts += e.amount;
+      if (e.type === "PAYMENT") t.payments += e.amount;
+      map.set(cur, t);
+    }
+    return Array.from(map.entries()).map(([currency, t]) => ({
+      currency,
+      receipts: t.receipts,
+      payments: t.payments,
+      net: t.receipts - t.payments,
+    }));
+  })();
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -201,21 +211,39 @@ export default function CashbookPage() {
         <Card>
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Receipts</p>
-            <p className="text-xl font-bold text-green-600 mt-1">TZS {fmtAmount(totalReceipts)}</p>
+            {totalsByCurrency.length === 0 ? (
+              <p className="text-xl font-bold text-green-600 mt-1">{formatMoney(0)}</p>
+            ) : (
+              totalsByCurrency.map((t) => (
+                <p key={t.currency} className="text-xl font-bold text-green-600 mt-1">{formatMoney(t.receipts, t.currency)}</p>
+              ))
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Payments</p>
-            <p className="text-xl font-bold text-red-600 mt-1">TZS {fmtAmount(totalPayments)}</p>
+            {totalsByCurrency.length === 0 ? (
+              <p className="text-xl font-bold text-red-600 mt-1">{formatMoney(0)}</p>
+            ) : (
+              totalsByCurrency.map((t) => (
+                <p key={t.currency} className="text-xl font-bold text-red-600 mt-1">{formatMoney(t.payments, t.currency)}</p>
+              ))
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Net Movement</p>
-            <p className={`text-xl font-bold mt-1 ${netMovement >= 0 ? "text-green-600" : "text-red-600"}`}>
-              TZS {fmtAmount(netMovement)}
-            </p>
+            {totalsByCurrency.length === 0 ? (
+              <p className="text-xl font-bold text-green-600 mt-1">{formatMoney(0)}</p>
+            ) : (
+              totalsByCurrency.map((t) => (
+                <p key={t.currency} className={`text-xl font-bold mt-1 ${t.net >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {formatMoney(t.net, t.currency)}
+                </p>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
@@ -276,14 +304,14 @@ export default function CashbookPage() {
                   </td>
                   <td className="px-3 py-2 text-right">
                     {entry.type === "RECEIPT" ? (
-                      <span className="font-medium text-green-600">{fmtAmount(entry.amount)}</span>
+                      <span className="font-medium text-green-600">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
                     ) : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {entry.type === "PAYMENT" ? (
-                      <span className="font-medium text-red-600">{fmtAmount(entry.amount)}</span>
+                      <span className="font-medium text-red-600">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
                     ) : entry.type === "TRANSFER" ? (
-                      <span className="font-medium text-amber-600">{fmtAmount(entry.amount)}</span>
+                      <span className="font-medium text-amber-600">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
                     ) : "—"}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">

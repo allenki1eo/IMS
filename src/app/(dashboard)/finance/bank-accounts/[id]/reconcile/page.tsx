@@ -31,6 +31,14 @@ interface BankTx {
   clearedAt: string | null;
 }
 
+interface TxnSummary {
+  clearedTotal: number;
+  unclearedTotal: number;
+  clearedCount: number;
+  unclearedCount: number;
+  totalCount: number;
+}
+
 function fmt(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -42,6 +50,7 @@ function fmtDate(s: string) {
 export default function BankReconcilePage() {
   const { id } = useParams<{ id: string }>();
   const [account, setAccount] = useState<any>(null);
+  const [summary, setSummary] = useState<TxnSummary | null>(null);
   const [transactions, setTransactions] = useState<BankTx[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
@@ -51,13 +60,15 @@ export default function BankReconcilePage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [accRes, txRes] = await Promise.all([
+      const [accRes, txRes, sumRes] = await Promise.all([
         fetch(`/api/finance/bank-accounts/${id}`),
         fetch(`/api/finance/bank-accounts/${id}/transactions?page=1&pageSize=500`),
+        fetch(`/api/finance/bank-accounts/${id}/transactions?summary=true`),
       ]);
-      const [accJson, txJson] = await Promise.all([accRes.json(), txRes.json()]);
+      const [accJson, txJson, sumJson] = await Promise.all([accRes.json(), txRes.json(), sumRes.json()]);
       if (accRes.ok) setAccount(accJson.data);
       if (txRes.ok) setTransactions(txJson.data ?? []);
+      if (sumRes.ok) setSummary(sumJson.data ?? null);
     } catch {
       toast.error("Failed to load account");
     } finally {
@@ -66,6 +77,16 @@ export default function BankReconcilePage() {
   }, [id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const refreshSummary = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/finance/bank-accounts/${id}/transactions?summary=true`);
+      const json = await res.json();
+      if (res.ok) setSummary(json.data ?? null);
+    } catch {
+      // summary refresh is non-blocking
+    }
+  }, [id]);
 
   async function toggleCleared(tx: BankTx) {
     setToggling(tx.id);
@@ -83,6 +104,7 @@ export default function BankReconcilePage() {
       setTransactions((prev) =>
         prev.map((t) => (t.id === tx.id ? { ...t, cleared: !t.cleared, clearedAt: json.data?.clearedAt ?? null } : t))
       );
+      refreshSummary();
     } catch {
       toast.error("Network error");
     } finally {
@@ -96,20 +118,16 @@ export default function BankReconcilePage() {
     return transactions;
   }, [transactions, filterCleared]);
 
-  const bookBalance = useMemo(
-    () => transactions.reduce((sum, t) => sum + (t.type === "DEPOSIT" ? t.amount : -t.amount), 0),
-    [transactions]
-  );
-
-  const clearedBalance = useMemo(
-    () =>
-      transactions
-        .filter((t) => t.cleared)
-        .reduce((sum, t) => sum + (t.type === "DEPOSIT" ? t.amount : -t.amount), 0),
-    [transactions]
-  );
-
-  const unclearedCount = transactions.filter((t) => !t.cleared).length;
+  // Balances come from DB aggregates over ALL transactions, not the loaded page.
+  // The account's currentBalance is authoritative (it includes the opening balance
+  // and is incremented by every transaction), so:
+  //   book balance    = currentBalance
+  //   cleared balance = currentBalance - uncleared movement
+  const bookBalance = account?.currentBalance ?? 0;
+  const unclearedTotal = summary?.unclearedTotal ?? 0;
+  const clearedBalance = bookBalance - unclearedTotal;
+  const clearedCount = summary?.clearedCount ?? 0;
+  const unclearedCount = summary?.unclearedCount ?? 0;
   const stmtBal = parseFloat(statementBalance) || 0;
   const difference = stmtBal - clearedBalance;
   const isReconciled = Math.abs(difference) < 0.01;
@@ -148,7 +166,7 @@ export default function BankReconcilePage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold tabular-nums text-emerald-700">{fmt(clearedBalance)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{transactions.filter((t) => t.cleared).length} cleared</p>
+            <p className="text-xs text-muted-foreground mt-1">{clearedCount} cleared</p>
           </CardContent>
         </Card>
 

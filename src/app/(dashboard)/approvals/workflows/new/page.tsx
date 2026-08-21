@@ -24,9 +24,11 @@ interface WorkflowStep {
   name: string;
   approverType: string;
   approverRoleId: string;
+  approverUserId: string;
 }
 
 interface RoleOption { id: string; name: string; }
+interface UserOption { id: string; fullName: string; username: string; }
 
 const APPROVER_TYPES = [
   { value: "ROLE", label: "Role" },
@@ -35,7 +37,7 @@ const APPROVER_TYPES = [
 ];
 
 function emptyStep(stepNumber: number): WorkflowStep {
-  return { stepNumber, name: "", approverType: "ROLE", approverRoleId: "" };
+  return { stepNumber, name: "", approverType: "ROLE", approverRoleId: "", approverUserId: "" };
 }
 
 export default function NewWorkflowPage() {
@@ -43,12 +45,17 @@ export default function NewWorkflowPage() {
   const [form, setForm] = useState({ name: "", module: "", resource: "", description: "" });
   const [steps, setSteps] = useState<WorkflowStep[]>([emptyStep(1)]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetch("/api/roles?pageSize=200")
       .then((r) => r.json())
       .then((d) => setRoles(d.data ?? []))
+      .catch(() => {});
+    fetch("/api/users?page=1&pageSize=100")
+      .then((r) => r.json())
+      .then((d) => setUsers(d.data ?? []))
       .catch(() => {});
   }, []);
 
@@ -96,6 +103,7 @@ export default function NewWorkflowPage() {
             name: s.name,
             approverType: s.approverType,
             approverRoleId: s.approverRoleId || undefined,
+            approverUserId: s.approverUserId || undefined,
           })),
         }),
       });
@@ -204,6 +212,18 @@ export default function NewWorkflowPage() {
                         <SelectContent>
                           <SelectItem value="__none">None</SelectItem>
                           {roles.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {step.approverType === "SPECIFIC_USER" && (
+                    <div className="space-y-1">
+                      <Label>Approver User</Label>
+                      <Select value={step.approverUserId || "__none"} onValueChange={(v) => handleStepChange(idx, "approverUserId", v)} disabled={submitting}>
+                        <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">None</SelectItem>
+                          {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.fullName} (@{u.username})</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>

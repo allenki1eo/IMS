@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { Fragment, useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Printer, ArrowLeft, X } from "lucide-react";
 import Link from "next/link";
@@ -285,6 +285,7 @@ function CashbookSummaryInner() {
         ) : (
           <>
             {/* Main consolidated table */}
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-black text-sm">
               <thead>
                 <tr className="bg-gray-100">
@@ -304,9 +305,9 @@ function CashbookSummaryInner() {
 
                 {/* Per-account sections */}
                 {summaries.map((s) => (
-                  <>
+                  <Fragment key={s.account.id}>
                     {/* Account section header */}
-                    <tr key={`hdr-${s.account.id}`} className="bg-blue-50">
+                    <tr className="bg-blue-50">
                       <td
                         colSpan={4}
                         className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide"
@@ -345,7 +346,7 @@ function CashbookSummaryInner() {
                     )}
 
                     {/* Account subtotal */}
-                    <tr key={`sub-${s.account.id}`} className="font-semibold bg-gray-50">
+                    <tr className="font-semibold bg-gray-50">
                       <td colSpan={2} className="border border-black px-3 py-1.5 text-right uppercase text-xs">
                         TOTAL {s.account.name.toUpperCase()}:
                       </td>
@@ -354,7 +355,7 @@ function CashbookSummaryInner() {
                         {fmtAmount(s.totalPayments)}
                       </td>
                     </tr>
-                  </>
+                  </Fragment>
                 ))}
 
                 {/* Cash Received section */}
@@ -422,6 +423,7 @@ function CashbookSummaryInner() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             {/* Signature Lines */}
             <div className="sig-section mt-12 grid grid-cols-2 gap-x-12 gap-y-10 pt-8">

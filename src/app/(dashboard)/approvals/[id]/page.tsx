@@ -54,7 +54,8 @@ export default function ApprovalDetailPage() {
   const [loading, setLoading] = useState(true);
   const [approveComment, setApproveComment] = useState("");
   const [rejectComment, setRejectComment] = useState("");
-  const [actioning, setActioning] = useState<"approve" | "reject" | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [actioning, setActioning] = useState<"approve" | "reject" | "cancel" | null>(null);
 
   useEffect(() => {
     fetch(`/api/approval-requests/${id}`)
@@ -98,6 +99,28 @@ export default function ApprovalDetailPage() {
       toast.success("Request rejected");
       setRequest((r) => r ? { ...r, status: "REJECTED" } : r);
       setRejectComment("");
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setActioning(null);
+    }
+  }
+
+  async function handleCancel() {
+    if (!cancelReason) { toast.error("A reason is required when cancelling"); return; }
+    if (!window.confirm("Cancel this approval request? This cannot be undone.")) return;
+    setActioning("cancel");
+    try {
+      const res = await fetch(`/api/approval-requests/${id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReason }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Failed to cancel"); return; }
+      toast.success("Request cancelled");
+      setRequest((r) => r ? { ...r, status: "CANCELLED" } : r);
+      setCancelReason("");
     } catch {
       toast.error("Network error");
     } finally {
@@ -248,8 +271,9 @@ export default function ApprovalDetailPage() {
 
         {/* Actions sidebar */}
         {request.status === "PENDING" && (
-          <PermissionGuard requireAny={["approvals:request:approve", "approvals:request:reject"]}>
-            <div className="space-y-4">
+          <div className="space-y-4">
+            <PermissionGuard requireAny={["approvals:request:approve", "approvals:request:reject"]}>
+              <div className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base text-green-600">Approve</CardTitle>
@@ -306,8 +330,44 @@ export default function ApprovalDetailPage() {
                   </Button>
                 </CardContent>
               </Card>
-            </div>
-          </PermissionGuard>
+              </div>
+            </PermissionGuard>
+
+            <PermissionGuard require="approvals:request:cancel">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base text-muted-foreground">Cancel Request</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="cancelReason">
+                      Reason <span className="text-destructive">*</span>
+                    </Label>
+                    <textarea
+                      id="cancelReason"
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder="Reason for cancellation (required)..."
+                      disabled={!!actioning}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleCancel}
+                    disabled={!!actioning || !cancelReason}
+                  >
+                    {actioning === "cancel" && <LoadingSpinner className="mr-2" />}
+                    Cancel Request
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Only the requester (or an admin) can cancel a pending request.
+                  </p>
+                </CardContent>
+              </Card>
+            </PermissionGuard>
+          </div>
         )}
       </div>
     </div>

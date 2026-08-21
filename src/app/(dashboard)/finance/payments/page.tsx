@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
@@ -13,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePermission } from "@/hooks/usePermission";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
+import { formatMoney } from "@/lib/format";
 
 interface PaymentRow {
   id: string;
@@ -22,15 +24,18 @@ interface PaymentRow {
   amount: number;
   paymentMethod: string;
   status: string;
+  currency?: string;
 }
 
 const PAGE_SIZE = 20;
 
 export default function PaymentsPage() {
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:payment:create");
+  const canDelete = usePermission("finance:payment:cancel");
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   useEffect(() => { setPage(1); }, [debounced, status]);
@@ -69,7 +74,7 @@ export default function PaymentsPage() {
     {
       key: "amount",
       header: "Amount",
-      cell: (row: PaymentRow) => (row.amount || 0).toLocaleString("en-TZ", { style: "currency", currency: "TZS", maximumFractionDigits: 0 }),
+      cell: (row: PaymentRow) => formatMoney(row.amount, row.currency),
     },
     { key: "paymentMethod", header: "Method", cell: (row: PaymentRow) => row.paymentMethod },
     {
@@ -84,11 +89,12 @@ export default function PaymentsPage() {
     {
       key: "actions",
       header: "",
-      cell: (row: PaymentRow) => (
-        <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      ),
+      cell: (row: PaymentRow) =>
+        canDelete ? (
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null,
     },
   ];
 

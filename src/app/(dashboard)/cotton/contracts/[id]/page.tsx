@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,8 @@ export default function ContractDetailPage() {
       } else {
         toast.error(d.error ?? `Failed to ${label.toLowerCase()}`);
       }
+    } catch {
+      toast.error(`Failed to ${label.toLowerCase()} contract`);
     } finally {
       setActionLoading(false);
     }
@@ -111,6 +114,8 @@ export default function ContractDetailPage() {
       } else {
         toast.error(d.error ?? "Failed to create invoice");
       }
+    } catch {
+      toast.error("Failed to create invoice");
     } finally {
       setActionLoading(false);
     }
@@ -132,20 +137,26 @@ export default function ContractDetailPage() {
               <Link href="/cotton/contracts"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link>
             </Button>
             {contract.status === "DRAFT" && (
-              <Button onClick={() => handleAction("confirm", "Confirm")} disabled={actionLoading}>
-                Confirm Contract
-              </Button>
+              <PermissionGuard require="cotton:contract:update">
+                <Button onClick={() => handleAction("confirm", "Confirm")} disabled={actionLoading}>
+                  Confirm Contract
+                </Button>
+              </PermissionGuard>
             )}
             {contract.status === "CONFIRMED" && !activeInvoice && (
-              <Button onClick={handleCreateInvoice} disabled={actionLoading}>
-                <FileText className="h-4 w-4 mr-2" />
-                Create Invoice
-              </Button>
+              <PermissionGuard require="cotton:invoice:create">
+                <Button onClick={handleCreateInvoice} disabled={actionLoading}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Create Invoice
+                </Button>
+              </PermissionGuard>
             )}
             {["DRAFT", "CONFIRMED"].includes(contract.status) && (
-              <Button variant="destructive" onClick={() => handleAction("cancel", "Cancel")} disabled={actionLoading}>
-                Cancel
-              </Button>
+              <PermissionGuard require="cotton:contract:update">
+                <Button variant="destructive" onClick={() => handleAction("cancel", "Cancel")} disabled={actionLoading}>
+                  Cancel
+                </Button>
+              </PermissionGuard>
             )}
           </div>
         }

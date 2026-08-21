@@ -15,6 +15,7 @@ const createWorkflowSchema = z.object({
       name: z.string(),
       approverType: z.string().default("ANY_OF_ROLE"),
       approverRoleId: z.string().optional(),
+      approverUserId: z.string().optional(),
       canDelegate: z.boolean().optional(),
       timeLimitHours: z.number().optional(),
     })

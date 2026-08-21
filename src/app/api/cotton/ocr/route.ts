@@ -63,17 +63,12 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await imageFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createWorker } = require("tesseract.js");
-
+    const { createWorker, PSM } = await import("tesseract.js");
     const worker = await createWorker("eng", 1, { logger: () => {} });
 
-    // PSM 6 = assume a single uniform block of text (better for lot sheets)
-    // Whitelist alphanumeric + common separators to reduce noise
     await worker.setParameters({
-      tessedit_pageseg_mode: "6",
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
       tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-/#. \n",
-      preserve_interword_spaces: "1",
     });
 
     const { data } = await worker.recognize(buffer);
@@ -82,10 +77,13 @@ export async function POST(request: NextRequest) {
     const text: string = data.text ?? "";
     const lotNumbers = extractLotNumbers(text);
 
-    // Also return per-word confidence so the UI can flag low-confidence reads
-    const lowConfidenceWords = (data.words ?? [])
-      .filter((w: { confidence: number; text: string }) => w.confidence < 60 && w.text.trim())
-      .map((w: { text: string; confidence: number }) => ({ text: w.text, confidence: Math.round(w.confidence) }));
+    // Also return per-word confidence so the UI can flag low-confidence reads.
+    // `words` is present at runtime but absent from the Page type definition.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const words: { confidence: number; text: string }[] = (data as any).words ?? [];
+    const lowConfidenceWords = words
+      .filter((w) => w.confidence < 60 && w.text.trim())
+      .map((w) => ({ text: w.text, confidence: Math.round(w.confidence) }));
 
     return success({
       lotNumbers,

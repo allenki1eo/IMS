@@ -16,6 +16,7 @@ export default function PaymentDetailPage() {
   const { id } = useParams();
   const [payment, setPayment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const canComplete = usePermission("finance:payment:complete");
   const canCancel = usePermission("finance:payment:cancel");
 
@@ -40,6 +41,7 @@ export default function PaymentDetailPage() {
   }, [id]);
 
   async function completePayment() {
+    setSubmitting(true);
     try {
       const res = await fetch(`/api/finance/payments/${id}/complete`, { method: "POST" });
       const json = await res.json();
@@ -51,10 +53,13 @@ export default function PaymentDetailPage() {
       }
     } catch {
       toast.error("Failed to complete payment");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function cancelPayment() {
+    setSubmitting(true);
     try {
       const res = await fetch(`/api/finance/payments/${id}/cancel`, { method: "POST" });
       const json = await res.json();
@@ -66,6 +71,8 @@ export default function PaymentDetailPage() {
       }
     } catch {
       toast.error("Failed to cancel payment");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -83,10 +90,10 @@ export default function PaymentDetailPage() {
         <PageHeader title={payment.paymentNumber} description={`${payment.type} to ${payment.partyName}`} />
         <div className="flex gap-2">
           {payment.status === "PENDING" && canComplete && (
-            <Button onClick={completePayment}><CheckCircle className="mr-2 h-4 w-4" />Complete</Button>
+            <Button onClick={completePayment} disabled={submitting}><CheckCircle className="mr-2 h-4 w-4" />Complete</Button>
           )}
-          {payment.status !== "CANCELLED" && canCancel && (
-            <Button variant="destructive" onClick={cancelPayment}><XCircle className="mr-2 h-4 w-4" />Cancel</Button>
+          {payment.status === "PENDING" && canCancel && (
+            <Button variant="destructive" onClick={cancelPayment} disabled={submitting}><XCircle className="mr-2 h-4 w-4" />Cancel</Button>
           )}
         </div>
       </div>

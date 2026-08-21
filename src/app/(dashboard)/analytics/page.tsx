@@ -3,10 +3,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line,
-} from "recharts";
+import dynamic from "next/dynamic";
+import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
 import {
   Users, Warehouse, Truck, Fuel, Wrench, ShoppingCart,
   Factory, FlaskConical, SendHorizonal, Landmark,
@@ -16,6 +14,16 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/hooks/useCurrency";
+
+// Lazy-load recharts pieces so the ~100kB library stays out of the initial bundle
+const MonthlyActivityChart = dynamic(
+  () => import("./AnalyticsCharts").then((m) => m.MonthlyActivityChart),
+  { ssr: false, loading: () => <ChartSkeleton height={300} /> }
+);
+const OperationalVolumeChart = dynamic(
+  () => import("./AnalyticsCharts").then((m) => m.OperationalVolumeChart),
+  { ssr: false, loading: () => <ChartSkeleton height={300} /> }
+);
 
 export default function AnalyticsPage() {
   const currency = useCurrency();
@@ -62,12 +70,12 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <PageHeader title="Management Analytics" description="Executive dashboard with KPIs and trends across all modules" />
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Link href="/analytics/operations"><Button variant="outline">Operational Analytics</Button></Link>
         <Link href="/analytics/financial"><Button variant="outline">Financial Analytics</Button></Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
         {kpiCards.map((card) => (
           <Link key={card.label} href={card.href}>
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
@@ -87,35 +95,14 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader><CardTitle>Monthly Activity Trends</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={trends}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="purchaseOrders" name="PO Value" fill="#0088FE" />
-                <Bar dataKey="dispatchOrders" name="Dispatch Value" fill="#00C49F" />
-                <Bar dataKey="journalActivity" name="Journal Activity" fill="#FFBB28" />
-              </BarChart>
-            </ResponsiveContainer>
+            <MonthlyActivityChart data={trends} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Operational Volume</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={trends}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="grns" name="GRNs" stroke="#0088FE" />
-                <Line type="monotone" dataKey="trips" name="Trips" stroke="#00C49F" />
-                <Line type="monotone" dataKey="batches" name="Batches" stroke="#FF8042" />
-                <Line type="monotone" dataKey="workOrders" name="Work Orders" stroke="#8884D8" />
-              </LineChart>
-            </ResponsiveContainer>
+            <OperationalVolumeChart data={trends} />
           </CardContent>
         </Card>
       </div>

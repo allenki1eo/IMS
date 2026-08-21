@@ -2,15 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
-} from "recharts";
+import dynamic from "next/dynamic";
+import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+// Lazy-load recharts pieces so the ~100kB library stays out of the initial bundle
+const StockBarChart = dynamic(
+  () => import("./OperationsCharts").then((m) => m.StockBarChart),
+  { ssr: false, loading: () => <ChartSkeleton height={300} /> }
+);
+const StatusPieChart = dynamic(
+  () => import("./OperationsCharts").then((m) => m.StatusPieChart),
+  { ssr: false, loading: () => <ChartSkeleton height={300} /> }
+);
 
 export default function OperationsAnalyticsPage() {
   const [metrics, setMetrics] = useState<any>(null);
@@ -45,87 +51,28 @@ export default function OperationsAnalyticsPage() {
         <Card>
           <CardHeader><CardTitle>Stock by Warehouse</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={metrics?.stockByWarehouse || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#0088FE" />
-              </BarChart>
-            </ResponsiveContainer>
+            <StockBarChart data={metrics?.stockByWarehouse || []} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Trip Status Breakdown</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={metrics?.tripStatusBreakdown || []}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label
-                >
-                  {(metrics?.tripStatusBreakdown || []).map((_: any, i: number) => (
-                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <StatusPieChart data={metrics?.tripStatusBreakdown || []} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Work Order Status</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={metrics?.maintenanceByStatus || []}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label
-                >
-                  {(metrics?.maintenanceByStatus || []).map((_: any, i: number) => (
-                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <StatusPieChart data={metrics?.maintenanceByStatus || []} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>QC Test Results</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={metrics?.qcResults || []}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label
-                >
-                  {(metrics?.qcResults || []).map((_: any, i: number) => (
-                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <StatusPieChart data={metrics?.qcResults || []} />
           </CardContent>
         </Card>
       </div>

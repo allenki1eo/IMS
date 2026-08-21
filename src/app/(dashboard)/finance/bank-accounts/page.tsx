@@ -30,6 +30,7 @@ export default function BankAccountsPage() {
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const canCreate = usePermission("finance:bank:create");
+  const canDelete = usePermission("finance:bank:deactivate");
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -78,11 +79,12 @@ export default function BankAccountsPage() {
     {
       key: "actions",
       header: "",
-      cell: (row: BankAccountRow) => (
-        <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      ),
+      cell: (row: BankAccountRow) =>
+        canDelete ? (
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null,
     },
   ];
 

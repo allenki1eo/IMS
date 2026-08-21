@@ -1,11 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import {
-  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
-} from "recharts";
+import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
+
+// Lazy-load recharts pieces so the ~100kB library stays out of the initial bundle
+const DashboardTrendChart = dynamic(
+  () => import("./DashboardCharts").then((m) => m.DashboardTrendChart),
+  { ssr: false, loading: () => <ChartSkeleton height={220} /> }
+);
+const DashboardSparkBar = dynamic(
+  () => import("./DashboardCharts").then((m) => m.DashboardSparkBar),
+  { ssr: false, loading: () => <div className="h-9 w-[72px] animate-pulse rounded bg-muted" /> }
+);
 import {
   Activity,
   ArrowUpRight,
@@ -301,24 +310,25 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat().format(value);
 }
 
-function generateSparkData(currentValue: number): { v: number }[] {
-  const seed = currentValue || 3;
-  return [
-    { v: Math.max(1, seed * 0.6) },
-    { v: Math.max(1, seed * 0.9) },
-    { v: Math.max(1, seed * 0.5) },
-    { v: Math.max(1, seed * 1.2) },
-    { v: Math.max(1, seed * 0.8) },
-    { v: Math.max(1, seed * 1.1) },
-    { v: Math.max(1, seed) },
-  ];
-}
+/**
+ * Maps KPI stat keys to the real monthly count series returned by
+ * /api/analytics/trends. KPIs without a matching series show no sparkline
+ * rather than a fabricated one.
+ */
+const SPARK_TREND_KEYS: Partial<Record<StatKey, keyof Omit<TrendPoint, "month">>> = {
+  activeTrips: "trips",
+  openWorkOrders: "workOrders",
+};
 
 /* ─────────────── Sub-components ─────────────── */
 
-function KpiCard({ metric, value, loading }: { metric: MetricConfig; value: number; loading: boolean }) {
+function KpiCard({ metric, value, trends, loading }: { metric: MetricConfig; value: number; trends: TrendPoint[]; loading: boolean }) {
   const Icon = metric.icon;
-  const sparkData = useMemo(() => generateSparkData(value), [value]);
+  const sparkData = useMemo(() => {
+    const trendKey = SPARK_TREND_KEYS[metric.key];
+    if (!trendKey || trends.length === 0) return null;
+    return trends.map((t) => ({ v: t[trendKey] }));
+  }, [metric.key, trends]);
 
   return (
     <Link href={metric.href} className="group block">
@@ -347,14 +357,12 @@ function KpiCard({ metric, value, loading }: { metric: MetricConfig; value: numb
                   <p className="mt-1.5 text-xs text-muted-foreground truncate">{metric.description}</p>
                 </div>
 
-                {/* Sparkline */}
-                <div className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <ResponsiveContainer width={72} height={36}>
-                    <BarChart data={sparkData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                      <Bar dataKey="v" fill="currentColor" radius={[2, 2, 0, 0]} isAnimationActive={false} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {/* Sparkline — real monthly series only */}
+                {sparkData && (
+                  <div className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <DashboardSparkBar data={sparkData} />
+                  </div>
+                )}
               </div>
 
               <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
@@ -553,7 +561,7 @@ export default function DashboardPage() {
       {/* ── KPI Cards ── */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {visibleMetrics.map((metric) => (
-          <KpiCard key={metric.key} metric={metric} value={stats[metric.key]} loading={loading} />
+          <KpiCard key={metric.key} metric={metric} value={stats[metric.key]} trends={trends} loading={loading} />
         ))}
         {loading && visibleMetrics.length === 0 &&
           Array.from({ length: 4 }).map((_, i) => (
@@ -601,35 +609,10 @@ export default function DashboardPage() {
                 }
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={trends} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                    cursor={{ fill: "hsl(var(--muted))" }}
-                  />
-                  {TREND_SERIES.filter((s) => activeSeries.has(s.key)).map((s) => (
-                    <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[3, 3, 0, 0]} maxBarSize={28} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
+              <DashboardTrendChart
+                trends={trends}
+                series={TREND_SERIES.filter((s) => activeSeries.has(s.key))}
+              />
             )}
           </CardContent>
         </Card>

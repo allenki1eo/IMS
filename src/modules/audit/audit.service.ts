@@ -8,10 +8,11 @@ export async function listAuditLogs(params: {
   userId?: string;
   action?: string;
   recordId?: string;
+  search?: string;
   from?: Date;
   to?: Date;
 }) {
-  const { page, pageSize, module, resource, userId, action, recordId, from, to } = params;
+  const { page, pageSize, module, resource, userId, action, recordId, search, from, to } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
@@ -20,6 +21,15 @@ export async function listAuditLogs(params: {
     ...(userId ? { userId } : {}),
     ...(action ? { action } : {}),
     ...(recordId ? { recordId } : {}),
+    ...(search
+      ? {
+          OR: [
+            { action: { contains: search } },
+            { module: { contains: search } },
+            { userName: { contains: search } },
+          ],
+        }
+      : {}),
     ...(from || to
       ? {
           createdAt: {

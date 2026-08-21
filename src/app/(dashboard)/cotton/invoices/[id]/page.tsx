@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,8 @@ export default function InvoiceDetailPage() {
       } else {
         toast.error(d.error ?? "Failed to mark invoice as paid");
       }
+    } catch {
+      toast.error("Failed to mark invoice as paid");
     } finally {
       setActionLoading(false);
     }
@@ -127,9 +130,11 @@ export default function InvoiceDetailPage() {
                 Print Invoice
               </Button>
               {(invoice.status === "DRAFT" || invoice.status === "ISSUED") && (
-                <Button onClick={handleMarkPaid} disabled={actionLoading}>
-                  Mark as Paid
-                </Button>
+                <PermissionGuard require="cotton:invoice:update">
+                  <Button onClick={handleMarkPaid} disabled={actionLoading}>
+                    Mark as Paid
+                  </Button>
+                </PermissionGuard>
               )}
             </div>
           }

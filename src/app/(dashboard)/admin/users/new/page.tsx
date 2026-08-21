@@ -79,6 +79,10 @@ export default function NewUserPage() {
       toast.error("Please fill in all required fields");
       return;
     }
+    if (form.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/users", {
