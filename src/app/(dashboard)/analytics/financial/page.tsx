@@ -2,16 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line,
-} from "recharts";
+import dynamic from "next/dynamic";
+import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+
+// Lazy-load recharts pieces so the ~100kB library stays out of the initial bundle
+const RevenueExpensesChart = dynamic(
+  () => import("./FinancialCharts").then((m) => m.RevenueExpensesChart),
+  { ssr: false, loading: () => <ChartSkeleton height={300} /> }
+);
+const NetPositionChart = dynamic(
+  () => import("./FinancialCharts").then((m) => m.NetPositionChart),
+  { ssr: false, loading: () => <ChartSkeleton height={300} /> }
+);
 
 export default function FinancialAnalyticsPage() {
   const [data, setData] = useState<any[]>([]);
@@ -43,7 +51,7 @@ export default function FinancialAnalyticsPage() {
     <div className="space-y-6">
       <PageHeader title="Financial Analytics" description="Revenue, expenses, payments, and receipts over time" />
 
-      <div className="flex gap-4 items-end">
+      <div className="flex flex-wrap gap-4 items-end">
         <div className="space-y-2">
           <Label>Months</Label>
           <Input type="number" min={3} max={24} value={months} onChange={(e) => setMonths(e.target.value)} className="w-24" />
@@ -55,34 +63,14 @@ export default function FinancialAnalyticsPage() {
         <Card>
           <CardHeader><CardTitle>Revenue vs Expenses</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="revenue" name="Revenue" fill="#00C49F" />
-                <Bar dataKey="expenses" name="Expenses" fill="#FF8042" />
-              </BarChart>
-            </ResponsiveContainer>
+            <RevenueExpensesChart data={data} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Net Position</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#00C49F" />
-                <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#FF8042" />
-                <Line type="monotone" dataKey="receipts" name="Receipts" stroke="#0088FE" />
-                <Line type="monotone" dataKey="payments" name="Payments" stroke="#8884D8" />
-              </LineChart>
-            </ResponsiveContainer>
+            <NetPositionChart data={data} />
           </CardContent>
         </Card>
       </div>

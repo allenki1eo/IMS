@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
   const q = (searchParams.get("q") || "").trim();
   if (q.length < 2) return badRequest("Query must be at least 2 characters");
 
-  const contains = { contains: q, mode: "insensitive" as const };
+  // SQLite/libSQL: LIKE is case-insensitive for ASCII, no `mode` support
+  const contains = { contains: q };
 
   try {
     const [

@@ -231,6 +231,7 @@ function DailyView() {
               <h2 className="text-base font-semibold mt-0.5 uppercase">REQUEST FOR: {displayDate}</h2>
             </div>
 
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-black text-sm">
               <thead>
                 <tr className="bg-gray-100">
@@ -363,6 +364,7 @@ function DailyView() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             {/* Below-table summary (matches physical doc) */}
             <div className="mt-4 text-sm space-y-1">

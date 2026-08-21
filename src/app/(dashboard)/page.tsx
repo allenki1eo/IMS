@@ -1,11 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import {
-  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
-} from "recharts";
+import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
+
+// Lazy-load recharts pieces so the ~100kB library stays out of the initial bundle
+const DashboardTrendChart = dynamic(
+  () => import("./DashboardCharts").then((m) => m.DashboardTrendChart),
+  { ssr: false, loading: () => <ChartSkeleton height={220} /> }
+);
+const DashboardSparkBar = dynamic(
+  () => import("./DashboardCharts").then((m) => m.DashboardSparkBar),
+  { ssr: false, loading: () => <div className="h-9 w-[72px] animate-pulse rounded bg-muted" /> }
+);
 import {
   Activity,
   ArrowUpRight,
@@ -351,11 +360,7 @@ function KpiCard({ metric, value, trends, loading }: { metric: MetricConfig; val
                 {/* Sparkline — real monthly series only */}
                 {sparkData && (
                   <div className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <ResponsiveContainer width={72} height={36}>
-                      <BarChart data={sparkData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                        <Bar dataKey="v" fill="currentColor" radius={[2, 2, 0, 0]} isAnimationActive={false} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <DashboardSparkBar data={sparkData} />
                   </div>
                 )}
               </div>
@@ -604,35 +609,10 @@ export default function DashboardPage() {
                 }
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={trends} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                    cursor={{ fill: "hsl(var(--muted))" }}
-                  />
-                  {TREND_SERIES.filter((s) => activeSeries.has(s.key)).map((s) => (
-                    <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[3, 3, 0, 0]} maxBarSize={28} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
+              <DashboardTrendChart
+                trends={trends}
+                series={TREND_SERIES.filter((s) => activeSeries.has(s.key))}
+              />
             )}
           </CardContent>
         </Card>

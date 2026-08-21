@@ -285,6 +285,7 @@ function CashbookSummaryInner() {
         ) : (
           <>
             {/* Main consolidated table */}
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-black text-sm">
               <thead>
                 <tr className="bg-gray-100">
@@ -422,6 +423,7 @@ function CashbookSummaryInner() {
                 </tr>
               </tbody>
             </table>
+            </div>
 
             {/* Signature Lines */}
             <div className="sig-section mt-12 grid grid-cols-2 gap-x-12 gap-y-10 pt-8">

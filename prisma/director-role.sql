@@ -1,11 +1,10 @@
 -- ============================================================
 -- Director Role — insert script
--- Compatible with PostgreSQL, Turso/libSQL, and SQLite 3.24+
+-- Compatible with Turso/libSQL and SQLite 3.24+
 --
 -- Run against your database:
---   Turso:      turso db shell <db-name> < prisma/director-role.sql
---   PostgreSQL: psql $DATABASE_URL -f prisma/director-role.sql
---   SQLite:     sqlite3 dev.db < prisma/director-role.sql
+--   Turso:  turso db shell <db-name> < prisma/director-role.sql
+--   SQLite: sqlite3 dev.db < prisma/director-role.sql
 --
 -- Safe to re-run: ON CONFLICT DO NOTHING throughout.
 -- ============================================================
@@ -17,10 +16,10 @@ VALUES (
   'Director',
   'DIRECTOR',
   'Executive director — full finance visibility and cross-company reporting',
-  true,
-  true,
-  NOW(),
-  NOW()
+  1,
+  1,
+  datetime('now'),
+  datetime('now')
 )
 ON CONFLICT (code) DO NOTHING;
 
@@ -123,7 +122,7 @@ INSERT INTO permissions (id, module, resource, action, description) VALUES ('per
 -- ============================================================
 
 INSERT INTO role_permissions ("roleId", "permissionId", "grantedAt", "grantedById")
-SELECT 'role_director_001', id, NOW(), 'role_director_001'
+SELECT 'role_director_001', id, datetime('now'), 'role_director_001'
 FROM permissions
 WHERE (module, resource, action) IN (
   ('auth',        'session',    'create'),

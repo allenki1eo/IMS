@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
+import dynamic from "next/dynamic";
+import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
 import {
   Warehouse, Truck, Fuel, Wrench, ShoppingCart,
   Factory, FlaskConical, SendHorizonal, Landmark,
@@ -18,6 +17,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/DataTable";
 import { useCurrency } from "@/hooks/useCurrency";
+
+// Lazy-load recharts so the ~100kB library stays out of the initial bundle
+const ReportBarChart = dynamic(
+  () => import("./ReportsCharts").then((m) => m.ReportBarChart),
+  { ssr: false, loading: () => <ChartSkeleton height={250} /> }
+);
 
 const MODULES = [
   { key: "warehouse", label: "Warehouse", icon: Warehouse },
@@ -118,7 +123,7 @@ export default function ReportsPage() {
       {report && (
         <div className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             {Object.entries(report.summary || {}).map(([key, value]) => (
               <Card key={key}>
                 <CardHeader className="pb-2">
@@ -160,15 +165,7 @@ export default function ReportsPage() {
                 <Card>
                   <CardHeader><CardTitle>Fuel Consumption by Vehicle</CardTitle></CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={report.fuelConsumption}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="vehicle" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="quantity" fill="#0088FE" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReportBarChart data={report.fuelConsumption} xKey="vehicle" dataKey="quantity" fill="#0088FE" />
                   </CardContent>
                 </Card>
               )}
@@ -225,15 +222,7 @@ export default function ReportsPage() {
                 <Card>
                   <CardHeader><CardTitle>Top Suppliers by Spending</CardTitle></CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={report.topSuppliers}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="supplier" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="totalAmount" fill="#00C49F" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReportBarChart data={report.topSuppliers} xKey="supplier" dataKey="totalAmount" fill="#00C49F" />
                   </CardContent>
                 </Card>
               )}
