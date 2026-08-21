@@ -113,8 +113,8 @@ export default function JournalEntryDetailPage() {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Date</CardTitle></CardHeader><CardContent>{new Date(entry.entryDate).toLocaleDateString()}</CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Voucher</CardTitle></CardHeader><CardContent><Badge variant="outline">{entry.voucherType || "JOURNAL"}</Badge></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Status</CardTitle></CardHeader><CardContent><Badge variant={entry.status === "POSTED" ? "default" : entry.status === "REVERSED" ? "destructive" : "secondary"}>{entry.status}</Badge></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Debit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">{currency} {entry.totalDebit.toLocaleString()}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Credit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">{currency} {entry.totalCredit.toLocaleString()}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Debit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">{currency} {(entry.totalDebit ?? 0).toLocaleString()}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Credit</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">{currency} {(entry.totalCredit ?? 0).toLocaleString()}</div></CardContent></Card>
       </div>
 
       <Card>

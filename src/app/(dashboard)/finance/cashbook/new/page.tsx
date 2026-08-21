@@ -274,7 +274,7 @@ export default function NewCashbookEntryPage() {
 
               {/* Amount */}
               <div className="space-y-1">
-                <Label>Amount (TZS) *</Label>
+                <Label>Amount ({selectedAccount?.currency ?? "TZS"}) *</Label>
                 <Input
                   type="number"
                   min="0.01"

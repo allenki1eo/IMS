@@ -199,6 +199,10 @@ export default function UserDetailPage() {
   async function resetPassword(e: React.FormEvent) {
     e.preventDefault();
     if (!newPassword) return;
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
     setResettingPw(true);
     try {
       const res = await fetch(`/api/users/${id}/reset-password`, {

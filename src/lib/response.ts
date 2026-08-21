@@ -88,15 +88,13 @@ export function handleError(err: unknown): NextResponse<ApiResponse> {
   if (err instanceof Error) {
     const msg = err.message;
 
-    const invalidDatabaseUrl =
-      /error validating datasource/i.test(msg) &&
-      /url must start with the protocol `postgresql:\/\/` or `postgres:\/\/`/i.test(msg);
+    const invalidDatabaseUrl = /error validating datasource/i.test(msg);
     if (invalidDatabaseUrl) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "DATABASE_URL is not a valid Supabase Postgres URL. Set it to the Supabase Transaction Pooler URL starting with postgresql://, and set DIRECT_URL to the direct db.<project-ref>.supabase.co:5432 URL.",
+            "DATABASE_URL is not a valid libSQL/SQLite URL. Set it to your Turso URL (libsql://your-db.turso.io) with DATABASE_AUTH_TOKEN, or file:./dev.db for local development.",
           code: "DATABASE_URL_INVALID",
         },
         { status: 500 }
@@ -113,7 +111,7 @@ export function handleError(err: unknown): NextResponse<ApiResponse> {
     const noTable = msg.match(/no such table[:\s]+(?:main\.)?(\w+)/i);
     if (noTable) {
       return NextResponse.json(
-        { success: false, error: `Database table "${noTable[1]}" is missing. Run the Supabase schema migration.`, code: "SERVER_ERROR" },
+        { success: false, error: `Database table "${noTable[1]}" is missing. Run \`prisma db push\` against the database.`, code: "SERVER_ERROR" },
         { status: 500 }
       );
     }
@@ -122,20 +120,19 @@ export function handleError(err: unknown): NextResponse<ApiResponse> {
                      msg.match(/no such column[:\s]+(\w+)/i);
     if (noColumn) {
       return NextResponse.json(
-        { success: false, error: `Database column "${noColumn[1]}" is missing. Run the Supabase schema migration.`, code: "SERVER_ERROR" },
+        { success: false, error: `Database column "${noColumn[1]}" is missing. Run \`prisma db push\` against the database.`, code: "SERVER_ERROR" },
         { status: 500 }
       );
     }
 
-    const supabaseDirectConnection =
-      /can't reach database server|connect timed out|connection timed out|econnrefused|enotfound|p1001/i.test(msg) &&
-      /db\.[\w-]+\.supabase\.co:5432/i.test(msg);
-    if (supabaseDirectConnection) {
+    const databaseUnreachable =
+      /can't reach database server|connect timed out|connection timed out|econnrefused|enotfound|p1001/i.test(msg);
+    if (databaseUnreachable) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Cannot reach Supabase through the direct database URL. Set DATABASE_URL to the Supabase Transaction Pooler URL in production and keep the direct db.supabase.co URL as DIRECT_URL for migrations.",
+            "Cannot reach the database. Check DATABASE_URL (libsql://your-db.turso.io) and DATABASE_AUTH_TOKEN.",
           code: "DATABASE_CONNECTION_ERROR",
         },
         { status: 500 }

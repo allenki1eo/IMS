@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 
 const ACCOUNT_TYPES = ["BANK", "CASH", "MOBILE_MONEY"];
+const CURRENCIES = ["TZS", "USD", "EUR", "GBP", "KES", "UGX", "CNY", "AED"];
 
 export default function NewBankAccountPage() {
   const router = useRouter();
@@ -27,13 +28,17 @@ export default function NewBankAccountPage() {
     accountNumber: "",
     bankName: "",
     branch: "",
-    currency: "USD",
+    currency: "TZS",
     accountType: "",
     currentBalance: "0",
   });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.accountType) {
+      toast.error("Please select an account type");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/finance/bank-accounts", {
@@ -96,8 +101,15 @@ export default function NewBankAccountPage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
-            <Input id="currency" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />
+            <Label>Currency</Label>
+            <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

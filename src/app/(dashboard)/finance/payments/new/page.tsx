@@ -75,6 +75,18 @@ export default function NewPaymentPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+    if (form.currency !== "TZS" && exchangeRate == null) {
+      toast.error(
+        rateLoading
+          ? "Exchange rate is still loading. Please wait a moment and try again."
+          : `No exchange rate found for ${form.currency}. Record a rate before creating this payment.`
+      );
+      return;
+    }
     setLoading(true);
     try {
       const body: any = {

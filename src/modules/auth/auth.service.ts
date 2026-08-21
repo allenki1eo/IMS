@@ -23,14 +23,18 @@ export async function loginService(params: LoginParams): Promise<LoginResult> {
   const { username, password, rememberMe = false, ipAddress, userAgent } = params;
   const loginIdentifier = username.trim();
 
-  const user = await db.user.findFirst({
+  // SQLite has no `mode: "insensitive"` — match case-insensitively via LIKE
+  // (case-insensitive for ASCII in SQLite/libSQL), then verify exactly in JS.
+  const candidates = await db.user.findMany({
     where: {
-      OR: [
-        { username: { equals: loginIdentifier, mode: "insensitive" } },
-        { email: { equals: loginIdentifier, mode: "insensitive" } },
-      ],
+      OR: [{ username: { contains: loginIdentifier } }, { email: { contains: loginIdentifier } }],
     },
   });
+  const lowered = loginIdentifier.toLowerCase();
+  const user =
+    candidates.find(
+      (u) => u.username.toLowerCase() === lowered || u.email?.toLowerCase() === lowered
+    ) ?? null;
 
   if (!user) {
     console.warn("[auth/login] User not found", { username: loginIdentifier });

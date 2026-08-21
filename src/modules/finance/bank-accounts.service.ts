@@ -274,6 +274,39 @@ export async function listBankTransactions(
   return { data: transactions, meta: { total, page, pageSize } };
 }
 
+export async function getBankTransactionSummary(companyId: string, bankAccountId: string) {
+  const grouped = await db.bankTransaction.groupBy({
+    by: ["type", "cleared"],
+    where: { companyId, bankAccountId },
+    _sum: { amount: true },
+    _count: { _all: true },
+  });
+
+  let clearedTotal = 0;
+  let unclearedTotal = 0;
+  let clearedCount = 0;
+  let unclearedCount = 0;
+
+  for (const g of grouped as any[]) {
+    const signed = (g.type === "DEPOSIT" ? 1 : -1) * (g._sum.amount ?? 0);
+    if (g.cleared) {
+      clearedTotal += signed;
+      clearedCount += g._count._all;
+    } else {
+      unclearedTotal += signed;
+      unclearedCount += g._count._all;
+    }
+  }
+
+  return {
+    clearedTotal,
+    unclearedTotal,
+    clearedCount,
+    unclearedCount,
+    totalCount: clearedCount + unclearedCount,
+  };
+}
+
 export async function toggleBankTransactionCleared(
   companyId: string,
   transactionId: string,

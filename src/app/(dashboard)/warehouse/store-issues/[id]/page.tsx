@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { LoadingState } from "@/components/shared/LoadingState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -48,7 +49,7 @@ export default function StoreIssueDetailPage({ params }: { params: Promise<{ id:
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;
+  if (loading) return <LoadingState text="Loading store issue..." />;
   if (!issue) return <div className="p-8 text-red-500">Store issue not found</div>;
 
   return (

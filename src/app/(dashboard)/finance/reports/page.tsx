@@ -150,6 +150,13 @@ export default function FinancialReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data.data.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                        No account activity in this period
+                      </td>
+                    </tr>
+                  )}
                   {data.data.map((row: any) => (
                     <tr key={row.id} className="border-b hover:bg-muted/30">
                       <td className="px-4 py-2 font-mono text-xs">{row.code}</td>
@@ -188,6 +195,9 @@ export default function FinancialReportsPage() {
             <CardContent className="space-y-6">
               <section>
                 <h3 className="mb-2 font-semibold text-emerald-700">Revenue</h3>
+                {data.revenue.length === 0 && (
+                  <p className="py-2 text-sm text-muted-foreground">No revenue recorded in this period</p>
+                )}
                 {data.revenue.map((r: any) => (
                   <div key={r.code} className="flex justify-between border-b py-1.5 text-sm">
                     <span className="text-muted-foreground">
@@ -204,6 +214,9 @@ export default function FinancialReportsPage() {
 
               <section>
                 <h3 className="mb-2 font-semibold text-red-700">Expenses</h3>
+                {data.expenses.length === 0 && (
+                  <p className="py-2 text-sm text-muted-foreground">No expenses recorded in this period</p>
+                )}
                 {data.expenses.map((r: any) => (
                   <div key={r.code} className="flex justify-between border-b py-1.5 text-sm">
                     <span className="text-muted-foreground">

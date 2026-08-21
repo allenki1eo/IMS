@@ -15,9 +15,18 @@ import { Label } from "@/components/ui/label";
 import { usePermission } from "@/hooks/usePermission";
 import { useCurrency } from "@/hooks/useCurrency";
 
+interface TxnSummary {
+  clearedTotal: number;
+  unclearedTotal: number;
+  clearedCount: number;
+  unclearedCount: number;
+  totalCount: number;
+}
+
 export default function BankAccountDetailPage() {
   const { id } = useParams();
   const [account, setAccount] = useState<any>(null);
+  const [summary, setSummary] = useState<TxnSummary | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [txnLoading, setTxnLoading] = useState(false);
@@ -41,6 +50,16 @@ export default function BankAccountDetailPage() {
     }
   }
 
+  async function fetchSummary() {
+    try {
+      const res = await fetch(`/api/finance/bank-accounts/${id}/transactions?summary=true`);
+      const json = await res.json();
+      if (res.ok) setSummary(json.data ?? null);
+    } catch {
+      // summary is non-blocking
+    }
+  }
+
   async function fetchTransactions() {
     setTxnLoading(true);
     try {
@@ -61,6 +80,7 @@ export default function BankAccountDetailPage() {
 
   useEffect(() => {
     fetchAccount();
+    fetchSummary();
   }, [id]);
 
   useEffect(() => {
@@ -98,6 +118,7 @@ export default function BankAccountDetailPage() {
       if (res.ok) {
         toast.success(json.data.isCleared ? "Transaction cleared" : "Transaction uncleared");
         fetchTransactions();
+        fetchSummary();
       } else {
         toast.error(json.message || "Failed to update");
       }
@@ -106,7 +127,10 @@ export default function BankAccountDetailPage() {
     }
   }
 
-  const unclearedTotal = transactions.filter((t) => !t.cleared).reduce((sum, t) => sum + (t.type === "DEPOSIT" ? t.amount : -t.amount), 0);
+  // Aggregates computed in the database over ALL transactions (not just the loaded page)
+  const bookBalance = account?.currentBalance ?? 0;
+  const unclearedTotal = summary?.unclearedTotal ?? 0;
+  const clearedBalance = bookBalance - unclearedTotal;
 
   if (loading) return <LoadingState text="Loading bank account..." />;
   if (!account) return <div className="text-muted-foreground">Bank account not found</div>;
@@ -140,7 +164,7 @@ export default function BankAccountDetailPage() {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Type</CardTitle></CardHeader><CardContent><Badge>{account.accountType}</Badge></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Account Number</CardTitle></CardHeader><CardContent>{account.accountNumber || "-"}</CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Currency</CardTitle></CardHeader><CardContent>{account.currency}</CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {account.currentBalance.toLocaleString()}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{currency} {(account.currentBalance ?? 0).toLocaleString()}</div></CardContent></Card>
       </div>
 
       <Card>
@@ -162,9 +186,9 @@ export default function BankAccountDetailPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-            <div className="bg-muted p-3 rounded"><div className="text-muted-foreground">Book Balance</div><div className="text-lg font-bold">{currency} {account.currentBalance.toLocaleString()}</div></div>
-            <div className="bg-green-50 p-3 rounded"><div className="text-muted-foreground">Cleared Balance</div><div className="text-lg font-bold text-green-700">{currency} {(account.currentBalance - unclearedTotal).toLocaleString()}</div></div>
-            <div className="bg-amber-50 p-3 rounded"><div className="text-muted-foreground">Uncleared</div><div className="text-lg font-bold text-amber-700">{currency} {unclearedTotal.toLocaleString()}</div></div>
+            <div className="bg-muted p-3 rounded"><div className="text-muted-foreground">Book Balance</div><div className="text-lg font-bold">{currency} {bookBalance.toLocaleString()}</div></div>
+            <div className="bg-green-50 p-3 rounded"><div className="text-muted-foreground">Cleared Balance</div><div className="text-lg font-bold text-green-700">{currency} {clearedBalance.toLocaleString()}</div></div>
+            <div className="bg-amber-50 p-3 rounded"><div className="text-muted-foreground">Uncleared ({summary?.unclearedCount ?? 0})</div><div className="text-lg font-bold text-amber-700">{currency} {unclearedTotal.toLocaleString()}</div></div>
           </div>
 
           {txnLoading ? (
