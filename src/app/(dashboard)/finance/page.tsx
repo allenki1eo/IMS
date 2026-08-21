@@ -209,7 +209,7 @@ export default function FinancePage() {
                 <k.icon className={`h-4 w-4 ${k.accent}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${k.accent}`}>{k.value}</div>
+                <div className={`text-2xl font-semibold tracking-tight tabular-nums ${k.accent}`}>{k.value}</div>
                 <p className="text-xs text-muted-foreground mt-1">{k.sub}</p>
               </CardContent>
             </Card>
