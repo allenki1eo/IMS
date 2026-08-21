@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
+import { usePermission } from "@/hooks/usePermission";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ type PermissionMap = Record<string, Record<string, Permission[]>>;
 
 export default function RoleDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const canUpdate = usePermission("roles:role:update");
   const [role, setRole] = useState<RoleDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingInfo, setSavingInfo] = useState(false);
@@ -220,12 +222,13 @@ export default function RoleDetailPage() {
                             {perms.map((perm) => (
                               <label
                                 key={perm.id}
-                                className="flex items-center gap-2 cursor-pointer select-none"
+                                className={`flex items-center gap-2 select-none ${canUpdate ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}
                               >
                                 <input
                                   type="checkbox"
                                   checked={assignedPermIds.has(perm.id)}
                                   onChange={() => togglePerm(perm.id)}
+                                  disabled={!canUpdate}
                                   className="h-4 w-4 rounded border-input accent-primary"
                                 />
                                 <span className="text-sm capitalize">

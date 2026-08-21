@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Search, LayoutDashboard, Users, Warehouse, Truck, Fuel, Wrench, ShoppingCart, Factory, FlaskConical, SendHorizonal, Landmark, BarChart3, Shield, Building2, UserCircle, CheckCircle, ScrollText, Settings, Tag } from "lucide-react";
+import { Search, Loader2, FileText, LayoutDashboard, Users, Warehouse, Truck, Fuel, Wrench, ShoppingCart, Factory, FlaskConical, SendHorizonal, Landmark, BarChart3, Shield, Building2, UserCircle, CheckCircle, ScrollText, Settings, Tag } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -88,6 +88,13 @@ const COMMANDS: CommandItem[] = [
   { label: "Reports", href: "/reports", icon: <BarChart3 className="h-4 w-4" />, group: "Analytics", permission: "reports:report:read" },
 ];
 
+interface SearchResult {
+  group: string;
+  label: string;
+  sublabel: string;
+  href: string;
+}
+
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
@@ -98,6 +105,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const { user } = useCurrentUser();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const allowed = useMemo(
     () => COMMANDS.filter((c) => !c.permission || (user && hasPermission(user, c.permission))),
@@ -108,32 +117,75 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     ? allowed.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()) || c.group.toLowerCase().includes(query.toLowerCase()))
     : allowed.slice(0, 8);
 
+  // Debounced global record search
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: controller.signal })
+        .then((r) => r.json())
+        .then((d) => {
+          setResults(Array.isArray(d.data) ? d.data : []);
+          setSearching(false);
+        })
+        .catch((err) => {
+          if (err?.name !== "AbortError") setSearching(false);
+        });
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
+  const totalCount = filtered.length + results.length;
+
   const navigate = useCallback((href: string) => {
     router.push(href);
     onClose();
     setQuery("");
+    setResults([]);
   }, [router, onClose]);
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [query]);
+  }, [query, results.length]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (!open) return;
-      if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex((i) => Math.min(i + 1, filtered.length - 1)); }
+      if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex((i) => Math.min(i + 1, totalCount - 1)); }
       if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex((i) => Math.max(i - 1, 0)); }
-      if (e.key === "Enter" && filtered[activeIndex]) navigate(filtered[activeIndex].href);
+      if (e.key === "Enter") {
+        const target = activeIndex < filtered.length
+          ? filtered[activeIndex]
+          : results[activeIndex - filtered.length];
+        if (target) navigate(target.href);
+      }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [open, filtered, activeIndex, navigate]);
+  }, [open, filtered, results, totalCount, activeIndex, navigate]);
 
   const grouped = filtered.reduce<Record<string, CommandItem[]>>((acc, item) => {
     if (!acc[item.group]) acc[item.group] = [];
     acc[item.group].push(item);
     return acc;
   }, {});
+
+  const resultsGrouped = Object.entries(
+    results.reduce<Record<string, SearchResult[]>>((acc, r) => {
+      if (!acc[r.group]) acc[r.group] = [];
+      acc[r.group].push(r);
+      return acc;
+    }, {})
+  );
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -147,6 +199,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             placeholder="Search pages, modules, records..."
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
+          {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
           <kbd className="text-xs text-muted-foreground border rounded px-1.5 py-0.5 font-mono">ESC</kbd>
         </div>
         <div className="max-h-80 overflow-y-auto py-2">
@@ -173,8 +226,35 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
               })}
             </div>
           ))}
-          {filtered.length === 0 && (
+          {resultsGrouped.map(([group, groupResults]) => (
+            <div key={group}>
+              <div className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {group}
+              </div>
+              {groupResults.map((result) => {
+                const globalIdx = filtered.length + results.indexOf(result);
+                return (
+                  <button
+                    key={result.href}
+                    onClick={() => navigate(result.href)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors",
+                      globalIdx === activeIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                    )}
+                  >
+                    <span className="text-muted-foreground"><FileText className="h-4 w-4" /></span>
+                    <span className="flex-1 min-w-0 truncate">{result.label}</span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[45%]">{result.sublabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          {totalCount === 0 && !searching && (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">No results for &ldquo;{query}&rdquo;</p>
+          )}
+          {totalCount === 0 && searching && (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">Searching&hellip;</p>
           )}
         </div>
       </DialogContent>

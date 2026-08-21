@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback } from "react";
 import { ChevronDown, ChevronRight, Printer, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -250,9 +250,9 @@ function DailyView() {
 
                 {/* ── Per-company bank receipt sections ───────────────────────── */}
                 {data.companies.map((cd) => (
-                  <>
+                  <Fragment key={cd.company.id}>
                     {/* Company section header with drill-down link */}
-                    <tr key={`hdr-${cd.company.id}`} className="bg-blue-100">
+                    <tr className="bg-blue-100">
                       <td
                         colSpan={3}
                         className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide"
@@ -290,7 +290,7 @@ function DailyView() {
                     ))}
 
                     {/* Company bank-receipt subtotal */}
-                    <tr key={`sub-${cd.company.id}`} className="font-semibold bg-gray-50">
+                    <tr className="font-semibold bg-gray-50">
                       <td colSpan={2} className="border border-black px-3 py-1 text-right text-xs uppercase">
                         TOTAL CHEQUE {cd.company.name.toUpperCase()}
                       </td>
@@ -299,7 +299,7 @@ function DailyView() {
                       </td>
                       <td className="border border-black px-3 py-1" />
                     </tr>
-                  </>
+                  </Fragment>
                 ))}
 
                 {/* ── Cash Received section ────────────────────────────────────── */}

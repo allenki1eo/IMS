@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { listBankTransactions, createBankTransaction } from "@/modules/finance/bank-accounts.service";
+import { listBankTransactions, createBankTransaction, getBankTransactionSummary } from "@/modules/finance/bank-accounts.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
-import { paginated, created, badRequest } from "@/lib/response";
+import { paginated, created, badRequest, success } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,6 +18,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const isCleared = isClearedParam === "true" ? true : isClearedParam === "false" ? false : undefined;
 
   try {
+    if (searchParams.get("summary") === "true") {
+      const summary = await getBankTransactionSummary(companyId, id);
+      return success(summary);
+    }
+
     const { data, meta } = await listBankTransactions(companyId, id, { ...pagination, isCleared });
     return paginated(data, buildMeta(meta.total, pagination));
   } catch {

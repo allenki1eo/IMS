@@ -99,14 +99,16 @@ export default function AdjustmentDetailPage() {
         actions={
           <div className="flex gap-2">
             {adjustment.status === "DRAFT" && (
-              <Button onClick={() => performAction("submit")} disabled={actioning}>
-                {actioning ? (
-                  <LoadingSpinner className="mr-2" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                Submit for Approval
-              </Button>
+              <PermissionGuard require="warehouse:adjustment:submit">
+                <Button onClick={() => performAction("submit")} disabled={actioning}>
+                  {actioning ? (
+                    <LoadingSpinner className="mr-2" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Submit for Approval
+                </Button>
+              </PermissionGuard>
             )}
             {adjustment.status === "SUBMITTED" && (
               <PermissionGuard require="warehouse:adjustment:approve">
@@ -226,18 +228,20 @@ export default function AdjustmentDetailPage() {
       {adjustment.status === "DRAFT" && (
         <>
           <Separator className="my-6" />
-          <div className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-800">Ready to submit?</p>
-              <p className="text-xs text-amber-700">
-                Submitting will send this adjustment for management approval.
-              </p>
+          <PermissionGuard require="warehouse:adjustment:submit">
+            <div className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800">Ready to submit?</p>
+                <p className="text-xs text-amber-700">
+                  Submitting will send this adjustment for management approval.
+                </p>
+              </div>
+              <Button onClick={() => performAction("submit")} disabled={actioning}>
+                {actioning && <LoadingSpinner className="mr-2" />}
+                Submit for Approval
+              </Button>
             </div>
-            <Button onClick={() => performAction("submit")} disabled={actioning}>
-              {actioning && <LoadingSpinner className="mr-2" />}
-              Submit for Approval
-            </Button>
-          </div>
+          </PermissionGuard>
         </>
       )}
 
