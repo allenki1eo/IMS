@@ -32,12 +32,29 @@ export function formatNumber(value: number | null | undefined, maximumFractionDi
 }
 
 export function formatMoney(value: number | null | undefined, currency = "TZS") {
-  if (value == null) return "-";
-  return value.toLocaleString(undefined, {
+  if (value == null || value === undefined) return "-";
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "-";
+  return amount.toLocaleString(undefined, {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
   });
+}
+
+/** Allow typing decimals without type=number fighting the controlled value. */
+export function sanitizeDecimalInput(raw: string): string {
+  const cleaned = raw.replace(/[^0-9.]/g, "");
+  const parts = cleaned.split(".");
+  if (parts.length <= 1) return cleaned;
+  return parts[0] + "." + parts.slice(1).join("");
+}
+
+export function createLineKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `line-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 export function formatDate(value: string | null | undefined) {

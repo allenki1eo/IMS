@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ClipboardList, Handshake, PackageCheck, ShoppingCart, Plus } from "lucide-react";
@@ -41,42 +41,151 @@ interface Stats {
   partialReceipts: number;
 }
 
+const OVERVIEW_TIMEOUT_MS = 15000;
+
+async function fetchJson(url: string, signal: AbortSignal) {
+  const res = await fetch(url, { signal, credentials: "same-origin" });
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+  if (!res.ok) {
+    const message =
+      (body && (body.error || body.message)) ||
+      `Request failed (${res.status})`;
+    throw new Error(typeof message === "string" ? message : "Request failed");
+  }
+  return body ?? {};
+}
+
 export default function ProcurementOverviewPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const loadOverview = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, OVERVIEW_TIMEOUT_MS);
+
+    setLoading(true);
+    setLoadError(null);
+
+    try {
+      const signal = controller.signal;
+      const results = await Promise.allSettled([
+        fetchJson("/api/procurement/suppliers?pageSize=1&status=ACTIVE", signal),
+        fetchJson("/api/procurement/requests?pageSize=1&status=SUBMITTED", signal),
+        fetchJson("/api/procurement/orders?pageSize=1&status=SENT", signal),
+        fetchJson("/api/procurement/orders?pageSize=1&status=PARTIALLY_RECEIVED", signal),
+        fetchJson("/api/procurement/requests?pageSize=5", signal),
+        fetchJson("/api/procurement/orders?pageSize=5", signal),
+      ]);
+
+      if (signal.aborted) {
+        if (timedOut) {
+          setLoadError("Request timed out. Check your connection and try again.");
+          toast.error("Procurement overview timed out");
+        }
+        return;
+      }
+
+      const value = (idx: number) => {
+        const r = results[idx];
+        return r.status === "fulfilled" ? r.value : null;
+      };
+
+      const failures = results.filter((r) => r.status === "rejected");
+      const criticalFailed = results[4].status === "rejected" && results[5].status === "rejected";
+
+      // If every request failed (or timed out), show lasting error — never leave skeleton up.
+      if (failures.length === results.length || criticalFailed) {
+        const firstReason = failures[0] && failures[0].status === "rejected"
+          ? failures[0].reason
+          : null;
+        const msg =
+          firstReason instanceof Error
+            ? firstReason.message
+            : controller.signal.aborted
+              ? "Request timed out"
+              : "Failed to load procurement overview";
+        setStats(null);
+        setRequests([]);
+        setOrders([]);
+        setLoadError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      const suppliersData = value(0);
+      const submittedData = value(1);
+      const sentData = value(2);
+      const partialData = value(3);
+      const requestsData = value(4);
+      const ordersData = value(5);
+
+      setStats({
+        activeSuppliers: suppliersData?.meta?.total ?? 0,
+        submittedRequests: submittedData?.meta?.total ?? 0,
+        openOrders: sentData?.meta?.total ?? 0,
+        partialReceipts: partialData?.meta?.total ?? 0,
+      });
+      setRequests(requestsData?.data ?? []);
+      setOrders(ordersData?.data ?? []);
+      setLoadError(null);
+
+      if (failures.length > 0) {
+        toast.error("Some procurement stats failed to load");
+      }
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") {
+        setLoadError("Request timed out. Check your connection and try again.");
+        toast.error("Procurement overview timed out");
+      } else {
+        const msg = err instanceof Error ? err.message : "Failed to load procurement overview";
+        setLoadError(msg);
+        toast.error(msg);
+      }
+      setStats(null);
+      setRequests([]);
+      setOrders([]);
+    } finally {
+      window.clearTimeout(timeoutId);
+      // Only clear loading if this is still the active request
+      if (abortRef.current === controller) {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/procurement/suppliers?pageSize=1&status=ACTIVE").then((r) => r.json()),
-      fetch("/api/procurement/requests?pageSize=1&status=SUBMITTED").then((r) => r.json()),
-      fetch("/api/procurement/orders?pageSize=1&status=SENT").then((r) => r.json()),
-      fetch("/api/procurement/orders?pageSize=1&status=PARTIALLY_RECEIVED").then((r) => r.json()),
-      fetch("/api/procurement/requests?pageSize=5").then((r) => r.json()),
-      fetch("/api/procurement/orders?pageSize=5").then((r) => r.json()),
-    ])
-      .then(([suppliersData, submittedData, sentData, partialData, requestsData, ordersData]) => {
-        setStats({
-          activeSuppliers: suppliersData.meta?.total ?? 0,
-          submittedRequests: submittedData.meta?.total ?? 0,
-          openOrders: sentData.meta?.total ?? 0,
-          partialReceipts: partialData.meta?.total ?? 0,
-        });
-        setRequests(requestsData.data ?? []);
-        setOrders(ordersData.data ?? []);
-      })
-      .catch(() => { setLoadError(true); toast.error("Failed to load procurement overview"); })
-      .finally(() => setLoading(false));
-  }, []);
+    void loadOverview();
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [loadOverview, retryCount]);
 
   if (loading) return <LoadingState text="Loading procurement overview..." />;
   if (loadError) {
     return (
       <ErrorState
         title="Could not load procurement overview"
-        onRetry={() => window.location.reload()}
+        description={loadError}
+        onRetry={() => {
+          setRetryCount((c) => c + 1);
+        }}
       />
     );
   }
@@ -214,4 +323,3 @@ export default function ProcurementOverviewPage() {
     </div>
   );
 }
-
