@@ -4,6 +4,7 @@ import { createAuditLog, getRequestMeta } from "@/lib/audit";
 import { success } from "@/lib/response";
 import { cookies } from "next/headers";
 import { getUser } from "@/lib/api-helpers";
+import { COMPANY_COOKIE } from "@/lib/company-cookie";
 
 export async function POST(request: NextRequest) {
   const user = await getUser(request);
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
 
   const cookieStore = await cookies();
   cookieStore.delete("erp_session");
+  cookieStore.delete(COMPANY_COOKIE);
 
   return success({ message: "Logged out successfully" });
 }

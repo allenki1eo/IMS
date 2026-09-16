@@ -107,6 +107,15 @@ Creates:
 - Middleware validates JWT and session on every request
 - Permissions fetched from DB on each request and never stored in the token
 
+## Multi-company context
+
+- Active company is stored in the HttpOnly `erp_company_id` cookie and forwarded as `x-company-id` by middleware.
+- Login always sets the cookie (user `companyId`, else deterministic oldest company). Logout and expired sessions clear it.
+- `getCompanyId()` uses the validated cookie for users with `company:company:switch` (or `*` / system); otherwise the user's assigned company. It never falls back to unordered `findFirst()`.
+- Company switch updates the cookie and reloads the page so client/SWR caches refetch.
+- **Company-scoped** (filter by active company): warehouse, procurement, production, finance, trips, daily truck movement, and most other module lists/creates.
+- **Intentional global / cross-company lists**: vehicles, drivers, fuel tanks/receipts/issues/prices, and incidents — shared fleet/fuel resources. Creates still stamp the active `companyId` for ownership.
+
 ## Permissions
 
 Pattern: `module:resource:action`

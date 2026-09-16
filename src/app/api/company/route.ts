@@ -4,12 +4,23 @@ import { updateCompanySchema, createCompanySchema } from "@/modules/company/comp
 import { requirePermission, requireAuth, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { success, badRequest, notFound, handleError, created } from "@/lib/response";
 import { cache, cacheKey, TTL } from "@/lib/cache";
+import { resolveBootstrapCompanyId, setCompanyCookie } from "@/lib/company-cookie";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if ("error" in auth) return auth.error;
 
-  const companyId = await getCompanyId(request);
+  let companyId = await getCompanyId(request);
+
+  // Heal missing/stale cookie: set a deterministic company so switchers and
+  // scoped modules do not sit in a "Company not configured" dead-end.
+  if (!companyId) {
+    companyId = await resolveBootstrapCompanyId(auth.user.companyId);
+    if (companyId) {
+      await setCompanyCookie(companyId);
+    }
+  }
+
   if (!companyId) return notFound("Company not configured");
 
   const cached = cache.get<unknown>(cacheKey.company(companyId));

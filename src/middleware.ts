@@ -20,6 +20,12 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 }
 
+function clearAuthCookies(response: NextResponse) {
+  response.cookies.delete("erp_session");
+  response.cookies.delete("erp_company_id");
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -57,16 +63,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers } });
   } catch {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { success: false, error: "Session expired", code: "UNAUTHORIZED" },
         { status: 401 }
       );
+      return clearAuthCookies(response);
     }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     const response = NextResponse.redirect(loginUrl);
-    response.cookies.delete("erp_session");
-    return response;
+    return clearAuthCookies(response);
   }
 }
 

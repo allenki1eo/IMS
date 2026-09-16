@@ -4,6 +4,11 @@ import { loginSchema } from "@/modules/auth/auth.validation";
 import { success, badRequest, handleError } from "@/lib/response";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import {
+  COMPANY_COOKIE,
+  companyCookieOptions,
+  resolveBootstrapCompanyId,
+} from "@/lib/company-cookie";
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,32 +43,31 @@ export async function POST(request: NextRequest) {
       expires: result.expiresAt,
     });
 
-    // Resolve the company for this user: prefer user's assigned companyId,
-    // fall back to the first company in the database.
-    // Wrapped in try/catch in case the companyId column hasn't been migrated yet.
+    // Always set erp_company_id on login so getCompanyId() never depends on
+    // a leftover cookie or unordered findFirst(). Prefer the user's assigned
+    // company; otherwise pick a deterministic bootstrap company.
     let companyId: string | null = null;
     try {
       const loggedInUser = await db.user.findUnique({
         where: { id: result.userId },
         select: { companyId: true },
       });
-      companyId = loggedInUser?.companyId ?? null;
+      companyId = await resolveBootstrapCompanyId(loggedInUser?.companyId ?? null);
     } catch {
-      // column not yet migrated — fall through to findFirst below
+      // companyId column not yet migrated — still bootstrap from companies table
+      companyId = await resolveBootstrapCompanyId(null);
     }
-    if (!companyId) {
-      companyId = (await db.company.findFirst({ select: { id: true } }))?.id ?? null;
-    }
+
     if (companyId) {
-      cookieStore.set("erp_company_id", companyId, {
-        ...cookieOptions,
-        maxAge: 60 * 60 * 24 * 365,
-      });
+      cookieStore.set(COMPANY_COOKIE, companyId, companyCookieOptions());
+    } else {
+      cookieStore.delete(COMPANY_COOKIE);
     }
 
     return success({
       userId: result.userId,
       mustChangePassword: result.mustChangePassword,
+      companyId,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Login failed";
