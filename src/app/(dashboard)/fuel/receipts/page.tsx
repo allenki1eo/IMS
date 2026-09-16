@@ -215,8 +215,13 @@ export default function ReceiptsPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        emptyTitle="No receipts found"
-        emptyDescription="Record your first fuel delivery to get started."
+        emptyTitle="No receipts yet"
+        emptyDescription="Record a fuel delivery to stock a tank and clear empty-tank status."
+        emptyAction={
+          <Button asChild size="sm">
+            <Link href="/fuel/receipts/new">Record receipt</Link>
+          </Button>
+        }
           error={error}
           onRetry={() => mutate()}
       />

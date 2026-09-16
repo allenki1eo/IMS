@@ -191,7 +191,12 @@ export default function FuelPricesPage() {
         data={prices}
         loading={loading}
         emptyTitle="No prices recorded"
-        emptyDescription="Record your first fuel price to get started."
+        emptyDescription="Record a fuel price so issues and receipts can cost correctly."
+        emptyAction={
+          <Button size="sm" onClick={() => setOpen(true)}>
+            Record price
+          </Button>
+        }
       />
     </div>
   );

@@ -247,8 +247,13 @@ export default function IssuesPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        emptyTitle="No fuel issues found"
-        emptyDescription="Issue fuel to a vehicle to get started."
+        emptyTitle="No fuel issues yet"
+        emptyDescription="Issue liters from a tank to a vehicle once stock is available."
+        emptyAction={
+          <Button asChild size="sm">
+            <Link href="/fuel/issues/new">Issue fuel</Link>
+          </Button>
+        }
           error={error}
           onRetry={() => mutate()}
       />

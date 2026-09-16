@@ -274,8 +274,13 @@ export default function VehiclesPage() {
         onPageChange={setPage}
         selectable
         onSelectionChange={setSelectedIds}
-        emptyTitle="No vehicles found"
-        emptyDescription="Add your first vehicle to the fleet."
+        emptyTitle="No vehicles yet"
+        emptyDescription="Add a vehicle so you can assign drivers and create trips."
+        emptyAction={
+          <Button asChild size="sm">
+            <Link href="/transport/vehicles/new">Add vehicle</Link>
+          </Button>
+        }
           error={error}
           onRetry={() => mutate()}
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Truck, Users, Navigation, AlertTriangle, Plus } from "lucide-react";
@@ -39,6 +39,25 @@ interface IncidentRow {
   status: string;
 }
 
+const OVERVIEW_TIMEOUT_MS = 15000;
+
+async function fetchJson(url: string, signal: AbortSignal) {
+  const res = await fetch(url, { signal, credentials: "same-origin" });
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+  if (!res.ok) {
+    const message =
+      (body && (body.error || body.message)) ||
+      `Request failed (${res.status})`;
+    throw new Error(typeof message === "string" ? message : "Request failed");
+  }
+  return body ?? {};
+}
+
 function StatCard({
   title,
   value,
@@ -68,78 +87,117 @@ function StatCard({
 }
 
 export default function TransportOverviewPage() {
-  const [stats, setStats] = useState<SummaryStats>({
-    totalVehicles: 0,
-    activeDrivers: 0,
-    activeTrips: 0,
-    openIncidents: 0,
-  });
+  const [stats, setStats] = useState<SummaryStats | null>(null);
   const [recentTrips, setRecentTrips] = useState<TripRow[]>([]);
   const [openIncidents, setOpenIncidents] = useState<IncidentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tripsLoading, setTripsLoading] = useState(true);
-  const [incidentsLoading, setIncidentsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const fetchStats = useCallback(async () => {
+  const loadOverview = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, OVERVIEW_TIMEOUT_MS);
+
+    setLoading(true);
+    setLoadError(null);
+
     try {
-      const [vehiclesRes, driversRes, tripsRes, incidentsRes] = await Promise.all([
-        fetch("/api/vehicles?pageSize=1"),
-        fetch("/api/drivers?isAvailable=true&pageSize=1"),
-        fetch("/api/trips?status=DISPATCHED&pageSize=1"),
-        fetch("/api/incidents?status=OPEN&pageSize=1"),
+      const signal = controller.signal;
+      // Parallel fan-out (no waterfall): stats + recent lists settle together.
+      const results = await Promise.allSettled([
+        fetchJson("/api/vehicles?pageSize=1", signal),
+        fetchJson("/api/drivers?isAvailable=true&pageSize=1", signal),
+        fetchJson("/api/trips?status=DISPATCHED&pageSize=1", signal),
+        fetchJson("/api/incidents?status=OPEN&pageSize=1", signal),
+        fetchJson("/api/trips?pageSize=5&sort=createdAt:desc", signal),
+        fetchJson("/api/incidents?status=OPEN&pageSize=5", signal),
       ]);
-      const [vehiclesJson, driversJson, tripsJson, incidentsJson] = await Promise.all([
-        vehiclesRes.json(),
-        driversRes.json(),
-        tripsRes.json(),
-        incidentsRes.json(),
-      ]);
+
+      if (signal.aborted) {
+        if (timedOut) {
+          setLoadError("Request timed out. Check your connection and try again.");
+          toast.error("Transport overview timed out");
+        }
+        return;
+      }
+
+      const value = (idx: number) => {
+        const r = results[idx];
+        return r.status === "fulfilled" ? r.value : null;
+      };
+
+      const failures = results.filter((r) => r.status === "rejected");
+      const criticalFailed =
+        results[4].status === "rejected" && results[5].status === "rejected";
+
+      // Never leave an infinite skeleton — lasting error + retry.
+      if (failures.length === results.length || criticalFailed) {
+        const firstReason =
+          failures[0] && failures[0].status === "rejected"
+            ? failures[0].reason
+            : null;
+        const msg =
+          firstReason instanceof Error
+            ? firstReason.message
+            : controller.signal.aborted
+              ? "Request timed out"
+              : "Failed to load transport overview";
+        setStats(null);
+        setRecentTrips([]);
+        setOpenIncidents([]);
+        setLoadError(msg);
+        toast.error(msg);
+        return;
+      }
+
       setStats({
-        totalVehicles: vehiclesJson.meta?.total ?? 0,
-        activeDrivers: driversJson.meta?.total ?? 0,
-        activeTrips: tripsJson.meta?.total ?? 0,
-        openIncidents: incidentsJson.meta?.total ?? 0,
+        totalVehicles: value(0)?.meta?.total ?? 0,
+        activeDrivers: value(1)?.meta?.total ?? 0,
+        activeTrips: value(2)?.meta?.total ?? 0,
+        openIncidents: value(3)?.meta?.total ?? 0,
       });
-    } catch {
-      setLoadError(true);
-      toast.error("Failed to load summary stats");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      setRecentTrips(value(4)?.data ?? []);
+      setOpenIncidents(value(5)?.data ?? []);
+      setLoadError(null);
 
-  const fetchRecentTrips = useCallback(async () => {
-    setTripsLoading(true);
-    try {
-      const res = await fetch("/api/trips?pageSize=5&sort=createdAt:desc");
-      const json = await res.json();
-      setRecentTrips(json.data ?? []);
-    } catch {
-      toast.error("Failed to load recent trips");
+      if (failures.length > 0) {
+        toast.error("Some transport stats failed to load");
+      }
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") {
+        setLoadError("Request timed out. Check your connection and try again.");
+        toast.error("Transport overview timed out");
+      } else {
+        const msg =
+          err instanceof Error ? err.message : "Failed to load transport overview";
+        setLoadError(msg);
+        toast.error(msg);
+      }
+      setStats(null);
+      setRecentTrips([]);
+      setOpenIncidents([]);
     } finally {
-      setTripsLoading(false);
-    }
-  }, []);
-
-  const fetchOpenIncidents = useCallback(async () => {
-    setIncidentsLoading(true);
-    try {
-      const res = await fetch("/api/incidents?status=OPEN&pageSize=5");
-      const json = await res.json();
-      setOpenIncidents(json.data ?? []);
-    } catch {
-      toast.error("Failed to load open incidents");
-    } finally {
-      setIncidentsLoading(false);
+      window.clearTimeout(timeoutId);
+      if (abortRef.current === controller) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    fetchStats();
-    fetchRecentTrips();
-    fetchOpenIncidents();
-  }, [fetchStats, fetchRecentTrips, fetchOpenIncidents]);
+    void loadOverview();
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [loadOverview, retryCount]);
 
   const tripColumns = [
     {
@@ -223,12 +281,9 @@ export default function TransportOverviewPage() {
     return (
       <ErrorState
         title="Could not load transport overview"
+        description={loadError}
         onRetry={() => {
-          setLoadError(false);
-          setLoading(true);
-          fetchStats();
-          fetchRecentTrips();
-          fetchOpenIncidents();
+          setRetryCount((c) => c + 1);
         }}
       />
     );
@@ -259,29 +314,29 @@ export default function TransportOverviewPage() {
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
           title="Total Vehicles"
-          value={stats.totalVehicles}
+          value={stats?.totalVehicles ?? 0}
           icon={Truck}
           href="/transport/vehicles"
         />
         <StatCard
           title="Available Drivers"
-          value={stats.activeDrivers}
+          value={stats?.activeDrivers ?? 0}
           icon={Users}
           href="/transport/drivers"
         />
         <StatCard
           title="Active Trips"
-          value={stats.activeTrips}
+          value={stats?.activeTrips ?? 0}
           icon={Navigation}
           href="/transport/trips"
-          highlight={stats.activeTrips > 0}
+          highlight={(stats?.activeTrips ?? 0) > 0}
         />
         <StatCard
           title="Open Incidents"
-          value={stats.openIncidents}
+          value={stats?.openIncidents ?? 0}
           icon={AlertTriangle}
           href="/transport/incidents"
-          highlight={stats.openIncidents > 0}
+          highlight={(stats?.openIncidents ?? 0) > 0}
         />
       </div>
 
@@ -291,9 +346,8 @@ export default function TransportOverviewPage() {
           <DataTable
             columns={tripColumns}
             data={recentTrips}
-            loading={tripsLoading}
             emptyTitle="No trips yet"
-            emptyDescription="Trips will appear here once created."
+            emptyDescription="Plan a trip to dispatch vehicles and track routes."
             emptyAction={
               <Button variant="outline" size="sm" asChild>
                 <Link href="/transport/trips/new">Create trip</Link>
@@ -306,9 +360,13 @@ export default function TransportOverviewPage() {
           <DataTable
             columns={incidentColumns}
             data={openIncidents}
-            loading={incidentsLoading}
             emptyTitle="No open incidents"
-            emptyDescription="All incidents have been resolved."
+            emptyDescription="Nothing to resolve — report an incident if something goes wrong on the road."
+            emptyAction={
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/transport/incidents/new">Report incident</Link>
+              </Button>
+            }
           />
         </div>
       </div>

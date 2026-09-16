@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { isTankBelowMinimum, isTankInService } from "../../_components/fuel-ui";
 
 interface Tank {
   id: string;
@@ -35,6 +36,7 @@ interface Tank {
   status: string;
   notes: string | null;
   branch?: { id: string; name: string } | null;
+  receipts?: unknown[];
 }
 
 interface HistoryEntry {
@@ -229,9 +231,14 @@ export default function TankDetailPage() {
                 <span>Min: {tank.minLevel.toLocaleString()} L</span>
                 <span>Capacity: {tank.capacity.toLocaleString()} L</span>
               </div>
-              {tank.currentLevel < tank.minLevel && (
+              {isTankBelowMinimum(tank) && (
                 <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-700">
                   Below minimum level
+                </div>
+              )}
+              {!isTankInService(tank) && tank.currentLevel === 0 && (
+                <div className="rounded-md bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-600">
+                  Awaiting first fuel receipt — min-level alerts stay quiet until the tank is filled.
                 </div>
               )}
               <div className="flex items-center gap-2">
