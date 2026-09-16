@@ -1,5 +1,8 @@
-import { NextRequest } from "next/server";
-import { startProductionBatch } from "@/modules/production/batches.service";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  InsufficientStockError,
+  startProductionBatch,
+} from "@/modules/production/batches.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { success, badRequest, notFound, handleError } from "@/lib/response";
 
@@ -18,10 +21,20 @@ export async function POST(
     const updated = await startProductionBatch(companyId, id, auth.user.id, auth.user.fullName, ipAddress);
     return success(updated);
   } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: err.message,
+          code: err.code,
+          data: { shortages: err.shortages },
+        },
+        { status: 400 }
+      );
+    }
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg.includes("not found")) return notFound(msg);
     if (msg.includes("PLANNED")) return badRequest(msg);
     return handleError(err);
   }
 }
-
