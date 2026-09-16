@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
     if (!line.itemId) return badRequest("Each line must have an itemId");
     if (typeof line.quantity !== "number" || line.quantity <= 0)
       return badRequest("Each line must have a positive quantity");
+    if (!line.locationId || typeof line.locationId !== "string")
+      return badRequest("Each line requires a storage location");
   }
 
   const { ipAddress, userAgent } = getRequestMeta(request);

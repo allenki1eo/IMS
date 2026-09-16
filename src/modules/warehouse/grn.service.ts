@@ -124,6 +124,14 @@ export async function createGRN(params: {
     userAgent,
   } = params;
 
+  if (!lines.length) {
+    throw new Error("At least one GRN line is required");
+  }
+  const missingLocation = lines.some((line) => !line.locationId);
+  if (missingLocation) {
+    throw new Error("Each GRN line requires a storage location");
+  }
+
   const reference = generateRef("GRN");
 
   const grn = await db.goodsReceivedNote.create({
@@ -184,6 +192,11 @@ export async function confirmGRN(
 
   if (!grn) throw new Error("GRN not found");
   if (grn.status !== "DRAFT") throw new Error("Only DRAFT GRNs can be confirmed");
+  if (!grn.lines.length) throw new Error("Cannot confirm a GRN with no lines");
+  const missingLocation = grn.lines.some((line) => !line.locationId);
+  if (missingLocation) {
+    throw new Error("Cannot confirm GRN: every line must have a storage location");
+  }
 
   const now = new Date();
 

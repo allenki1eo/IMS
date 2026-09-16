@@ -28,6 +28,7 @@ export async function getStockBalance(
         itemType: true,
         reorderPoint: true,
         minStock: true,
+        category: { select: { id: true, name: true, code: true } },
         uom: { select: { id: true, symbol: true, code: true } },
       },
     },

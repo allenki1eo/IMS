@@ -23,6 +23,7 @@ import {
 interface Warehouse { id: string; name: string; }
 interface Item { id: string; code: string; name: string; }
 interface Location { id: string; name: string; code: string; }
+interface Supplier { id: string; code: string; name: string; }
 
 interface LineItem {
   key: string;
@@ -42,9 +43,12 @@ export default function NewGRNPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [suppliersLoaded, setSuppliersLoaded] = useState(false);
+  const [suppliersError, setSuppliersError] = useState<string | null>(null);
 
   const [warehouseId, setWarehouseId] = useState("");
-  const [supplierName, setSupplierName] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [supplierRef, setSupplierRef] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<LineItem[]>([newLine()]);
@@ -53,12 +57,26 @@ export default function NewGRNPage() {
     Promise.all([
       fetch("/api/warehouses?pageSize=200").then((r) => r.json()),
       fetch("/api/items?pageSize=500&isActive=true").then((r) => r.json()),
+      fetch("/api/procurement/suppliers?status=ACTIVE&pageSize=500")
+        .then(async (r) => {
+          const json = await r.json();
+          if (!r.ok) {
+            throw new Error(json.error ?? "Failed to load suppliers");
+          }
+          return json;
+        }),
     ])
-      .then(([whJson, itemJson]) => {
+      .then(([whJson, itemJson, supplierJson]) => {
         setWarehouses(whJson.data ?? []);
         setItems(itemJson.data ?? []);
+        setSuppliers(supplierJson.data ?? []);
+        setSuppliersError(null);
       })
-      .catch(() => {});
+      .catch((err) => {
+        setSuppliers([]);
+        setSuppliersError(err instanceof Error ? err.message : "Failed to load suppliers");
+      })
+      .finally(() => setSuppliersLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -66,7 +84,9 @@ export default function NewGRNPage() {
     fetch(`/api/warehouses/${warehouseId}/locations?pageSize=200`)
       .then((r) => r.json())
       .then((d) => setLocations(d.data ?? d ?? []))
-      .catch(() => {});
+      .catch(() => setLocations([]));
+    // Clear location selections when warehouse changes
+    setLines((prev) => prev.map((l) => ({ ...l, locationId: "" })));
   }, [warehouseId]);
 
   function updateLine(key: string, field: keyof LineItem, value: string) {
@@ -84,6 +104,17 @@ export default function NewGRNPage() {
     if (!warehouseId) { toast.error("Please select a warehouse"); return; }
     const validLines = lines.filter((l) => l.itemId && l.quantity);
     if (validLines.length === 0) { toast.error("Add at least one item line"); return; }
+    const missingLocation = validLines.some((l) => !l.locationId);
+    if (missingLocation) {
+      toast.error("Each line requires a storage location");
+      return;
+    }
+    if (locations.length === 0) {
+      toast.error("Selected warehouse has no storage locations. Add a location before creating a GRN.");
+      return;
+    }
+
+    const selectedSupplier = suppliers.find((s) => s.id === supplierId);
 
     setSubmitting(true);
     try {
@@ -92,12 +123,12 @@ export default function NewGRNPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           warehouseId,
-          supplierName: supplierName || undefined,
+          supplierName: selectedSupplier?.name ?? undefined,
           supplierRef: supplierRef || undefined,
           notes: notes || undefined,
           lines: validLines.map((l) => ({
             itemId: l.itemId,
-            locationId: l.locationId || undefined,
+            locationId: l.locationId,
             quantity: Number(l.quantity),
             unitCost: l.unitCost ? Number(l.unitCost) : undefined,
           })),
@@ -130,7 +161,6 @@ export default function NewGRNPage() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
-        {/* Header */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">GRN Details</CardTitle>
@@ -153,14 +183,49 @@ export default function NewGRNPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="supplierName">Supplier Name</Label>
-                <Input
-                  id="supplierName"
-                  value={supplierName}
-                  onChange={(e) => setSupplierName(e.target.value)}
-                  placeholder="Optional"
-                  disabled={submitting}
-                />
+                <Label>Supplier</Label>
+                {!suppliersLoaded ? (
+                  <p className="text-sm text-muted-foreground">Loading suppliers…</p>
+                ) : suppliersError ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Could not load suppliers. Ensure you have procurement supplier access.
+                  </div>
+                ) : suppliers.length === 0 ? (
+                  <div className="rounded-md border border-dashed px-3 py-3 text-sm space-y-2">
+                    <p className="text-muted-foreground">
+                      No suppliers in master data yet. Add a supplier first, then select it here.
+                    </p>
+                    <Button type="button" variant="outline" size="sm" asChild>
+                      <Link href="/procurement/suppliers/new">Quick create supplier</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Select
+                      value={supplierId || "__none"}
+                      onValueChange={(v) => setSupplierId(v === "__none" ? "" : v)}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select supplier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">No supplier</SelectItem>
+                        {suppliers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.code} — {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Choose from procurement suppliers.{" "}
+                      <Link href="/procurement/suppliers/new" className="underline underline-offset-2">
+                        Quick create supplier
+                      </Link>
+                    </p>
+                  </>
+                )}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="supplierRef">Supplier Reference</Label>
@@ -187,7 +252,6 @@ export default function NewGRNPage() {
           </CardContent>
         </Card>
 
-        {/* Line items */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Line Items</CardTitle>
@@ -203,6 +267,15 @@ export default function NewGRNPage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
+            {warehouseId && locations.length === 0 && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                This warehouse has no storage locations.{" "}
+                <Link href={`/warehouse/warehouses/${warehouseId}`} className="underline underline-offset-2">
+                  Add a location
+                </Link>{" "}
+                before creating a GRN.
+              </div>
+            )}
             {lines.map((line, idx) => (
               <div key={line.key}>
                 {idx > 0 && <Separator className="mb-4" />}
@@ -227,15 +300,15 @@ export default function NewGRNPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <Label>Location</Label>
+                    <Label>Location <span className="text-destructive">*</span></Label>
                     <Select
                       value={line.locationId || "__none"}
                       onValueChange={(v) => updateLine(line.key, "locationId", v === "__none" ? "" : v)}
-                      disabled={submitting || !warehouseId}
+                      disabled={submitting || !warehouseId || locations.length === 0}
                     >
-                      <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none">None</SelectItem>
+                        <SelectItem value="__none">Select location</SelectItem>
                         {locations.map((l) => (
                           <SelectItem key={l.id} value={l.id}>{l.name} ({l.code})</SelectItem>
                         ))}
