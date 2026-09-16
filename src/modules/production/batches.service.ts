@@ -25,6 +25,124 @@ type RecipeMaterialRow = {
   wastagePct: number;
 };
 
+
+export type BatchMaterialStockStatus = {
+  materialId?: string;
+  itemId: string | null;
+  itemCode: string | null;
+  description: string;
+  uom: string;
+  requiredQty: number;
+  availableStock: number;
+  shortfall: number;
+  status: "OK" | "SHORTAGE" | "UNKNOWN";
+};
+
+export class InsufficientStockError extends Error {
+  readonly code = "INSUFFICIENT_STOCK";
+  readonly shortages: BatchMaterialStockStatus[];
+
+  constructor(shortages: BatchMaterialStockStatus[]) {
+    const list = shortages
+      .map(
+        (s) =>
+          `${s.description}: need ${s.requiredQty} ${s.uom}, have ${s.availableStock} ${s.uom}`
+      )
+      .join("; ");
+    super(`Insufficient stock to start batch. Short materials: ${list}`);
+    this.name = "InsufficientStockError";
+    this.shortages = shortages;
+  }
+}
+
+type MaterialStockInput = {
+  id?: string;
+  itemId: string | null;
+  itemCode: string | null;
+  description: string;
+  plannedQty: number;
+  issuedQty?: number;
+  uom: string;
+};
+
+/**
+ * Resolve available stock for batch material lines (total across warehouses).
+ * Required qty is planned minus already issued.
+ */
+export async function assessBatchMaterialStock(
+  companyId: string,
+  materials: MaterialStockInput[]
+): Promise<BatchMaterialStockStatus[]> {
+  const itemIds: string[] = [];
+  const itemCodes: string[] = [];
+  for (const mat of materials) {
+    if (mat.itemId) itemIds.push(mat.itemId);
+    else if (mat.itemCode) itemCodes.push(mat.itemCode);
+  }
+
+  const itemsByCode =
+    itemCodes.length > 0
+      ? await db.item.findMany({
+          where: { companyId, code: { in: itemCodes } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const codeToItemId = new Map(itemsByCode.map((i) => [i.code, i.id]));
+
+  const allItemIds = Array.from(
+    new Set([...itemIds, ...itemsByCode.map((i) => i.id)])
+  );
+  const stockBalances =
+    allItemIds.length > 0
+      ? await db.stockBalance.findMany({
+          where: { itemId: { in: allItemIds } },
+          select: { itemId: true, quantity: true },
+        })
+      : [];
+
+  const stockByItem = new Map<string, number>();
+  for (const sb of stockBalances) {
+    stockByItem.set(sb.itemId, (stockByItem.get(sb.itemId) ?? 0) + (sb.quantity ?? 0));
+  }
+
+  return materials.map((mat) => {
+    const requiredQty = Math.max(0, mat.plannedQty - (mat.issuedQty ?? 0));
+    const resolvedItemId = mat.itemId ?? codeToItemId.get(mat.itemCode ?? "") ?? null;
+    const availableStock = resolvedItemId ? (stockByItem.get(resolvedItemId) ?? 0) : 0;
+
+    let status: BatchMaterialStockStatus["status"];
+    if (!resolvedItemId) {
+      status = requiredQty > 0 ? "UNKNOWN" : "OK";
+    } else if (availableStock + 1e-9 < requiredQty) {
+      status = "SHORTAGE";
+    } else {
+      status = "OK";
+    }
+
+    const shortfall =
+      status === "OK" ? 0 : Math.max(0, requiredQty - availableStock);
+
+    return {
+      materialId: mat.id,
+      itemId: mat.itemId,
+      itemCode: mat.itemCode,
+      description: mat.description,
+      uom: mat.uom,
+      requiredQty,
+      availableStock,
+      shortfall,
+      status,
+    };
+  });
+}
+
+export function getBlockingShortages(
+  assessments: BatchMaterialStockStatus[]
+): BatchMaterialStockStatus[] {
+  // Hard-block: SHORTAGE and UNKNOWN (unresolvable item with remaining need)
+  return assessments.filter((a) => a.status === "SHORTAGE" || a.status === "UNKNOWN");
+}
+
 function assertPositiveFiniteNumber(value: number, field: string) {
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(`${field} must be greater than 0`);
@@ -83,7 +201,17 @@ export async function getProductionBatch(companyId: string, id: string) {
     },
   });
   if (!batch || batch.companyId !== companyId) return null;
-  return batch;
+
+  const materialStock = await assessBatchMaterialStock(companyId, batch.materials);
+  const shortages = getBlockingShortages(materialStock);
+  return {
+    ...batch,
+    materialStock,
+    stockGate: {
+      canStart: batch.status !== "PLANNED" ? false : shortages.length === 0,
+      shortages,
+    },
+  };
 }
 
 export async function createProductionBatch(
@@ -217,9 +345,19 @@ export async function startProductionBatch(
   userName: string,
   ipAddress?: string
 ) {
-  const existing = await db.productionBatch.findUnique({ where: { id } });
+  const existing = await db.productionBatch.findUnique({
+    where: { id },
+    include: { materials: true },
+  });
   if (!existing || existing.companyId !== companyId) throw new Error("Production batch not found");
   if (existing.status !== "PLANNED") throw new Error("Only PLANNED batches can be started");
+
+  // Server-side stock gate — do not trust the UI
+  const materialStock = await assessBatchMaterialStock(companyId, existing.materials);
+  const shortages = getBlockingShortages(materialStock);
+  if (shortages.length > 0) {
+    throw new InsufficientStockError(shortages);
+  }
 
   const updated = await db.productionBatch.update({
     where: { id },
