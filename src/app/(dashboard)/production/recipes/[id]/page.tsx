@@ -25,7 +25,9 @@ interface Recipe {
   version: string;
   status: string;
   notes?: string | null;
-  materials: Array<{ id: string; itemCode?: string | null; description: string; quantity: number; uom: string; wastagePct: number }>;
+  lineFamily?: string;
+  targetAbvPct?: number | null;
+  materials: Array<{ id: string; itemCode?: string | null; description: string; quantity: number; uom: string; wastagePct: number; role?: string | null }>;
   batches: Array<{ id: string; reference: string; productName: string; plannedQty: number; uom: string; status: string; line?: { name: string } | null }>;
 }
 
@@ -94,6 +96,8 @@ export default function RecipeDetailPage() {
             <div><p className="text-muted-foreground">Status</p><div className="mt-1"><StatusBadge status={recipe.status} /></div></div>
             <div><p className="text-muted-foreground">Product</p><p className="mt-1">{recipe.productCode ? `${recipe.productCode} - ` : ""}{recipe.productName}</p></div>
             <div><p className="text-muted-foreground">Batch Size</p><p className="mt-1">{qty(recipe.batchSize, recipe.uom)}</p></div>
+            <div><p className="text-muted-foreground">Line Family</p><p className="mt-1">{recipe.lineFamily ?? "BREWING"}</p></div>
+            <div><p className="text-muted-foreground">Target ABV %</p><p className="mt-1">{recipe.targetAbvPct != null ? recipe.targetAbvPct : "-"}</p></div>
             <div><p className="text-muted-foreground">Version</p><p className="mt-1">{recipe.version}</p></div>
             {recipe.notes && <div className="sm:col-span-2"><p className="text-muted-foreground">Notes</p><p className="mt-1 whitespace-pre-wrap">{recipe.notes}</p></div>}
           </CardContent>
@@ -137,7 +141,7 @@ export default function RecipeDetailPage() {
       </div>
       <Card className="mb-6">
         <CardHeader><CardTitle className="text-base">Bill of Materials</CardTitle></CardHeader>
-        <CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="px-4 py-3 text-left font-medium text-muted-foreground">Item</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Code</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Qty per batch</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">UOM</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Wastage %</th></tr></thead><tbody>{recipe.materials.map((line) => <tr key={line.id} className="border-t hover:bg-muted/30"><td className="px-4 py-3">{line.description}</td><td className="px-4 py-3">{line.itemCode ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{line.itemCode}</code> : "-"}</td><td className="px-4 py-3">{qty(line.quantity, "")}</td><td className="px-4 py-3">{line.uom}</td><td className="px-4 py-3">{line.wastagePct}%</td></tr>)}</tbody></table></div></CardContent>
+        <CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-muted/50"><tr><th className="px-4 py-3 text-left font-medium text-muted-foreground">Item</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Code</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Qty per batch</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">UOM</th><th className="px-4 py-3 text-left font-medium text-muted-foreground">Wastage %</th></tr></thead><tbody>{recipe.materials.map((line) => <tr key={line.id} className="border-t hover:bg-muted/30"><td className="px-4 py-3">{line.description}</td><td className="px-4 py-3">{line.itemCode ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{line.itemCode}</code> : "-"}</td><td className="px-4 py-3">{line.role ?? "-"}</td><td className="px-4 py-3">{qty(line.quantity, "")}</td><td className="px-4 py-3">{line.uom}</td><td className="px-4 py-3">{line.wastagePct}%</td></tr>)}</tbody></table></div></CardContent>
       </Card>
       <Card>
         <CardHeader><CardTitle className="text-base">Recent Batches</CardTitle></CardHeader>

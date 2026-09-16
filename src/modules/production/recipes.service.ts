@@ -8,7 +8,15 @@ type RecipeMaterialInput = {
   quantity: number;
   uom?: string;
   wastagePct?: number;
+  role?: string | null;
 };
+
+const RECIPE_LINE_FAMILIES = new Set(["BREWING", "SPIRITS"]);
+
+/** requiredQty per recipe batchSize, including wastage */
+export function requiredQtyWithWastage(quantity: number, wastagePct: number): number {
+  return quantity * (1 + (wastagePct || 0) / 100);
+}
 
 type ItemCodeRow = {
   id: string;
@@ -23,13 +31,14 @@ function assertPositiveFiniteNumber(value: number, field: string) {
 
 export async function listProductionRecipes(
   companyId: string,
-  params: { search?: string; status?: string; page: number; pageSize: number }
+  params: { search?: string; status?: string; lineFamily?: string; page: number; pageSize: number }
 ) {
-  const { search, status, page, pageSize } = params;
+  const { search, status, lineFamily, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
   const where = {
     companyId,
     ...(status ? { status } : {}),
+    ...(lineFamily ? { lineFamily } : {}),
     ...(search
       ? { OR: [{ code: { contains: search } }, { name: { contains: search } }, { productName: { contains: search } }] }
       : {}),
@@ -76,6 +85,8 @@ export async function createProductionRecipe(
     batchSize: number;
     uom?: string;
     version?: string;
+    lineFamily?: string;
+    targetAbvPct?: number | null;
     notes?: string | null;
     materials: RecipeMaterialInput[];
   },
@@ -85,6 +96,17 @@ export async function createProductionRecipe(
 ) {
   if (!data.materials.length) throw new Error("At least one material is required");
   assertPositiveFiniteNumber(data.batchSize, "batchSize");
+
+  const lineFamily = (data.lineFamily ?? "BREWING").toUpperCase();
+  if (!RECIPE_LINE_FAMILIES.has(lineFamily)) {
+    throw new Error("lineFamily must be BREWING or SPIRITS");
+  }
+  if (
+    data.targetAbvPct != null &&
+    (!Number.isFinite(data.targetAbvPct) || data.targetAbvPct < 0 || data.targetAbvPct > 100)
+  ) {
+    throw new Error("targetAbvPct must be between 0 and 100");
+  }
 
   for (const mat of data.materials) {
     if (!mat.description || !mat.description.trim()) {
@@ -116,6 +138,11 @@ export async function createProductionRecipe(
 
   const materialsToCreate = data.materials.map((line) => {
     const itemId = line.itemId ?? codeToId.get(line.itemCode?.trim() ?? "") ?? null;
+    if (!itemId) {
+      throw new Error(
+        `material "${line.description}" must link to a warehouse item (itemId/itemCode) for stock gates`
+      );
+    }
     return {
       itemId,
       itemCode: line.itemCode ?? null,
@@ -123,6 +150,7 @@ export async function createProductionRecipe(
       quantity: line.quantity,
       uom: line.uom ?? "KG",
       wastagePct: line.wastagePct ?? 0,
+      role: line.role?.trim() || null,
     };
   });
 
@@ -137,6 +165,8 @@ export async function createProductionRecipe(
       batchSize: data.batchSize,
       uom: data.uom ?? "L",
       version: data.version ?? "1",
+      lineFamily,
+      targetAbvPct: data.targetAbvPct ?? null,
       notes: data.notes ?? null,
       createdById,
       materials: {
@@ -222,7 +252,7 @@ export async function calculateRecipeCapacity(
   for (const mat of recipe.materials) {
     const resolvedItemId = mat.itemId ?? codeToItemId.get(mat.itemCode ?? "") ?? null;
     const availableStock = resolvedItemId ? (stockByItem.get(resolvedItemId) ?? 0) : 0;
-    const requiredPerBatch = mat.quantity;
+    const requiredPerBatch = requiredQtyWithWastage(mat.quantity, mat.wastagePct);
 
     let matMaxUnits: number;
     let status: MaterialCapacity["status"];

@@ -11,6 +11,7 @@ type MaterialBody = {
   quantity: number | string;
   uom?: string;
   wastagePct?: number | string;
+  role?: string | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
     const { data, meta } = await listProductionRecipes(companyId, {
       search: searchParams.get("search") ?? undefined,
       status: searchParams.get("status") ?? undefined,
+      lineFamily: searchParams.get("lineFamily") ?? undefined,
       page: pagination.page,
       pageSize: pagination.pageSize,
     });
@@ -62,6 +64,11 @@ export async function POST(request: NextRequest) {
         batchSize: Number(body.batchSize),
         uom: body.uom ?? "L",
         version: body.version ?? "1",
+        lineFamily: body.lineFamily ?? "BREWING",
+        targetAbvPct:
+          body.targetAbvPct == null || body.targetAbvPct === ""
+            ? null
+            : Number(body.targetAbvPct),
         notes: body.notes ?? null,
         materials: body.materials.map((line: MaterialBody) => ({
           itemId: line.itemId ?? null,
@@ -70,6 +77,7 @@ export async function POST(request: NextRequest) {
           quantity: Number(line.quantity),
           uom: line.uom ?? "KG",
           wastagePct: line.wastagePct == null || line.wastagePct === "" ? 0 : Number(line.wastagePct),
+          role: line.role ?? null,
         })),
       },
       auth.user.id,

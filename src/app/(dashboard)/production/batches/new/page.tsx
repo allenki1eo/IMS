@@ -15,7 +15,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LINE_TYPES, qty } from "../../_components/production-ui";
 
 interface LineOption { id: string; code: string; name: string }
-interface RecipeOption { id: string; code: string; name: string; productName: string; batchSize: number; uom: string }
+interface RecipeOption {
+  id: string;
+  code: string;
+  name: string;
+  productName: string;
+  batchSize: number;
+  uom: string;
+  lineFamily?: string;
+}
 
 interface CapacityMaterial {
   description: string;
@@ -79,6 +87,7 @@ export default function NewProductionBatchPage() {
       productName: prev.productName || recipe.productName,
       plannedQty: prev.plannedQty || String(recipe.batchSize),
       uom: prev.uom || recipe.uom,
+      batchType: recipe.lineFamily === "SPIRITS" ? "SPIRITS" : prev.batchType || "BREWING",
     }));
     setCapacityLoading(true);
     fetch(`/api/production/recipes/${recipe.id}/capacity`)

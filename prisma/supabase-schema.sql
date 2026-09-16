@@ -987,6 +987,8 @@ CREATE TABLE "production_recipes" (
     "uom" TEXT NOT NULL DEFAULT 'L',
     "version" TEXT NOT NULL DEFAULT '1',
     "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+    "lineFamily" TEXT NOT NULL DEFAULT 'BREWING',
+    "targetAbvPct" DOUBLE PRECISION,
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -1005,6 +1007,7 @@ CREATE TABLE "recipe_materials" (
     "quantity" DOUBLE PRECISION NOT NULL,
     "uom" TEXT NOT NULL DEFAULT 'KG',
     "wastagePct" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "role" TEXT,
 
     CONSTRAINT "recipe_materials_pkey" PRIMARY KEY ("id")
 );
@@ -2010,6 +2013,9 @@ CREATE INDEX "production_recipes_companyId_idx" ON "production_recipes"("company
 
 -- CreateIndex
 CREATE INDEX "production_recipes_status_idx" ON "production_recipes"("status");
+
+-- CreateIndex
+CREATE INDEX "production_recipes_lineFamily_idx" ON "production_recipes"("lineFamily");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "production_recipes_companyId_code_version_key" ON "production_recipes"("companyId", "code", "version");

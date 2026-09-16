@@ -6,9 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const LINE_TYPES = [
   { value: "BREWING", label: "Brewing" },
+  { value: "SPIRITS", label: "Spirits" },
   { value: "PACKAGING", label: "Packaging" },
   { value: "PROCESSING", label: "Processing" },
   { value: "OTHER", label: "Other" },
+];
+
+/** Recipe / BOM line families (maps to ProductionBatch.batchType). */
+export const RECIPE_LINE_FAMILIES = [
+  { value: "BREWING", label: "Brewing" },
+  { value: "SPIRITS", label: "Spirits" },
 ];
 
 export const BATCH_STATUSES = [

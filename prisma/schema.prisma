@@ -1339,6 +1339,10 @@ model ProductionRecipe {
   uom           String   @default("L")
   version       String   @default("1")
   status        String   @default("ACTIVE")
+  /// BREWING | SPIRITS — maps to ProductionBatch.batchType
+  lineFamily    String   @default("BREWING")
+  /// Optional target ABV % (beer or spirits)
+  targetAbvPct  Float?
   notes         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1350,18 +1354,21 @@ model ProductionRecipe {
   @@unique([companyId, code, version])
   @@index([companyId])
   @@index([status])
+  @@index([lineFamily])
   @@map("production_recipes")
 }
 
 model RecipeMaterial {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   recipeId    String
   itemId      String?
   itemCode    String?
   description String
   quantity    Float
-  uom         String @default("KG")
-  wastagePct  Float  @default(0)
+  uom         String  @default("KG")
+  wastagePct  Float   @default(0)
+  /// Optional role: MALT, HOPS, YEAST, NEUTRAL_SPIRIT, BOTANICAL, WATER, PACKAGING, etc.
+  role        String?
 
   recipe ProductionRecipe @relation(fields: [recipeId], references: [id])
 
