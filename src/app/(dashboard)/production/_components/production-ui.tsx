@@ -35,6 +35,16 @@ export function qty(value: number | null | undefined, uom = "") {
   return `${formatNumber(value)}${uom ? ` ${uom}` : ""}`;
 }
 
+
+/** Allow typing decimals without type=number fighting the controlled value. */
+export function sanitizeDecimalInput(raw: string): string {
+  const cleaned = raw.replace(/[^0-9.]/g, "");
+  const parts = cleaned.split(".");
+  if (parts.length <= 1) return cleaned;
+  return parts[0] + "." + parts.slice(1).join("");
+}
+
+
 export function StatCard({
   title,
   value,

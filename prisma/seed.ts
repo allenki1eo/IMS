@@ -1,5 +1,10 @@
 import bcrypt from "bcryptjs";
 import { db } from "../src/lib/db";
+import {
+  PALE_ALE_BOM_LINES,
+  PALE_ALE_FINISHED_GOOD,
+  PALE_ALE_RECIPE,
+} from "../src/modules/production/pale-ale-bom";
 
 // ─── Permission definitions ──────────────────────────────
 const PERMISSIONS = [
@@ -796,6 +801,215 @@ async function main() {
       },
     });
   }
+
+  // ── 10. Brewery demo: UOMs, warehouse, items, Pale Ale BOM ─
+  console.log("  → Creating brewery demo BOM (Pale Ale example)...");
+
+  const uomDefs = [
+    { code: "KG", name: "Kilogram", symbol: "KG", isBase: true },
+    { code: "G", name: "Gram", symbol: "G", isBase: false },
+    { code: "L", name: "Litre", symbol: "L", isBase: true },
+    { code: "PCS", name: "Pieces", symbol: "PCS", isBase: false },
+  ];
+  const uomByCode: Record<string, string> = {};
+  for (const u of uomDefs) {
+    const row = await db.unitOfMeasure.upsert({
+      where: { companyId_code: { companyId: company.id, code: u.code } },
+      update: { name: u.name, symbol: u.symbol, isActive: true },
+      create: {
+        companyId: company.id,
+        code: u.code,
+        name: u.name,
+        symbol: u.symbol,
+        isBase: u.isBase,
+      },
+    });
+    uomByCode[u.code] = row.id;
+  }
+
+  const brewCategory = await db.itemCategory.upsert({
+    where: { companyId_code: { companyId: company.id, code: "RAW-BREW" } },
+    update: { name: "Brewing Raw Materials", isActive: true },
+    create: {
+      companyId: company.id,
+      code: "RAW-BREW",
+      name: "Brewing Raw Materials",
+      description: "Malt, hops, yeast, and brewing salts",
+    },
+  });
+
+  const fgCategory = await db.itemCategory.upsert({
+    where: { companyId_code: { companyId: company.id, code: "FG-BEER" } },
+    update: { name: "Finished Beer", isActive: true },
+    create: {
+      companyId: company.id,
+      code: "FG-BEER",
+      name: "Finished Beer",
+      description: "Packaged / bulk finished beer",
+    },
+  });
+
+  const warehouse = await db.warehouse.upsert({
+    where: { companyId_code: { companyId: company.id, code: "WH-MAIN" } },
+    update: { name: "Main Warehouse", isActive: true },
+    create: {
+      companyId: company.id,
+      branchId: branch.id,
+      code: "WH-MAIN",
+      name: "Main Warehouse",
+      warehouseType: "MAIN",
+      createdById: adminUser.id,
+    },
+  });
+
+  const bulkLocation = await db.storageLocation.upsert({
+    where: { warehouseId_code: { warehouseId: warehouse.id, code: "BULK" } },
+    update: { name: "Bulk Storage", isActive: true },
+    create: {
+      warehouseId: warehouse.id,
+      code: "BULK",
+      name: "Bulk Storage",
+      locationType: "AREA",
+    },
+  });
+
+  const itemIdByCode: Record<string, string> = {};
+
+  for (const line of PALE_ALE_BOM_LINES) {
+    const uomId = uomByCode[line.uom] ?? uomByCode["KG"];
+    const item = await db.item.upsert({
+      where: { companyId_code: { companyId: company.id, code: line.itemCode } },
+      update: {
+        name: line.name,
+        categoryId: brewCategory.id,
+        uomId,
+        itemType: "RAW_MATERIAL",
+        isActive: true,
+      },
+      create: {
+        companyId: company.id,
+        code: line.itemCode,
+        name: line.name,
+        categoryId: brewCategory.id,
+        uomId,
+        itemType: "RAW_MATERIAL",
+        minStock: 0,
+        createdById: adminUser.id,
+      },
+    });
+    itemIdByCode[line.itemCode] = item.id;
+
+    const existingBalance = await db.stockBalance.findFirst({
+      where: {
+        itemId: item.id,
+        warehouseId: warehouse.id,
+        locationId: bulkLocation.id,
+      },
+    });
+    if (existingBalance) {
+      await db.stockBalance.update({
+        where: { id: existingBalance.id },
+        data: { quantity: line.seedStock },
+      });
+    } else {
+      await db.stockBalance.create({
+        data: {
+          itemId: item.id,
+          warehouseId: warehouse.id,
+          locationId: bulkLocation.id,
+          quantity: line.seedStock,
+        },
+      });
+    }
+  }
+
+  const fgUomId = uomByCode[PALE_ALE_FINISHED_GOOD.uom] ?? uomByCode["L"];
+  const fgItem = await db.item.upsert({
+    where: {
+      companyId_code: { companyId: company.id, code: PALE_ALE_FINISHED_GOOD.itemCode },
+    },
+    update: {
+      name: PALE_ALE_FINISHED_GOOD.name,
+      categoryId: fgCategory.id,
+      uomId: fgUomId,
+      itemType: PALE_ALE_FINISHED_GOOD.itemType,
+      isActive: true,
+    },
+    create: {
+      companyId: company.id,
+      code: PALE_ALE_FINISHED_GOOD.itemCode,
+      name: PALE_ALE_FINISHED_GOOD.name,
+      categoryId: fgCategory.id,
+      uomId: fgUomId,
+      itemType: PALE_ALE_FINISHED_GOOD.itemType,
+      createdById: adminUser.id,
+    },
+  });
+  itemIdByCode[PALE_ALE_FINISHED_GOOD.itemCode] = fgItem.id;
+
+  const existingRecipe = await db.productionRecipe.findFirst({
+    where: {
+      companyId: company.id,
+      code: PALE_ALE_RECIPE.code,
+      version: PALE_ALE_RECIPE.version,
+    },
+  });
+
+  if (existingRecipe) {
+    await db.recipeMaterial.deleteMany({ where: { recipeId: existingRecipe.id } });
+    await db.productionRecipe.update({
+      where: { id: existingRecipe.id },
+      data: {
+        name: PALE_ALE_RECIPE.name,
+        productCode: PALE_ALE_RECIPE.productCode,
+        productName: PALE_ALE_RECIPE.productName,
+        productItemId: fgItem.id,
+        batchSize: PALE_ALE_RECIPE.batchSize,
+        uom: PALE_ALE_RECIPE.uom,
+        notes: PALE_ALE_RECIPE.notes,
+        status: "ACTIVE",
+        materials: {
+          create: PALE_ALE_BOM_LINES.map((line) => ({
+            itemId: itemIdByCode[line.itemCode] ?? null,
+            itemCode: line.itemCode,
+            description: line.name,
+            quantity: line.quantity,
+            uom: line.uom,
+            wastagePct: line.wastagePct,
+          })),
+        },
+      },
+    });
+  } else {
+    await db.productionRecipe.create({
+      data: {
+        companyId: company.id,
+        code: PALE_ALE_RECIPE.code,
+        name: PALE_ALE_RECIPE.name,
+        productCode: PALE_ALE_RECIPE.productCode,
+        productName: PALE_ALE_RECIPE.productName,
+        productItemId: fgItem.id,
+        batchSize: PALE_ALE_RECIPE.batchSize,
+        uom: PALE_ALE_RECIPE.uom,
+        version: PALE_ALE_RECIPE.version,
+        notes: PALE_ALE_RECIPE.notes,
+        status: "ACTIVE",
+        createdById: adminUser.id,
+        materials: {
+          create: PALE_ALE_BOM_LINES.map((line) => ({
+            itemId: itemIdByCode[line.itemCode] ?? null,
+            itemCode: line.itemCode,
+            description: line.name,
+            quantity: line.quantity,
+            uom: line.uom,
+            wastagePct: line.wastagePct,
+          })),
+        },
+      },
+    });
+  }
+
+  console.log(`   Pale Ale recipe: ${PALE_ALE_RECIPE.code} (${PALE_ALE_BOM_LINES.length} BOM lines)`);
 
   console.log("");
   console.log("✅ Seed complete!");

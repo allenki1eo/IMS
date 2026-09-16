@@ -60,7 +60,7 @@ export default function ProductionRecipesPage() {
     { key: "product", header: "Product", cell: (row: RecipeRow) => <span>{row.productName}</span> },
     { key: "batchSize", header: "Batch Size", cell: (row: RecipeRow) => <span>{qty(row.batchSize, row.uom)}</span> },
     { key: "version", header: "Version", cell: (row: RecipeRow) => <span>{row.version}</span> },
-    { key: "materials", header: "Materials", cell: (row: RecipeRow) => <span>{row._count?.materials ?? 0}</span> },
+    { key: "materials", header: "BOM lines", cell: (row: RecipeRow) => <span>{row._count?.materials ?? 0}</span> },
     { key: "status", header: "Status", cell: (row: RecipeRow) => <StatusBadge status={row.status} /> },
     { key: "actions", header: "Actions", cell: (row: RecipeRow) => (
       <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export default function ProductionRecipesPage() {
 
   return (
     <div>
-      <PageHeader title="Production Recipes" description="Maintain product recipes and material requirements" actions={<PermissionGuard require="production:recipe:create"><Button asChild><Link href="/production/recipes/new"><Plus className="h-4 w-4 mr-2" />New Recipe</Link></Button></PermissionGuard>} />
+      <PageHeader title="Production Recipes" description="Maintain product recipes and Bills of Materials" actions={<PermissionGuard require="production:recipe:create"><Button asChild><Link href="/production/recipes/new"><Plus className="h-4 w-4 mr-2" />New Recipe</Link></Button></PermissionGuard>} />
       <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search recipes..." className="w-full sm:max-w-xs" />
         <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
@@ -85,7 +85,7 @@ export default function ProductionRecipesPage() {
           </SelectContent>
         </Select>
       </div>
-      <DataTable columns={columns} data={recipes} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No recipes found" emptyDescription="Create a recipe to standardize production batches."
+      <DataTable columns={columns} data={recipes} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No recipes found" emptyDescription="Create a recipe with a Bill of Materials to standardize production batches."
           error={error}
           onRetry={() => mutate()} />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
