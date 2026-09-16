@@ -28,8 +28,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Drivers are shared across companies (same as vehicles) so trip/fuel
+    // forms can pick any driver regardless of erp_company_id.
     const { data, meta } = await listDrivers({
-      companyId,
       search,
       status,
       isAvailable,

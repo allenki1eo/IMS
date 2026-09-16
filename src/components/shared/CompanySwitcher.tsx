@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Building2, ChevronDown, Check, Loader2 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
@@ -14,8 +13,6 @@ import { toast } from "sonner";
 
 export function CompanySwitcher() {
   const { user } = useCurrentUser();
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [activeCompanyName, setActiveCompanyName] = useState<string | null>(null);
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
@@ -36,7 +33,7 @@ export function CompanySwitcher() {
   // Optimistic display: show the company we're switching to immediately
   const activeCompany = companies.find((c) => c.id === (switchingTo ?? activeCompanyId));
   const displayName = activeCompany?.name ?? activeCompanyName ?? "…";
-  const isLoading = isPending || switchingTo !== null;
+  const isLoading = switchingTo !== null;
 
   async function switchCompany(companyId: string, companyName: string) {
     if (companyId === activeCompanyId) return;
@@ -55,12 +52,10 @@ export function CompanySwitcher() {
 
       if (res.ok) {
         setActiveCompanyId(companyId);
-        setSwitchingTo(null);
         toast.success(`Switched to ${json.data?.name ?? companyName}`);
-        // router.refresh() re-fetches server components without a full page reload
-        startTransition(() => {
-          router.refresh();
-        });
+        // Full reload so SWR/client fetches re-run with the new erp_company_id
+        // cookie. router.refresh() alone leaves SWR caches keyed by URL stale.
+        window.location.reload();
       } else {
         // Rollback optimistic update on failure
         setSwitchingTo(null);

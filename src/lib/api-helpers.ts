@@ -57,6 +57,14 @@ export function getRequestMeta(request: NextRequest) {
   return { ipAddress, userAgent };
 }
 
+function canSwitchCompany(authUser: AuthUser): boolean {
+  return (
+    authUser.isSystemUser ||
+    authUser.permissions.includes("*") ||
+    authUser.permissions.includes("company:company:switch")
+  );
+}
+
 async function resolveExistingCompanyId(companyId: string | null | undefined): Promise<string | null> {
   if (!companyId) return null;
   try {
@@ -71,44 +79,52 @@ async function resolveExistingCompanyId(companyId: string | null | undefined): P
   }
 }
 
+/**
+ * Resolve the active company for this request.
+ *
+ * Priority:
+ * 1. Users with switch permission: validated `erp_company_id` cookie (via x-company-id)
+ * 2. User's assigned companyId
+ * 3. Validated cookie when there is no authenticated user context
+ *
+ * Never falls back to unordered `findFirst()` — that silently scoped lists to
+ * the wrong company when the cookie was unset. Callers should treat null as
+ * "Company not configured" and login/company GET heal the cookie instead.
+ */
 export async function getCompanyId(request?: NextRequest): Promise<string | null> {
   try {
     if (request) {
       const userId = request.headers.get("x-user-id");
 
       if (userId) {
-        // Single (cached) lookup — AuthUser already carries companyId,
-        // isSystemUser, and permissions.
         const authUser = await getAuthUser(userId);
 
         if (authUser) {
-          const canSwitch =
-            authUser.isSystemUser ||
-            authUser.permissions.includes("*") ||
-            authUser.permissions.includes("company:company:switch");
-          if (canSwitch) {
+          if (canSwitchCompany(authUser)) {
             const cookieCompanyId = request.headers.get("x-company-id");
-            // Ignore stale/bogus erp_company_id cookies so transport/fuel lists
+            // Ignore stale/bogus erp_company_id cookies so scoped module lists
             // do not silently go empty after a company delete or corrupt cookie.
             const validCookieCompanyId = await resolveExistingCompanyId(cookieCompanyId);
             if (validCookieCompanyId) return validCookieCompanyId;
           }
 
-          // Enforce user's assigned company
-          if (authUser.companyId) return authUser.companyId;
+          // Enforce user's assigned company (non-switchers always; switchers
+          // when cookie is missing/invalid).
+          if (authUser.companyId) {
+            return (await resolveExistingCompanyId(authUser.companyId)) ?? authUser.companyId;
+          }
+
+          return null;
         }
       }
 
       // Fall back to cookie header (no authenticated user context)
       const cookieCompanyId = request.headers.get("x-company-id");
-      const validCookieCompanyId = await resolveExistingCompanyId(cookieCompanyId);
-      if (validCookieCompanyId) return validCookieCompanyId;
+      return await resolveExistingCompanyId(cookieCompanyId);
     }
 
-    // Last resort: first company in the database
-    const { db } = await import("./db");
-    const company = await db.company.findFirst({ select: { id: true } });
-    return company?.id ?? null;
+    // No request: do not guess a company — callers must pass request or heal.
+    return null;
   } catch {
     return null;
   }

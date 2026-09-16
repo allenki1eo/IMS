@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { cookies } from "next/headers";
 import { getCompanyById } from "@/modules/company/company.service";
 import { requirePermission } from "@/lib/api-helpers";
 import { success, badRequest, notFound } from "@/lib/response";
+import { setCompanyCookie } from "@/lib/company-cookie";
 
 export async function POST(request: NextRequest) {
   const auth = await requirePermission(request, "company:company:switch");
@@ -18,16 +18,7 @@ export async function POST(request: NextRequest) {
   const company = await getCompanyById(companyId);
   if (!company) return notFound("Company not found");
 
-  const cookieStore = await cookies();
-  cookieStore.set("erp_company_id", companyId, {
-    httpOnly: true,
-    secure:
-      process.env.NODE_ENV === "production" ||
-      process.env.FORCE_HTTPS === "true",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 365, // 1 year
-    path: "/",
-  });
+  await setCompanyCookie(companyId);
 
   return success({ companyId, name: company.name });
 }
