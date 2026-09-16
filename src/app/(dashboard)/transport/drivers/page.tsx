@@ -284,8 +284,13 @@ export default function DriversPage() {
         onPageChange={setPage}
         selectable
         onSelectionChange={setSelectedIds}
-        emptyTitle="No drivers found"
-        emptyDescription="Register your first driver to get started."
+        emptyTitle="No drivers yet"
+        emptyDescription="Register a driver before assigning vehicles or dispatching trips."
+        emptyAction={
+          <Button asChild size="sm">
+            <Link href="/transport/drivers/new">Add driver</Link>
+          </Button>
+        }
           error={error}
           onRetry={() => mutate()}
       />

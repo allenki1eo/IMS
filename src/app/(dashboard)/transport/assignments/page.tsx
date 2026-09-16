@@ -290,8 +290,13 @@ export default function AssignmentsPage() {
         onPageChange={setPage}
         selectable
         onSelectionChange={setSelectedIds}
-        emptyTitle="No assignments found"
-        emptyDescription="Assign a vehicle to a driver to get started."
+        emptyTitle="No assignments yet"
+        emptyDescription="Assign a vehicle to a driver so trips can be dispatched."
+        emptyAction={
+          <Button size="sm" onClick={openCreateDialog}>
+            Assign vehicle
+          </Button>
+        }
       />
 
       {/* Create Assignment Dialog */}

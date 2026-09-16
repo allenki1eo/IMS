@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, FileText } from "lucide-react";
 import { format } from "date-fns";
@@ -169,7 +170,12 @@ export default function DailyMovementListPage() {
         exportable
         exportFilename="daily-truck-movements"
         emptyTitle="No movement reports yet"
-        emptyDescription="Create the first daily truck movement report for today."
+        emptyDescription="Log today's truck movements to keep the daily control sheet current."
+        emptyAction={
+          <Button asChild size="sm">
+            <Link href="/transport/daily-movement/new">New movement report</Link>
+          </Button>
+        }
       />
     </div>
   );

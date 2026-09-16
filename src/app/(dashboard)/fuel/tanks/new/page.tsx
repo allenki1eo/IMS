@@ -94,6 +94,10 @@ export default function NewTankPage() {
       toast.error("Initial level cannot exceed capacity");
       return;
     }
+    if (minLevelNum > capacityNum) {
+      toast.error("Min level cannot exceed capacity");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -209,6 +213,7 @@ export default function NewTankPage() {
                   onChange={handleChange}
                   disabled={submitting}
                 />
+                <p className="text-xs text-muted-foreground">Leave at 0 if the tank is empty — record a receipt when fuel arrives.</p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="minLevel">Min Level (L)</Label>
@@ -222,6 +227,7 @@ export default function NewTankPage() {
                   onChange={handleChange}
                   disabled={submitting}
                 />
+                <p className="text-xs text-muted-foreground">Alert threshold after the tank is in service (first fill). Empty new tanks are not flagged below-min.</p>
               </div>
             </div>
 

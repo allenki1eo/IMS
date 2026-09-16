@@ -200,8 +200,13 @@ export default function IncidentsPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        emptyTitle="No incidents found"
-        emptyDescription="No incidents have been reported."
+        emptyTitle="No incidents reported"
+        emptyDescription="Report an incident when something goes wrong on the road."
+        emptyAction={
+          <Button asChild size="sm">
+            <Link href="/transport/incidents/new">Report incident</Link>
+          </Button>
+        }
       />
 
       <ConfirmDeleteDialog

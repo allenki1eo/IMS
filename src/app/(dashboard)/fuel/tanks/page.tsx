@@ -21,6 +21,7 @@ import {
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePagedData } from "@/hooks/usePagedData";
+import { isTankBelowMinimum } from "../_components/fuel-ui";
 
 interface TankRow {
   id: string;
@@ -32,6 +33,7 @@ interface TankRow {
   currentLevel: number;
   minLevel: number;
   isActive: boolean;
+  _count?: { receipts?: number; issues?: number };
 }
 
 const FUEL_TYPE_FILTERS = [
@@ -90,8 +92,10 @@ export default function TanksPage() {
           <Link href={`/fuel/tanks/${row.id}`} className="font-semibold hover:underline">
             {row.name}
           </Link>
-          {row.currentLevel < row.minLevel && (
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          {isTankBelowMinimum(row) && (
+            <span title="Below minimum level">
+              <AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden />
+            </span>
           )}
         </div>
       ),
@@ -209,10 +213,18 @@ export default function TanksPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        emptyTitle="No tanks found"
-        emptyDescription="Add your first fuel tank to get started."
-          error={error}
-          onRetry={() => mutate()}
+        emptyTitle="No tanks yet"
+        emptyDescription="Register a tank with capacity and min level, then record a receipt when fuel arrives."
+        emptyAction={
+          <Button asChild size="sm">
+            <Link href="/fuel/tanks/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Add tank
+            </Link>
+          </Button>
+        }
+        error={error}
+        onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

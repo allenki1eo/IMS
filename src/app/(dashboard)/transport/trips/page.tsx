@@ -263,8 +263,13 @@ export default function TripsPage() {
             onSelectionChange={setSelectedIds}
             exportable
             exportFilename="trips"
-            emptyTitle="No trips found"
-            emptyDescription="Create your first trip to get started."
+            emptyTitle="No trips yet"
+        emptyDescription="Create a trip to dispatch a vehicle and track the route."
+        emptyAction={
+          <Button asChild size="sm">
+            <Link href="/transport/trips/new">Create trip</Link>
+          </Button>
+        }
           error={error}
           onRetry={() => mutate()}
           />

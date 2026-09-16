@@ -34,17 +34,80 @@ export function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
 }
 
+/**
+ * A tank is "in service" once it has been filled at least once
+ * (confirmed receipt, or a non-zero starting level at create).
+ * Empty never-filled tanks must not scream "below minimum".
+ */
+export function isTankInService(tank: {
+  currentLevel: number;
+  receiptCount?: number | null;
+  _count?: { receipts?: number } | null;
+  receipts?: unknown[] | null;
+}): boolean {
+  const receiptCount =
+    tank.receiptCount ??
+    tank._count?.receipts ??
+    (Array.isArray(tank.receipts) ? tank.receipts.length : null);
+
+  if (receiptCount != null && receiptCount > 0) return true;
+  return tank.currentLevel > 0;
+}
+
+/** Below-min alerts only after the tank has been put into service. */
+export function isTankBelowMinimum(tank: {
+  currentLevel: number;
+  minLevel: number;
+  receiptCount?: number | null;
+  _count?: { receipts?: number } | null;
+  receipts?: unknown[] | null;
+}): boolean {
+  if (!isTankInService(tank)) return false;
+  return tank.currentLevel < tank.minLevel;
+}
+
+export function tankLevelStatus(tank: {
+  currentLevel: number;
+  capacity: number;
+  minLevel: number;
+  receiptCount?: number | null;
+  _count?: { receipts?: number } | null;
+  receipts?: unknown[] | null;
+}): { label: string; color: string } {
+  if (!isTankInService(tank) && tank.currentLevel === 0) {
+    return { label: "EMPTY", color: "text-muted-foreground" };
+  }
+  const pct = tank.capacity > 0 ? (tank.currentLevel / tank.capacity) * 100 : 0;
+  if (isTankBelowMinimum(tank) || pct < 10) {
+    return { label: "CRITICAL", color: "text-red-600" };
+  }
+  if (pct < 25) return { label: "LOW", color: "text-amber-600" };
+  return { label: "OK", color: "text-green-600" };
+}
+
 export function FuelLevelBadge({
   currentLevel,
   capacity,
   minLevel,
+  inService,
 }: {
   currentLevel: number;
   capacity: number;
   minLevel?: number | null;
+  /** When false, skip below-min destructive styling (awaiting first fill). */
+  inService?: boolean;
 }) {
   const pct = capacity > 0 ? Math.round((currentLevel / capacity) * 100) : 0;
-  const variant = currentLevel <= (minLevel ?? 0) ? "destructive" : pct <= 25 ? "warning" : "success";
+  const commissioned = inService ?? currentLevel > 0;
+  const belowMin =
+    commissioned && currentLevel < (minLevel ?? 0);
+  const variant = belowMin
+    ? "destructive"
+    : !commissioned && currentLevel === 0
+      ? "secondary"
+      : pct <= 25
+        ? "warning"
+        : "success";
   return (
     <div className="min-w-[120px] space-y-1">
       <div className="flex items-center justify-between gap-2">
@@ -93,4 +156,3 @@ export function StatCard({
     </Link>
   );
 }
-
