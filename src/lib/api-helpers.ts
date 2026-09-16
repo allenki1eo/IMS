@@ -57,6 +57,20 @@ export function getRequestMeta(request: NextRequest) {
   return { ipAddress, userAgent };
 }
 
+async function resolveExistingCompanyId(companyId: string | null | undefined): Promise<string | null> {
+  if (!companyId) return null;
+  try {
+    const { db } = await import("./db");
+    const company = await db.company.findUnique({
+      where: { id: companyId },
+      select: { id: true },
+    });
+    return company?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getCompanyId(request?: NextRequest): Promise<string | null> {
   try {
     if (request) {
@@ -74,7 +88,10 @@ export async function getCompanyId(request?: NextRequest): Promise<string | null
             authUser.permissions.includes("company:company:switch");
           if (canSwitch) {
             const cookieCompanyId = request.headers.get("x-company-id");
-            if (cookieCompanyId) return cookieCompanyId;
+            // Ignore stale/bogus erp_company_id cookies so transport/fuel lists
+            // do not silently go empty after a company delete or corrupt cookie.
+            const validCookieCompanyId = await resolveExistingCompanyId(cookieCompanyId);
+            if (validCookieCompanyId) return validCookieCompanyId;
           }
 
           // Enforce user's assigned company
@@ -84,7 +101,8 @@ export async function getCompanyId(request?: NextRequest): Promise<string | null
 
       // Fall back to cookie header (no authenticated user context)
       const cookieCompanyId = request.headers.get("x-company-id");
-      if (cookieCompanyId) return cookieCompanyId;
+      const validCookieCompanyId = await resolveExistingCompanyId(cookieCompanyId);
+      if (validCookieCompanyId) return validCookieCompanyId;
     }
 
     // Last resort: first company in the database
