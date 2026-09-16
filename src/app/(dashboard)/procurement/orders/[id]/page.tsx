@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PrintButton } from "@/components/shared/PrintButton";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -114,7 +115,14 @@ export default function PurchaseOrderDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!order) return <div className="text-muted-foreground">Purchase order not found.</div>;
+  if (!order) return (
+    <NotFoundState
+      title="Purchase order not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/procurement/orders"
+      backLabel="Back to list"
+    />
+  );
 
   const canReceive = ["SENT", "PARTIALLY_RECEIVED"].includes(order.status);
 

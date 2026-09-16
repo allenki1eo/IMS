@@ -7,6 +7,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { CheckCircle, Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,14 @@ export default function BrewingSessionDetailPage({ params }: { params: Promise<{
   }
 
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;
-  if (!session) return <div className="p-8 text-red-500">Session not found</div>;
+  if (!session) return (
+    <NotFoundState
+      title="Session not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/production/brewing/sessions"
+      backLabel="Back to list"
+    />
+  );
 
   const sectionKeys = [...new Set(session.activities.map((a) => a.section))];
 

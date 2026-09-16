@@ -10,6 +10,9 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Button } from "@/components/ui/button";
 import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
 import Link from "next/link";
 
@@ -63,6 +66,7 @@ function fmt(val: number, currency: string) {
 export default function FinancePage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const currency = useCurrency();
 
   useEffect(() => {
@@ -70,9 +74,16 @@ export default function FinancePage() {
       try {
         // Single aggregated request (replaces 7 separate list-endpoint calls)
         const res = await fetch("/api/finance/overview");
-        const json = res.ok ? await res.json() : null;
+        if (!res.ok) {
+          setLoadError(true);
+          setStats(EMPTY_STATS);
+          return;
+        }
+        const json = await res.json();
         setStats(json?.data ? { ...EMPTY_STATS, ...json.data } : EMPTY_STATS);
+        setLoadError(false);
       } catch {
+        setLoadError(true);
         setStats(EMPTY_STATS);
       } finally {
         setLoading(false);
@@ -82,6 +93,21 @@ export default function FinancePage() {
   }, []);
 
   if (loading) return <LoadingState text="Loading finance overview..." />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Could not load finance overview"
+        description="The finance summary could not be loaded. Check your connection and try again."
+        onRetry={() => {
+          setLoadError(false);
+          setLoading(true);
+          setStats(null);
+          // re-trigger effect by remounting via reload is simplest
+          window.location.reload();
+        }}
+      />
+    );
+  }
 
   const trendData = stats?.monthlyTrend ?? [];
   const thisMonth = trendData[trendData.length - 1] ?? { receipts: 0, payments: 0 };
@@ -157,6 +183,16 @@ export default function FinancePage() {
       <PageHeader
         title="Finance Operations"
         description="Chart of accounts, journal entries, bank accounts, payments, and financial reports"
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/finance/cashbook">Open cashbook</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/finance/payments">Payments</Link>
+            </Button>
+          </>
+        }
       />
 
       {/* KPI Cards */}
@@ -186,7 +222,16 @@ export default function FinancePage() {
           </CardHeader>
           <CardContent>
             {trendData.every((d) => d.receipts === 0 && d.payments === 0) ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No cashbook data yet</p>
+              <EmptyState
+                compact
+                title="No cashbook data yet"
+                description="Receipts and payments will chart here once cashbook entries exist."
+                action={
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/finance/cashbook">Go to cashbook</Link>
+                  </Button>
+                }
+              />
             ) : (
               <FinanceTrendChart data={trendData} currency={currency} />
             )}
@@ -200,7 +245,16 @@ export default function FinancePage() {
           </CardHeader>
           <CardContent>
             {bankPieData.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No bank accounts</p>
+              <EmptyState
+                compact
+                title="No bank accounts"
+                description="Add a bank account to track cash by account."
+                action={
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/finance/bank-accounts">Bank accounts</Link>
+                  </Button>
+                }
+              />
             ) : (
               <BankBalancePie data={bankPieData} currency={currency} />
             )}

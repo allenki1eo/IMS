@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ClipboardList, Handshake, PackageCheck, ShoppingCart } from "lucide-react";
+import { ClipboardList, Handshake, PackageCheck, ShoppingCart, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Button } from "@/components/ui/button";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatMoney, priorityClass, StatCard } from "./_components/procurement-ui";
@@ -42,6 +46,7 @@ export default function ProcurementOverviewPage() {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -62,17 +67,40 @@ export default function ProcurementOverviewPage() {
         setRequests(requestsData.data ?? []);
         setOrders(ordersData.data ?? []);
       })
-      .catch(() => toast.error("Failed to load procurement overview"))
+      .catch(() => { setLoadError(true); toast.error("Failed to load procurement overview"); })
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingState />;
+  if (loading) return <LoadingState text="Loading procurement overview..." />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Could not load procurement overview"
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
 
   return (
     <div>
       <PageHeader
         title="Procurement"
         description="Manage suppliers, purchase requests, purchase orders, and receiving"
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/procurement/suppliers">Suppliers</Link>
+            </Button>
+            <PermissionGuard require="procurement:request:create">
+              <Button asChild>
+                <Link href="/procurement/requests/new">
+                  <Plus className="h-4 w-4" />
+                  New request
+                </Link>
+              </Button>
+            </PermissionGuard>
+          </>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -102,7 +130,18 @@ export default function ProcurementOverviewPage() {
                 </thead>
                 <tbody>
                   {requests.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No purchase requests found</td></tr>
+                    <tr><td colSpan={5}>
+                      <EmptyState
+                        compact
+                        title="No purchase requests"
+                        description="Create a request to start the procurement workflow."
+                        action={
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href="/procurement/requests/new">New request</Link>
+                          </Button>
+                        }
+                      />
+                    </td></tr>
                   ) : requests.map((request) => (
                     <tr key={request.id} className="border-t hover:bg-muted/30">
                       <td className="px-4 py-3">
@@ -143,7 +182,18 @@ export default function ProcurementOverviewPage() {
                 </thead>
                 <tbody>
                   {orders.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No purchase orders found</td></tr>
+                    <tr><td colSpan={5}>
+                      <EmptyState
+                        compact
+                        title="No purchase orders"
+                        description="Orders appear here after a request is converted or an order is created."
+                        action={
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href="/procurement/orders/new">New order</Link>
+                          </Button>
+                        }
+                      />
+                    </td></tr>
                   ) : orders.map((order) => (
                     <tr key={order.id} className="border-t hover:bg-muted/30">
                       <td className="px-4 py-3">

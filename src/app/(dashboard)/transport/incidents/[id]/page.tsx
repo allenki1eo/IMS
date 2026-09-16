@@ -8,6 +8,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -110,7 +111,14 @@ export default function IncidentDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!incident) return <div className="text-muted-foreground">Incident not found.</div>;
+  if (!incident) return (
+    <NotFoundState
+      title="Incident not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/transport/incidents"
+      backLabel="Back to list"
+    />
+  );
 
   const canUpdate = incident.status === "OPEN" || incident.status === "INVESTIGATING";
 

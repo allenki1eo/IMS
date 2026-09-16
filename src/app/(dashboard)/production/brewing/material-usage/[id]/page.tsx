@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -48,7 +49,14 @@ export default function MaterialUsageDetailPage({ params }: { params: Promise<{ 
   }, [id]);
 
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;
-  if (!usage) return <div className="p-8 text-red-500">Record not found</div>;
+  if (!usage) return (
+    <NotFoundState
+      title="Record not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/production/brewing/material-usage"
+      backLabel="Back to list"
+    />
+  );
 
   const sections = [...new Set(usage.items.map((i) => i.section))];
 

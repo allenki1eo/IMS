@@ -63,7 +63,7 @@ export default function StockPage() {
   if (warehouseFilter !== "ALL") params.set("warehouseId", warehouseFilter);
   if (lowStockOnly) params.set("lowStock", "true");
   const url = `/api/stock/balance?${params}`;
-  const { data: stock, total, loading } = usePagedData<StockRow>(url);
+  const { data: stock, total, loading, error, mutate } = usePagedData<StockRow>(url);
 
   const columns = [
     {
@@ -186,6 +186,8 @@ export default function StockPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No stock found"
+          error={error}
+          onRetry={() => mutate()}
         emptyDescription="Stock balances will appear here after GRNs are confirmed."
       />
     </div>

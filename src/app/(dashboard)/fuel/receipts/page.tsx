@@ -70,7 +70,7 @@ export default function ReceiptsPage() {
   if (tankFilter !== "ALL") params.set("tankId", tankFilter);
   const url = `/api/fuel-receipts?${params}`;
 
-  const { data: receipts, total, loading, mutate } = usePagedData<ReceiptRow>(url);
+  const { data: receipts, total, loading, error, mutate } = usePagedData<ReceiptRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -217,6 +217,8 @@ export default function ReceiptsPage() {
         onPageChange={setPage}
         emptyTitle="No receipts found"
         emptyDescription="Record your first fuel delivery to get started."
+          error={error}
+          onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

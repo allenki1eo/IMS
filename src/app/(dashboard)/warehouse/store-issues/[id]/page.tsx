@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -50,7 +51,14 @@ export default function StoreIssueDetailPage({ params }: { params: Promise<{ id:
   }, [id]);
 
   if (loading) return <LoadingState text="Loading store issue..." />;
-  if (!issue) return <div className="p-8 text-red-500">Store issue not found</div>;
+  if (!issue) return (
+    <NotFoundState
+      title="Store issue not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/warehouse/store-issues"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div className="space-y-6 max-w-3xl">

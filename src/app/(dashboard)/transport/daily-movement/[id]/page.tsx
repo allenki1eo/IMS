@@ -8,6 +8,7 @@ import { ArrowLeft, Printer, Save, Send } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -262,7 +263,14 @@ export default function DailyMovementDetailPage() {
   };
 
   if (loading) return <LoadingState />;
-  if (!report) return <div className="p-8 text-center text-muted-foreground">Report not found.</div>;
+  if (!report) return (
+    <NotFoundState
+      title="Report not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/transport/daily-movement"
+      backLabel="Back to list"
+    />
+  );
 
   const isDraft = report.status === "DRAFT";
   const counts = isDraft

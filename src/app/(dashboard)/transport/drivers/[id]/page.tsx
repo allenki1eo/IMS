@@ -8,6 +8,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -170,7 +171,14 @@ export default function DriverDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!driver) return <div className="text-muted-foreground">Driver not found.</div>;
+  if (!driver) return (
+    <NotFoundState
+      title="Driver not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/transport/drivers"
+      backLabel="Back to list"
+    />
+  );
 
   const emp = driver.employee;
   const displayName = emp?.fullName ??

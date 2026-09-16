@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -158,7 +159,14 @@ export default function TankDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!tank) return <div className="text-muted-foreground">Tank not found.</div>;
+  if (!tank) return (
+    <NotFoundState
+      title="Tank not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/fuel/tanks"
+      backLabel="Back to list"
+    />
+  );
 
   const fillPct = tank.capacity > 0 ? (tank.currentLevel / tank.capacity) * 100 : 0;
   const color = fillColor(fillPct);

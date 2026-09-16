@@ -92,7 +92,7 @@ export default function VehiclesPage() {
   if (typeFilter !== "ALL") params.set("vehicleType", typeFilter);
   if (statusFilter !== "ALL") params.set("status", statusFilter);
   const url = `/api/vehicles?${params}`;
-  const { data: vehicles, total, loading, mutate } = usePagedData<VehicleRow>(url);
+  const { data: vehicles, total, loading, error, mutate } = usePagedData<VehicleRow>(url);
 
   async function handleBulkAction(status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED") {
     setBulkLoading(true);
@@ -276,6 +276,8 @@ export default function VehiclesPage() {
         onSelectionChange={setSelectedIds}
         emptyTitle="No vehicles found"
         emptyDescription="Add your first vehicle to the fleet."
+          error={error}
+          onRetry={() => mutate()}
       />
 
       <ImportModal

@@ -8,6 +8,7 @@ import { ArrowLeft, Send, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,14 @@ export default function AdjustmentDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!adjustment) return <div className="text-muted-foreground">Adjustment not found.</div>;
+  if (!adjustment) return (
+    <NotFoundState
+      title="Adjustment not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/warehouse/adjustments"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div>

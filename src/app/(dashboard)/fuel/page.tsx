@@ -4,9 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Fuel, TrendingDown, Droplets, DollarSign } from "lucide-react";
+import { Fuel, TrendingDown, Droplets, DollarSign, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Button } from "@/components/ui/button";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -55,6 +59,7 @@ export default function FuelOverviewPage() {
   const [tanks, setTanks] = useState<TankSummary[]>([]);
   const [recentIssues, setRecentIssues] = useState<RecentIssue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const now = new Date();
@@ -88,15 +93,41 @@ export default function FuelOverviewPage() {
 
         setRecentIssues(issuesData.data ?? []);
       })
-      .catch(() => toast.error("Failed to load fuel overview"))
+      .catch(() => { setLoadError(true); toast.error("Failed to load fuel overview"); })
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingState />;
+  if (loading) return <LoadingState text="Loading fuel overview..." />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Could not load fuel overview"
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
 
   return (
     <div>
-      <PageHeader title="Fuel Management" description="Overview of fuel tanks, consumption, and costs" />
+      <PageHeader
+        title="Fuel Management"
+        description="Overview of fuel tanks, consumption, and costs"
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/fuel/tanks">Manage tanks</Link>
+            </Button>
+            <PermissionGuard require="fuel:issue:create">
+              <Button asChild>
+                <Link href="/fuel/issues/new">
+                  <Plus className="h-4 w-4" />
+                  Issue fuel
+                </Link>
+              </Button>
+            </PermissionGuard>
+          </>
+        }
+      />
 
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -171,7 +202,18 @@ export default function FuelOverviewPage() {
                 <tbody>
                   {tanks.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No tanks found</td>
+                      <td colSpan={5}>
+                        <EmptyState
+                          compact
+                          title="No tanks yet"
+                          description="Add a fuel tank to start tracking levels and issues."
+                          action={
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href="/fuel/tanks">Go to tanks</Link>
+                            </Button>
+                          }
+                        />
+                      </td>
                     </tr>
                   ) : (
                     tanks.map((tank) => {
@@ -231,7 +273,18 @@ export default function FuelOverviewPage() {
                 <tbody>
                   {recentIssues.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No recent issues</td>
+                      <td colSpan={4}>
+                        <EmptyState
+                          compact
+                          title="No recent issues"
+                          description="Fuel issues will show here after the first issue is recorded."
+                          action={
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href="/fuel/issues/new">Issue fuel</Link>
+                            </Button>
+                          }
+                        />
+                      </td>
                     </tr>
                   ) : (
                     recentIssues.map((issue) => (

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -193,7 +194,14 @@ export default function WarehouseDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!warehouse) return <div className="text-muted-foreground">Warehouse not found.</div>;
+  if (!warehouse) return (
+    <NotFoundState
+      title="Warehouse not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/warehouse/warehouses"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div>

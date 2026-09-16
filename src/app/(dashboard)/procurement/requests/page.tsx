@@ -50,7 +50,7 @@ export default function PurchaseRequestsPage() {
   if (priority !== "ALL") params.set("priority", priority);
   const url = `/api/procurement/requests?${params}`;
 
-  const { data: requests, total, loading, mutate } = usePagedData<RequestRow>(url);
+  const { data: requests, total, loading, error, mutate } = usePagedData<RequestRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -145,6 +145,8 @@ export default function PurchaseRequestsPage() {
         onPageChange={setPage}
         emptyTitle="No purchase requests found"
         emptyDescription="Create a purchase request to start the procurement flow."
+          error={error}
+          onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

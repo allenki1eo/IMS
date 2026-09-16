@@ -75,7 +75,7 @@ export default function TripsPage() {
   if (dateFrom) params.set("dateFrom", dateFrom);
   if (dateTo) params.set("dateTo", dateTo);
   const url = `/api/trips?${params}`;
-  const { data: trips, total, loading, mutate } = usePagedData<TripRow>(url);
+  const { data: trips, total, loading, error, mutate } = usePagedData<TripRow>(url);
 
   async function handleBulkAction(action: "cancel" | "delete") {
     setBulkLoading(true);
@@ -265,6 +265,8 @@ export default function TripsPage() {
             exportFilename="trips"
             emptyTitle="No trips found"
             emptyDescription="Create your first trip to get started."
+          error={error}
+          onRetry={() => mutate()}
           />
         </>
       ) : (

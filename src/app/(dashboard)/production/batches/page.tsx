@@ -47,7 +47,7 @@ export default function ProductionBatchesPage() {
   const urlParams = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) urlParams.set("search", debounced);
   if (status !== "ALL") urlParams.set("status", status);
-  const { data: batches, total, loading, mutate } = usePagedData<BatchRow>(`/api/production/batches?${urlParams}`);
+  const { data: batches, total, loading, error, mutate } = usePagedData<BatchRow>(`/api/production/batches?${urlParams}`);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -91,7 +91,9 @@ export default function ProductionBatchesPage() {
           </SelectContent>
         </Select>
       </div>
-      <DataTable columns={columns} data={batches} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No production batches found" emptyDescription="Plan your first production batch to begin." />
+      <DataTable columns={columns} data={batches} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No production batches found" emptyDescription="Plan your first production batch to begin."
+          error={error}
+          onRetry={() => mutate()} />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );

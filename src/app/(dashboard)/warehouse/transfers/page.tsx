@@ -43,6 +43,7 @@ const STATUS_OPTIONS = [
 export default function TransfersPage() {
   const [transfers, setTransfers] = useState<TransferRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -52,6 +53,7 @@ export default function TransfersPage() {
 
   useEffect(() => {
     setLoading(true);
+    setLoadError(null);
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (debounced) params.set("search", debounced);
     if (statusFilter !== "ALL") params.set("status", statusFilter);
@@ -62,7 +64,7 @@ export default function TransfersPage() {
         setTransfers(d.data ?? []);
         setTotal(d.meta?.total ?? 0);
       })
-      .catch(() => toast.error("Failed to load transfers"))
+      .catch(() => { setLoadError("Failed to load transfers"); toast.error("Failed to load transfers"); })
       .finally(() => setLoading(false));
   }, [page, debounced, statusFilter]);
 
@@ -163,6 +165,8 @@ export default function TransfersPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No transfers found"
+          error={loadError}
+          onRetry={() => window.location.reload()}
         emptyDescription="Create a stock transfer to move items between warehouses."
       />
     </div>
