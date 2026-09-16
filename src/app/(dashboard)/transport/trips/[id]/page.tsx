@@ -8,6 +8,7 @@ import { ArrowLeft, Truck, MapPin, Clock, Package, Fuel } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -214,7 +215,14 @@ export default function TripDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!trip) return <div className="text-muted-foreground">Trip not found.</div>;
+  if (!trip) return (
+    <NotFoundState
+      title="Trip not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/transport/trips"
+      backLabel="Back to list"
+    />
+  );
 
   const driverName = trip.driver?.employee?.fullName ??
     ([trip.driver?.firstName, trip.driver?.lastName].filter(Boolean).join(" ") || "—");

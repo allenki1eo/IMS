@@ -8,6 +8,7 @@ import { ArrowLeft, Send, PackageCheck } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,14 @@ export default function TransferDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!transfer) return <div className="text-muted-foreground">Transfer not found.</div>;
+  if (!transfer) return (
+    <NotFoundState
+      title="Transfer not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/warehouse/transfers"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div>

@@ -8,6 +8,7 @@ import { ArrowLeft, CheckCircle, RotateCcw } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PrintButton } from "@/components/shared/PrintButton";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +82,14 @@ export default function JournalEntryDetailPage() {
   }
 
   if (loading) return <LoadingState text="Loading journal entry..." />;
-  if (!entry) return <div className="text-muted-foreground">Journal entry not found</div>;
+  if (!entry) return (
+    <NotFoundState
+      title="Journal entry not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/finance/journal-entries"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div className="space-y-6">

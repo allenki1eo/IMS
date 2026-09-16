@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ClipboardList, Factory, FlaskConical, PlayCircle } from "lucide-react";
+import { ClipboardList, Factory, FlaskConical, PlayCircle, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Button } from "@/components/ui/button";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, qty, StatCard } from "./_components/production-ui";
@@ -33,6 +37,7 @@ export default function ProductionOverviewPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [batches, setBatches] = useState<BatchRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -51,17 +56,40 @@ export default function ProductionOverviewPage() {
         });
         setBatches(batchesData.data ?? []);
       })
-      .catch(() => toast.error("Failed to load production overview"))
+      .catch(() => { setLoadError(true); toast.error("Failed to load production overview"); })
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingState />;
+  if (loading) return <LoadingState text="Loading production overview..." />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Could not load production overview"
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
 
   return (
     <div>
       <PageHeader
         title="Production & Brewing"
         description="Plan batches, manage production lines, and maintain recipes"
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/production/recipes">Recipes</Link>
+            </Button>
+            <PermissionGuard require="production:batch:create">
+              <Button asChild>
+                <Link href="/production/batches/new">
+                  <Plus className="h-4 w-4" />
+                  New batch
+                </Link>
+              </Button>
+            </PermissionGuard>
+          </>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -91,7 +119,18 @@ export default function ProductionOverviewPage() {
               </thead>
               <tbody>
                 {batches.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No production batches found</td></tr>
+                  <tr><td colSpan={6}>
+                  <EmptyState
+                    compact
+                    title="No batches yet"
+                    description="Plan a batch to start production tracking."
+                    action={
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/production/batches/new">New batch</Link>
+                      </Button>
+                    }
+                  />
+                </td></tr>
                 ) : batches.map((batch) => (
                   <tr key={batch.id} className="border-t hover:bg-muted/30">
                     <td className="px-4 py-3"><Link href={`/production/batches/${batch.id}`} className="font-medium hover:underline">{batch.reference}</Link></td>

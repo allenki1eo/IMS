@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -57,7 +58,14 @@ export default function CIPRecordDetailPage({ params }: { params: Promise<{ id: 
   }, [id]);
 
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;
-  if (!record) return <div className="p-8 text-red-500">Record not found</div>;
+  if (!record) return (
+    <NotFoundState
+      title="Record not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/production/brewing/cip"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div className="space-y-6 max-w-3xl">

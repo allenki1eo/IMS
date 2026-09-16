@@ -74,7 +74,7 @@ export default function IssuesPage() {
   if (toDate) params.set("to", toDate);
   const url = `/api/fuel-issues?${params}`;
 
-  const { data: issues, total, loading, mutate } = usePagedData<IssueRow>(url);
+  const { data: issues, total, loading, error, mutate } = usePagedData<IssueRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -249,6 +249,8 @@ export default function IssuesPage() {
         onPageChange={setPage}
         emptyTitle="No fuel issues found"
         emptyDescription="Issue fuel to a vehicle to get started."
+          error={error}
+          onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

@@ -56,6 +56,28 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   RECEIVED: { label: "Received", variant: "success" },
   // Production
   ARCHIVED: { label: "Archived", variant: "secondary" },
+  // Finance / cash
+  POSTED: { label: "Posted", variant: "success" },
+  PAID: { label: "Paid", variant: "success" },
+  UNPAID: { label: "Unpaid", variant: "warning" },
+  OVERDUE: { label: "Overdue", variant: "destructive" },
+  PARTIAL: { label: "Partial", variant: "warning" },
+  FAILED: { label: "Failed", variant: "destructive" },
+  SUCCESS: { label: "Success", variant: "success" },
+  PROCESSING: { label: "Processing", variant: "info" },
+  // Fuel / stock
+  LOW: { label: "Low", variant: "warning" },
+  FULL: { label: "Full", variant: "success" },
+  CONFIRMED: { label: "Confirmed", variant: "success" },
+  // Warehouse
+  AVAILABLE: { label: "Available", variant: "success" },
+  RESERVED: { label: "Reserved", variant: "info" },
+  DAMAGED: { label: "Damaged", variant: "destructive" },
+  // Generic workflow
+  ENABLED: { label: "Enabled", variant: "success" },
+  DISABLED: { label: "Disabled", variant: "secondary" },
+  SYNCED: { label: "Synced", variant: "success" },
+  PENDING_SYNC: { label: "Pending Sync", variant: "warning" },
 };
 
 interface StatusBadgeProps {

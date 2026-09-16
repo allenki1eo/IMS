@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -75,7 +76,14 @@ export default function ReceiptDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!receipt) return <div className="text-muted-foreground">Receipt not found.</div>;
+  if (!receipt) return (
+    <NotFoundState
+      title="Receipt not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/fuel/receipts"
+      backLabel="Back to list"
+    />
+  );
 
   const newLevel = receipt.tank
     ? Math.min(receipt.tank.currentLevel + receipt.quantityLiters, receipt.tank.capacity)

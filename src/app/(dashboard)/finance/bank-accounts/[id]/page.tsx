@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Power, PowerOff, CheckCircle, Circle, Scale } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -133,7 +134,14 @@ export default function BankAccountDetailPage() {
   const clearedBalance = bookBalance - unclearedTotal;
 
   if (loading) return <LoadingState text="Loading bank account..." />;
-  if (!account) return <div className="text-muted-foreground">Bank account not found</div>;
+  if (!account) return (
+    <NotFoundState
+      title="Bank account not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/finance/bank-accounts"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div className="space-y-6">

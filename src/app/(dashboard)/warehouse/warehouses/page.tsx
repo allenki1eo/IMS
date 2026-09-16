@@ -35,7 +35,7 @@ export default function WarehousesPage() {
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) params.set("search", debounced);
   const url = `/api/warehouses?${params}`;
-  const { data: warehouses, total, loading, mutate } = usePagedData<WarehouseRow>(url);
+  const { data: warehouses, total, loading, error, mutate } = usePagedData<WarehouseRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -136,6 +136,8 @@ export default function WarehousesPage() {
         onPageChange={setPage}
         emptyTitle="No warehouses found"
         emptyDescription="Create your first warehouse to get started."
+          error={error}
+          onRetry={() => mutate()}
       />
 
       <ConfirmDeleteDialog

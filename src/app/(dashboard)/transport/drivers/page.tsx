@@ -77,7 +77,7 @@ export default function DriversPage() {
   if (availabilityFilter === "UNAVAILABLE") params.set("isAvailable", "false");
   if (statusFilter !== "ALL") params.set("status", statusFilter);
   const url = `/api/drivers?${params}`;
-  const { data: drivers, total, loading, mutate } = usePagedData<DriverRow>(url);
+  const { data: drivers, total, loading, error, mutate } = usePagedData<DriverRow>(url);
 
   async function handleBulkStatus(status: "ACTIVE" | "INACTIVE") {
     setBulkLoading(true);
@@ -286,6 +286,8 @@ export default function DriversPage() {
         onSelectionChange={setSelectedIds}
         emptyTitle="No drivers found"
         emptyDescription="Register your first driver to get started."
+          error={error}
+          onRetry={() => mutate()}
       />
 
       <ImportModal

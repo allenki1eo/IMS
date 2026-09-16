@@ -39,7 +39,7 @@ export default function ProductionRecipesPage() {
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) params.set("search", debounced);
   if (status !== "ALL") params.set("status", status);
-  const { data: recipes, total, loading, mutate } = usePagedData<RecipeRow>(`/api/production/recipes?${params}`);
+  const { data: recipes, total, loading, error, mutate } = usePagedData<RecipeRow>(`/api/production/recipes?${params}`);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -85,7 +85,9 @@ export default function ProductionRecipesPage() {
           </SelectContent>
         </Select>
       </div>
-      <DataTable columns={columns} data={recipes} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No recipes found" emptyDescription="Create a recipe to standardize production batches." />
+      <DataTable columns={columns} data={recipes} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No recipes found" emptyDescription="Create a recipe to standardize production batches."
+          error={error}
+          onRetry={() => mutate()} />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );

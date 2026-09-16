@@ -66,7 +66,7 @@ export default function TanksPage() {
   if (fuelType !== "ALL") params.set("fuelType", fuelType);
   const url = `/api/fuel-tanks?${params}`;
 
-  const { data: tanks, total, loading, mutate } = usePagedData<TankRow>(url);
+  const { data: tanks, total, loading, error, mutate } = usePagedData<TankRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -211,6 +211,8 @@ export default function TanksPage() {
         onPageChange={setPage}
         emptyTitle="No tanks found"
         emptyDescription="Add your first fuel tank to get started."
+          error={error}
+          onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

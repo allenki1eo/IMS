@@ -43,7 +43,7 @@ export default function SuppliersPage() {
   if (status !== "ALL") params.set("status", status);
   const url = `/api/procurement/suppliers?${params}`;
 
-  const { data: suppliers, total, loading, mutate } = usePagedData<SupplierRow>(url);
+  const { data: suppliers, total, loading, error, mutate } = usePagedData<SupplierRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -132,6 +132,8 @@ export default function SuppliersPage() {
         onPageChange={setPage}
         emptyTitle="No suppliers found"
         emptyDescription="Create your first supplier to start issuing purchase orders."
+          error={error}
+          onRetry={() => mutate()}
       />
 
       <ImportModal

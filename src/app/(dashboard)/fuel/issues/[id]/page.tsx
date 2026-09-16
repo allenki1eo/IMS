@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,14 @@ export default function FuelIssueDetailPage() {
   useEffect(() => { fetchIssue(); }, [fetchIssue]);
 
   if (loading) return <LoadingState />;
-  if (!issue) return <div className="p-8 text-center text-muted-foreground">Fuel issue not found.</div>;
+  if (!issue) return (
+    <NotFoundState
+      title="Fuel issue not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/fuel/issues"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div>

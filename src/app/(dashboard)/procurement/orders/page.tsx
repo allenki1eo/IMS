@@ -43,7 +43,7 @@ export default function PurchaseOrdersPage() {
   if (debounced) params.set("search", debounced);
   if (status !== "ALL") params.set("status", status);
   const url = `/api/procurement/orders?${params}`;
-  const { data: orders, total, loading, mutate } = usePagedData<OrderRow>(url);
+  const { data: orders, total, loading, error, mutate } = usePagedData<OrderRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -123,6 +123,8 @@ export default function PurchaseOrdersPage() {
         onPageChange={setPage}
         emptyTitle="No purchase orders found"
         emptyDescription="Create an order from an approved request or directly for a supplier."
+          error={error}
+          onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

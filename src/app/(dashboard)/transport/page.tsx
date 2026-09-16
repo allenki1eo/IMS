@@ -3,12 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Truck, Users, Navigation, AlertTriangle } from "lucide-react";
+import { Truck, Users, Navigation, AlertTriangle, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { Button } from "@/components/ui/button";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SummaryStats {
@@ -76,6 +79,7 @@ export default function TransportOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [tripsLoading, setTripsLoading] = useState(true);
   const [incidentsLoading, setIncidentsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -98,6 +102,7 @@ export default function TransportOverviewPage() {
         openIncidents: incidentsJson.meta?.total ?? 0,
       });
     } catch {
+      setLoadError(true);
       toast.error("Failed to load summary stats");
     } finally {
       setLoading(false);
@@ -213,13 +218,42 @@ export default function TransportOverviewPage() {
     },
   ];
 
-  if (loading) return <LoadingState />;
+  if (loading) return <LoadingState text="Loading transport overview..." />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Could not load transport overview"
+        onRetry={() => {
+          setLoadError(false);
+          setLoading(true);
+          fetchStats();
+          fetchRecentTrips();
+          fetchOpenIncidents();
+        }}
+      />
+    );
+  }
 
   return (
     <div>
       <PageHeader
         title="Transport & Fleet"
         description="Overview of vehicles, drivers, trips, and incidents"
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/transport/vehicles">Vehicles</Link>
+            </Button>
+            <PermissionGuard require="transport:trip:create">
+              <Button asChild>
+                <Link href="/transport/trips/new">
+                  <Plus className="h-4 w-4" />
+                  New trip
+                </Link>
+              </Button>
+            </PermissionGuard>
+          </>
+        }
       />
 
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -260,6 +294,11 @@ export default function TransportOverviewPage() {
             loading={tripsLoading}
             emptyTitle="No trips yet"
             emptyDescription="Trips will appear here once created."
+            emptyAction={
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/transport/trips/new">Create trip</Link>
+              </Button>
+            }
           />
         </div>
         <div>

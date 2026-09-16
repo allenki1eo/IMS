@@ -9,6 +9,7 @@ import { PrintButton } from "@/components/shared/PrintButton";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,14 @@ export default function GRNDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!grn) return <div className="text-muted-foreground">GRN not found.</div>;
+  if (!grn) return (
+    <NotFoundState
+      title="GRN not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/warehouse/grn"
+      backLabel="Back to list"
+    />
+  );
 
   const totalValue = grn.lines.reduce(
     (sum, l) => sum + (l.unitCost ? l.quantity * l.unitCost : 0),

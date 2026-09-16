@@ -44,7 +44,7 @@ export default function PaymentsPage() {
   if (debounced) params.set("search", debounced);
   if (status) params.set("status", status);
   const url = `/api/finance/payments?${params}`;
-  const { data: payments, total, loading, mutate } = usePagedData<PaymentRow>(url);
+  const { data: payments, total, loading, error, mutate } = usePagedData<PaymentRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -131,6 +131,8 @@ export default function PaymentsPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No payments found"
+        error={error}
+          onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

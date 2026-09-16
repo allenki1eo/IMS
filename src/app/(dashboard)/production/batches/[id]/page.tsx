@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, FlaskConical, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -97,7 +98,14 @@ export default function ProductionBatchDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!batch) return <div className="text-muted-foreground">Production batch not found.</div>;
+  if (!batch) return (
+    <NotFoundState
+      title="Production batch not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/production/batches"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div>

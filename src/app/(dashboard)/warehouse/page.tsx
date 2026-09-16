@@ -3,11 +3,14 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Warehouse, Package, AlertTriangle, ClipboardList } from "lucide-react";
+import { Warehouse, Package, AlertTriangle, ClipboardList, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { Button } from "@/components/ui/button";
+import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Badge } from "@/components/ui/badge";
 
 interface SummaryStats {
@@ -66,6 +69,7 @@ export default function WarehouseOverviewPage() {
   const [stockRows, setStockRows] = useState<StockRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [stockLoading, setStockLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -88,6 +92,7 @@ export default function WarehouseOverviewPage() {
         pendingGRNs: grnJson.meta?.total ?? 0,
       });
     } catch {
+      setLoadError(true);
       toast.error("Failed to load summary stats");
     } finally {
       setLoading(false);
@@ -181,13 +186,41 @@ export default function WarehouseOverviewPage() {
     },
   ];
 
-  if (loading) return <LoadingState />;
+  if (loading) return <LoadingState text="Loading warehouse overview..." />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Could not load warehouse overview"
+        onRetry={() => {
+          setLoadError(false);
+          setLoading(true);
+          fetchStats();
+          fetchLowStock();
+        }}
+      />
+    );
+  }
 
   return (
     <div>
       <PageHeader
         title="Warehouse Management"
         description="Overview of stock, warehouses, and operations"
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/warehouse/stock">View stock</Link>
+            </Button>
+            <PermissionGuard require="warehouse:grn:create">
+              <Button asChild>
+                <Link href="/warehouse/grn/new">
+                  <Plus className="h-4 w-4" />
+                  New GRN
+                </Link>
+              </Button>
+            </PermissionGuard>
+          </>
+        }
       />
 
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -227,6 +260,11 @@ export default function WarehouseOverviewPage() {
           loading={stockLoading}
           emptyTitle="No stock data"
           emptyDescription="Stock balances will appear here once GRNs are confirmed."
+          emptyAction={
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/warehouse/grn/new">Create first GRN</Link>
+            </Button>
+          }
         />
       </div>
     </div>

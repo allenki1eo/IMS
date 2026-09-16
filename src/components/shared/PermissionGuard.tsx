@@ -1,9 +1,12 @@
 "use client";
 import { usePermission, useAnyPermission } from "@/hooks/usePermission";
+import { AccessDenied } from "./AccessDenied";
 
 interface PermissionGuardProps {
   require?: string;
   requireAny?: string[];
+  /** inline (default): hide children with null/fallback. page: full AccessDenied panel. */
+  mode?: "inline" | "page";
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -11,7 +14,8 @@ interface PermissionGuardProps {
 export function PermissionGuard({
   require,
   requireAny,
-  fallback = null,
+  mode = "inline",
+  fallback,
   children,
 }: PermissionGuardProps) {
   const singlePerm = usePermission(require ?? "");
@@ -19,6 +23,10 @@ export function PermissionGuard({
 
   const allowed = require ? singlePerm : requireAny ? anyPerm : true;
 
-  if (!allowed) return <>{fallback}</>;
+  if (!allowed) {
+    if (fallback !== undefined) return <>{fallback}</>;
+    if (mode === "page") return <AccessDenied />;
+    return null;
+  }
   return <>{children}</>;
 }

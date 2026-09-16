@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Power, PowerOff, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -89,7 +90,14 @@ export default function AccountDetailPage() {
   }
 
   if (loading) return <LoadingState text="Loading account..." />;
-  if (!account) return <div className="text-muted-foreground">Account not found</div>;
+  if (!account) return (
+    <NotFoundState
+      title="Account not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/finance/accounts"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div className="space-y-6">

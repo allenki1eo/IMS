@@ -80,7 +80,7 @@ export default function ItemsPage() {
   if (typeFilter !== "ALL") params.set("itemType", typeFilter);
   if (activeFilter !== "ALL") params.set("isActive", activeFilter === "ACTIVE" ? "true" : "false");
   const url = `/api/items?${params}`;
-  const { data: items, total, loading, mutate } = usePagedData<ItemRow>(url);
+  const { data: items, total, loading, error, mutate } = usePagedData<ItemRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -234,6 +234,8 @@ export default function ItemsPage() {
         onPageChange={setPage}
         emptyTitle="No items found"
         emptyDescription="Add your first item to the catalog."
+          error={error}
+          onRetry={() => mutate()}
       />
 
       <ImportModal

@@ -36,7 +36,7 @@ export default function BankAccountsPage() {
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) params.set("search", debounced);
   const url = `/api/finance/bank-accounts?${params}`;
-  const { data: accounts, total, loading, mutate } = usePagedData<BankAccountRow>(url);
+  const { data: accounts, total, loading, error, mutate } = usePagedData<BankAccountRow>(url);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -113,6 +113,8 @@ export default function BankAccountsPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No bank accounts found"
+          error={error}
+          onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

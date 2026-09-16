@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +78,14 @@ export default function PaymentDetailPage() {
   }
 
   if (loading) return <LoadingState text="Loading payment..." />;
-  if (!payment) return <div className="text-muted-foreground">Payment not found</div>;
+  if (!payment) return (
+    <NotFoundState
+      title="Payment not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/finance/payments"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div className="space-y-6">

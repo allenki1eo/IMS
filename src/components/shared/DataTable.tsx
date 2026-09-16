@@ -7,6 +7,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "./EmptyState";
+import { ErrorState } from "./ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 function getCellValue<T extends object>(col: { key: string; exportValue?: (row: T) => string | number }, row: T): string {
@@ -91,6 +92,9 @@ interface DataTableProps<T> {
   loading?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
+  emptyAction?: React.ReactNode;
+  error?: Error | string | null;
+  onRetry?: () => void;
   page?: number;
   pageSize?: number;
   total?: number;
@@ -114,6 +118,9 @@ export function DataTable<T extends { id: string }>({
   loading,
   emptyTitle,
   emptyDescription,
+  emptyAction,
+  error,
+  onRetry,
   page = 1,
   pageSize = 20,
   total = 0,
@@ -188,8 +195,15 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className={cn("space-y-3", className)}>
+      {/* Error (mobile + desktop shared) */}
+      {error && !loading && mobileCardRender && (
+        <div className="sm:hidden">
+          <ErrorState error={error} onRetry={onRetry} />
+        </div>
+      )}
+
       {/* Mobile card view */}
-      {mobileCardRender && !loading && sortedData.length > 0 && (
+      {mobileCardRender && !loading && !error && sortedData.length > 0 && (
         <div className="sm:hidden space-y-2">
           {sortedData.map((row) => (
             <div key={row.id} className={cn("rounded-lg border bg-card p-4", selected.has(row.id) && "border-foreground/20 bg-muted/20")}>
@@ -219,6 +233,12 @@ export function DataTable<T extends { id: string }>({
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {mobileCardRender && !loading && !error && sortedData.length === 0 && (
+        <div className="sm:hidden rounded-lg border bg-card">
+          <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} compact />
         </div>
       )}
 
@@ -277,10 +297,16 @@ export function DataTable<T extends { id: string }>({
                     ))}
                   </tr>
                 ))
+              ) : error ? (
+                <tr>
+                  <td colSpan={allCols.length}>
+                    <ErrorState error={error} onRetry={onRetry} />
+                  </td>
+                </tr>
               ) : sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={allCols.length}>
-                    <EmptyState title={emptyTitle} description={emptyDescription} />
+                    <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} compact />
                   </td>
                 </tr>
               ) : (

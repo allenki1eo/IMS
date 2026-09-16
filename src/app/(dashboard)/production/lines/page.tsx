@@ -41,7 +41,7 @@ export default function ProductionLinesPage() {
   if (debounced) params.set("search", debounced);
   if (status !== "ALL") params.set("status", status);
   if (lineType !== "ALL") params.set("lineType", lineType);
-  const { data: lines, total, loading, mutate } = usePagedData<LineRow>(`/api/production/lines?${params}`);
+  const { data: lines, total, loading, error, mutate } = usePagedData<LineRow>(`/api/production/lines?${params}`);
 
   function handleFilterChange(setter: (v: string) => void) {
     return (v: string) => { setter(v); setPage(1); };
@@ -107,7 +107,9 @@ export default function ProductionLinesPage() {
         </Select>
       </div>
 
-      <DataTable columns={columns} data={lines} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No production lines found" emptyDescription="Create a line to start planning batches." />
+      <DataTable columns={columns} data={lines} loading={loading} page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} emptyTitle="No production lines found" emptyDescription="Create a line to start planning batches."
+          error={error}
+          onRetry={() => mutate()} />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>
   );

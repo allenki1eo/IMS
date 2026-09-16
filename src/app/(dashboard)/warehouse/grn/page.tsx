@@ -38,6 +38,7 @@ const PAGE_SIZE = 20;
 export default function GRNListPage() {
   const [grns, setGrns] = useState<GRNRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -56,6 +57,7 @@ export default function GRNListPage() {
 
   useEffect(() => {
     setLoading(true);
+    setLoadError(null);
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (debounced) params.set("search", debounced);
     if (warehouseFilter !== "ALL") params.set("warehouseId", warehouseFilter);
@@ -67,7 +69,7 @@ export default function GRNListPage() {
         setGrns(d.data ?? []);
         setTotal(d.meta?.total ?? 0);
       })
-      .catch(() => toast.error("Failed to load GRNs"))
+      .catch(() => { setLoadError("Failed to load GRNs"); toast.error("Failed to load GRNs"); })
       .finally(() => setLoading(false));
   }, [page, debounced, warehouseFilter, statusFilter]);
 
@@ -181,6 +183,8 @@ export default function GRNListPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No GRNs found"
+          error={loadError}
+          onRetry={() => window.location.reload()}
         emptyDescription="Create your first GRN to record incoming stock."
       />
     </div>

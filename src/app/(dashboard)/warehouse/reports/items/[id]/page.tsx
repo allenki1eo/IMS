@@ -8,6 +8,7 @@ import { ArrowLeft, Package, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,7 +92,14 @@ export default function ItemLedgerReportPage() {
   }, [id]);
 
   if (loading) return <LoadingState />;
-  if (!item) return <div className="text-muted-foreground">Item not found.</div>;
+  if (!item) return (
+    <NotFoundState
+      title="Item not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/warehouse/reports/items"
+      backLabel="Back to list"
+    />
+  );
 
   const currentBalance = entries.length > 0 ? entries[entries.length - 1].balanceAfter : 0;
 

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
+import { NotFoundState } from "@/components/shared/NotFoundState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,14 @@ export default function SupplierDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!supplier) return <div className="text-muted-foreground">Supplier not found.</div>;
+  if (!supplier) return (
+    <NotFoundState
+      title="Supplier not found"
+      description="This record may have been deleted or you may not have access to it."
+      backHref="/procurement/suppliers"
+      backLabel="Back to list"
+    />
+  );
 
   return (
     <div>
