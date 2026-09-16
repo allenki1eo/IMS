@@ -57,6 +57,11 @@ export default function GRNDetailPage() {
   useEffect(() => { fetchGRN(); }, [fetchGRN]);
 
   async function confirmReceipt() {
+    if (!grn) return;
+    if (grn.lines.some((l) => !l.location?.name)) {
+      toast.error("Cannot confirm GRN: every line must have a storage location");
+      return;
+    }
     setConfirming(true);
     try {
       const res = await fetch(`/api/grns/${id}/confirm`, {
@@ -88,6 +93,8 @@ export default function GRNDetailPage() {
     (sum, l) => sum + (l.unitCost ? l.quantity * l.unitCost : 0),
     0
   );
+  const missingLocation = grn.lines.some((l) => !l.location?.name);
+  const canConfirm = grn.status === "DRAFT" && grn.lines.length > 0 && !missingLocation;
 
   return (
     <div>
@@ -98,7 +105,7 @@ export default function GRNDetailPage() {
           <div className="flex gap-2">
             {grn.status === "DRAFT" && (
               <PermissionGuard require="warehouse:grn:confirm">
-                <Button onClick={confirmReceipt} disabled={confirming}>
+                <Button onClick={confirmReceipt} disabled={confirming || !canConfirm} title={!canConfirm ? "Every line must have a storage location before confirm" : undefined}>
                   {confirming ? (
                     <LoadingSpinner className="mr-2" />
                   ) : (
@@ -220,15 +227,25 @@ export default function GRNDetailPage() {
       {grn.status === "DRAFT" && (
         <>
           <Separator className="my-6" />
+          {missingLocation && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm font-medium text-red-800">Storage location required</p>
+              <p className="text-xs text-red-700">
+                One or more lines are missing a storage location. Create a new GRN with locations set on every line before confirming — stock cannot be posted without a location.
+              </p>
+            </div>
+          )}
           <PermissionGuard require="warehouse:grn:confirm">
             <div className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-800">Ready to confirm?</p>
                 <p className="text-xs text-amber-700">
-                  Confirming will update stock levels and cannot be undone.
+                  {canConfirm
+                    ? "Confirming will update stock levels and cannot be undone."
+                    : "Confirm is blocked until every line has a storage location."}
                 </p>
               </div>
-              <Button onClick={confirmReceipt} disabled={confirming}>
+              <Button onClick={confirmReceipt} disabled={confirming || !canConfirm}>
                 {confirming && <LoadingSpinner className="mr-2" />}
                 Confirm Receipt
               </Button>

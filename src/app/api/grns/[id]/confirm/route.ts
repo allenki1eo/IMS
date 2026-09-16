@@ -26,6 +26,7 @@ export async function POST(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "GRN not found") return notFound(msg);
     if (msg.includes("Only DRAFT")) return badRequest(msg);
+    if (msg.includes("storage location") || msg.includes("no lines")) return badRequest(msg);
     return handleError(err);
   }
 }
