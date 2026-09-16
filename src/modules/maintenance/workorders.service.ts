@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { generateDatedRef } from "@/lib/timezone";
 
 function assertPositiveFiniteNumber(value: number, field: string) {
   if (!Number.isFinite(value) || value <= 0) {
@@ -14,9 +15,7 @@ function assertNonNegativeFiniteNumber(value: number, field: string) {
 }
 
 function generateRef(): string {
-  const d = new Date();
-  const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  return `WO-${date}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+  return generateDatedRef("WO");
 }
 
 export async function listWorkOrders(

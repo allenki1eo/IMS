@@ -53,6 +53,8 @@ export async function DELETE(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Quality standard not found" || msg === "Parameter not found") return notFound(msg);
+    if (msg === "Cannot remove the last parameter from an active quality standard")
+      return badRequest(msg);
     return handleError(err);
   }
 }

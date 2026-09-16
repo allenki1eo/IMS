@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format } from "date-fns";
+import { formatDateInAppTz, formatDateTimeInAppTz } from "@/lib/timezone";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -8,12 +8,12 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
-  return format(new Date(date), "dd MMM yyyy");
+  return formatDateInAppTz(date);
 }
 
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "—";
-  return format(new Date(date), "dd MMM yyyy HH:mm");
+  return formatDateTimeInAppTz(date);
 }
 
 export function getInitials(name: string): string {

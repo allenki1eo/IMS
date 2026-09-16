@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { generateDatedRef } from "@/lib/timezone";
 
 function generateRef(): string {
-  const d = new Date();
-  return `DTM-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(Math.floor(Math.random() * 900) + 100)}`;
+  return generateDatedRef("DTM", { digits: 3 });
 }
 
 function calcCounts(entries: { vehicleStatus: string }[]) {

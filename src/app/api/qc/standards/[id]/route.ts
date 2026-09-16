@@ -57,7 +57,11 @@ export async function PATCH(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Quality standard not found") return notFound(msg);
-    if (msg === "Item not found" || msg === "A standard with this code already exists")
+    if (
+      msg === "Item not found" ||
+      msg === "A standard with this code already exists" ||
+      msg === "Cannot activate a quality standard with no parameters"
+    )
       return badRequest(msg);
     return handleError(err);
   }

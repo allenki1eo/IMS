@@ -31,7 +31,10 @@ export function formatMoney(value: number | null | undefined, currency = "TZS") 
 
 export function formatDate(value: string | null | undefined) {
   if (!value) return "-";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Dar_es_Salaam",
+    dateStyle: "medium",
+  }).format(new Date(value));
 }
 
 /**

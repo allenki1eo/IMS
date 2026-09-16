@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { generateDatedRef } from "@/lib/timezone";
 
 interface TestWithResult {
   result?: string | null;
@@ -24,9 +25,7 @@ interface TestResultRow {
 }
 
 function generateRef(prefix: string): string {
-  const d = new Date();
-  const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  return `${prefix}-${date}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+  return generateDatedRef(prefix);
 }
 
 export async function listTests(

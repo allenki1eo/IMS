@@ -3,6 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+import { getAppHour } from "@/lib/timezone";
 import type { LucideIcon } from "lucide-react";
 import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
 
@@ -478,7 +479,7 @@ export default function DashboardPage() {
 
   const profile = useMemo(() => getRoleProfile(user), [user]);
   const greeting = useMemo(() => {
-    const h = new Date().getHours();
+    const h = getAppHour();
     if (h < 12) return "Good morning";
     if (h < 18) return "Good afternoon";
     return "Good evening";

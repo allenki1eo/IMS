@@ -168,6 +168,10 @@ export default function NewQcStandardPage() {
               />
             </div>
 
+            <p className="text-xs text-muted-foreground">
+              New standards are created as Inactive. Add at least one parameter on the next screen, then Activate.
+            </p>
+
             <div className="flex gap-2 pt-2">
               <Button type="submit" disabled={submitting}>
                 {submitting && <LoadingSpinner className="mr-2" />}

@@ -8,7 +8,7 @@ import {
   BREWERY_TEST_TYPES,
   RELEASE_DECISIONS,
 } from "@/modules/qc/brewery-qc";
-import { addParameter, createStandard } from "@/modules/qc/standards.service";
+import { addParameter, createStandard, updateStandard } from "@/modules/qc/standards.service";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "qc:standard:read");
@@ -56,7 +56,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return created(standard);
+    // Templates include parameters — activate once they are in place.
+    const activated = await updateStandard(
+      companyId,
+      standard.id,
+      { isActive: true },
+      auth.user.id,
+      auth.user.fullName,
+      ipAddress
+    );
+
+    return created(activated);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "A standard with this code already exists") return badRequest(msg);

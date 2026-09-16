@@ -84,6 +84,7 @@ export default function QcStandardDetailPage() {
   const [showAddParam, setShowAddParam] = useState(false);
   const [paramForm, setParamForm] = useState<ParamForm>(PARAM_DEFAULT);
   const [addingParam, setAddingParam] = useState(false);
+  const [togglingActive, setTogglingActive] = useState(false);
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -171,6 +172,34 @@ export default function QcStandardDetailPage() {
     }
   }
 
+
+  async function handleToggleActive() {
+    if (!standard) return;
+    if (!standard.isActive && standard.parameters.length < 1) {
+      toast.error("Add at least one parameter before activating this standard");
+      return;
+    }
+    setTogglingActive(true);
+    try {
+      const res = await fetch(`/api/qc/standards/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !standard.isActive }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "Failed to update status");
+        return;
+      }
+      setStandard((prev) => (prev ? { ...prev, isActive: json.data.isActive } : prev));
+      toast.success(json.data.isActive ? "Standard activated" : "Standard deactivated");
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setTogglingActive(false);
+    }
+  }
+
   async function handleDeleteParam(paramId: string) {
     try {
       const res = await fetch(`/api/qc/standards/${id}/parameters/${paramId}`, {
@@ -194,6 +223,20 @@ export default function QcStandardDetailPage() {
         description={`Code: ${standard.code}`}
         actions={
           <div className="flex gap-2">
+            <PermissionGuard require="qc:standard:update">
+              <Button
+                variant={standard.isActive ? "outline" : "default"}
+                onClick={handleToggleActive}
+                disabled={togglingActive || (!standard.isActive && standard.parameters.length < 1)}
+                title={
+                  !standard.isActive && standard.parameters.length < 1
+                    ? "Add at least one parameter before activating"
+                    : undefined
+                }
+              >
+                {togglingActive ? "Updating..." : standard.isActive ? "Deactivate" : "Activate"}
+              </Button>
+            </PermissionGuard>
             <Button asChild>
               <Link href={`/qc/tests/new?standardId=${standard.id}`}>
                 <FlaskConical className="h-4 w-4 mr-2" />
@@ -224,6 +267,11 @@ export default function QcStandardDetailPage() {
             <div>
               <p className="text-muted-foreground">Status</p>
               <p className="mt-1 text-sm font-medium">{standard.isActive ? "Active" : "Inactive"}</p>
+              {!standard.isActive && standard.parameters.length < 1 && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Active requires at least one parameter.
+                </p>
+              )}
             </div>
             <div className="col-span-2">
               <p className="text-muted-foreground">Linked Item</p>
