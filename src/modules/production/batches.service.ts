@@ -25,6 +25,18 @@ type RecipeMaterialRow = {
   wastagePct: number;
 };
 
+type RecipeForBatch = {
+  companyId: string;
+  status: string;
+  productName: string;
+  productCode: string | null;
+  productItemId: string | null;
+  batchSize: number;
+  uom: string;
+  lineFamily: string;
+  materials: RecipeMaterialRow[];
+};
+
 
 export type BatchMaterialStockStatus = {
   materialId?: string;
@@ -247,11 +259,13 @@ export async function createProductionBatch(
     if (line.status !== "ACTIVE") throw new Error("Production line is inactive");
   }
 
+  let inheritedBatchType: string | null = null;
+
   if (data.recipeId) {
-    const recipe = await db.productionRecipe.findUnique({
+    const recipe = (await db.productionRecipe.findUnique({
       where: { id: data.recipeId },
       include: { materials: true },
-    });
+    })) as RecipeForBatch | null;
     if (!recipe || recipe.companyId !== companyId) throw new Error("Production recipe not found");
     if (recipe.status !== "ACTIVE") throw new Error("Production recipe is inactive");
     productName = productName ?? recipe.productName;
@@ -259,12 +273,15 @@ export async function createProductionBatch(
     productItemId = productItemId ?? recipe.productItemId;
     plannedQty = plannedQty ?? recipe.batchSize;
     uom = data.uom ?? recipe.uom;
+    // Map recipe lineFamily → batchType (BREWING | SPIRITS)
+    inheritedBatchType = recipe.lineFamily === "SPIRITS" ? "SPIRITS" : "BREWING";
     if (!materials.length) {
       const multiplier = plannedQty && recipe.batchSize > 0 ? plannedQty / recipe.batchSize : 1;
       materials = recipe.materials.map((line: RecipeMaterialRow) => ({
         itemId: line.itemId,
         itemCode: line.itemCode,
         description: line.description,
+        // requiredQty = qty × (1 + wastage/100) scaled to batch
         plannedQty: line.quantity * multiplier * (1 + line.wastagePct / 100),
         uom: line.uom,
       }));
@@ -298,7 +315,7 @@ export async function createProductionBatch(
       lineId: data.lineId ?? null,
       recipeId: data.recipeId ?? null,
       reference,
-      batchType: data.batchType ?? "BREWING",
+      batchType: data.batchType ?? inheritedBatchType ?? "BREWING",
       productItemId,
       productCode,
       productName,

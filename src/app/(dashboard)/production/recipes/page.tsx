@@ -25,6 +25,8 @@ interface RecipeRow {
   uom: string;
   version: string;
   status: string;
+  lineFamily?: string;
+  targetAbvPct?: number | null;
   _count?: { materials: number; batches: number };
 }
 
@@ -33,12 +35,14 @@ const PAGE_SIZE = 20;
 export default function ProductionRecipesPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("ALL");
+  const [lineFamily, setLineFamily] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) params.set("search", debounced);
   if (status !== "ALL") params.set("status", status);
+  if (lineFamily !== "ALL") params.set("lineFamily", lineFamily);
   const { data: recipes, total, loading, error, mutate } = usePagedData<RecipeRow>(`/api/production/recipes?${params}`);
 
   async function handleDelete() {
@@ -58,6 +62,7 @@ export default function ProductionRecipesPage() {
     { key: "name", header: "Recipe", cell: (row: RecipeRow) => <Link href={`/production/recipes/${row.id}`} className="font-semibold hover:underline">{row.name}</Link> },
     { key: "code", header: "Code", cell: (row: RecipeRow) => <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{row.code}</code> },
     { key: "product", header: "Product", cell: (row: RecipeRow) => <span>{row.productName}</span> },
+    { key: "lineFamily", header: "Family", cell: (row: RecipeRow) => <span>{row.lineFamily ?? "BREWING"}</span> },
     { key: "batchSize", header: "Batch Size", cell: (row: RecipeRow) => <span>{qty(row.batchSize, row.uom)}</span> },
     { key: "version", header: "Version", cell: (row: RecipeRow) => <span>{row.version}</span> },
     { key: "materials", header: "BOM lines", cell: (row: RecipeRow) => <span>{row._count?.materials ?? 0}</span> },
@@ -72,9 +77,17 @@ export default function ProductionRecipesPage() {
 
   return (
     <div>
-      <PageHeader title="Production Recipes" description="Maintain product recipes and Bills of Materials" actions={<PermissionGuard require="production:recipe:create"><Button asChild><Link href="/production/recipes/new"><Plus className="h-4 w-4 mr-2" />New Recipe</Link></Button></PermissionGuard>} />
+      <PageHeader title="Production Recipes" description="Brewing and spirits recipes with Bills of Materials" actions={<PermissionGuard require="production:recipe:create"><Button asChild><Link href="/production/recipes/new"><Plus className="h-4 w-4 mr-2" />New Recipe</Link></Button></PermissionGuard>} />
       <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
         <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search recipes..." className="w-full sm:max-w-xs" />
+        <Select value={lineFamily} onValueChange={(v) => { setLineFamily(v); setPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Families</SelectItem>
+            <SelectItem value="BREWING">Brewing</SelectItem>
+            <SelectItem value="SPIRITS">Spirits</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>

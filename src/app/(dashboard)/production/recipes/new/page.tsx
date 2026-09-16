@@ -18,8 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { sanitizeDecimalInput } from "../../_components/production-ui";
+import {
+  RECIPE_LINE_FAMILIES,
+  sanitizeDecimalInput,
+} from "../../_components/production-ui";
 import { PALE_ALE_BOM_LINES, PALE_ALE_RECIPE } from "@/modules/production/pale-ale-bom";
+import {
+  GIN_BOM_LINES,
+  GIN_RECIPE,
+  SPIRIT_BLEND_BOM_LINES,
+  SPIRIT_BLEND_RECIPE,
+} from "@/modules/production/spirits-bom";
 
 interface ItemOption {
   id: string;
@@ -36,6 +45,7 @@ interface MaterialForm {
   quantity: string;
   uom: string;
   wastagePct: string;
+  role: string;
 }
 
 const EMPTY_MATERIAL: MaterialForm = {
@@ -45,6 +55,29 @@ const EMPTY_MATERIAL: MaterialForm = {
   quantity: "1",
   uom: "KG",
   wastagePct: "0",
+  role: "",
+};
+
+type BomTemplateLine = {
+  itemCode: string;
+  name: string;
+  quantity: number;
+  uom: string;
+  wastagePct: number;
+  role?: string;
+};
+
+type BomTemplateRecipe = {
+  code: string;
+  name: string;
+  productCode: string;
+  productName: string;
+  batchSize: number;
+  uom: string;
+  version: string;
+  lineFamily: string;
+  targetAbvPct?: number;
+  notes: string;
 };
 
 export default function NewProductionRecipePage() {
@@ -60,6 +93,8 @@ export default function NewProductionRecipePage() {
     batchSize: "",
     uom: "L",
     version: "1",
+    lineFamily: "BREWING",
+    targetAbvPct: "",
     notes: "",
   });
   const [materials, setMaterials] = useState<MaterialForm[]>([{ ...EMPTY_MATERIAL }]);
@@ -101,8 +136,8 @@ export default function NewProductionRecipePage() {
     return (item.stockBalances ?? []).reduce((sum, b) => sum + (b.quantity || 0), 0);
   }
 
-  function applyPaleAleTemplate() {
-    const lines: MaterialForm[] = PALE_ALE_BOM_LINES.map((line) => {
+  function applyBomTemplate(recipe: BomTemplateRecipe, bomLines: BomTemplateLine[], label: string) {
+    const lines: MaterialForm[] = bomLines.map((line) => {
       const match = items.find((it) => it.code === line.itemCode);
       return {
         itemId: match?.id ?? "",
@@ -111,32 +146,36 @@ export default function NewProductionRecipePage() {
         quantity: String(line.quantity),
         uom: match?.uom?.symbol ?? line.uom,
         wastagePct: String(line.wastagePct),
+        role: line.role ?? "",
       };
     });
 
     setForm({
-      code: PALE_ALE_RECIPE.code,
-      name: PALE_ALE_RECIPE.name,
-      productCode: PALE_ALE_RECIPE.productCode,
-      productName: PALE_ALE_RECIPE.productName,
-      batchSize: String(PALE_ALE_RECIPE.batchSize),
-      uom: PALE_ALE_RECIPE.uom,
-      version: PALE_ALE_RECIPE.version,
-      notes: PALE_ALE_RECIPE.notes,
+      code: recipe.code,
+      name: recipe.name,
+      productCode: recipe.productCode,
+      productName: recipe.productName,
+      batchSize: String(recipe.batchSize),
+      uom: recipe.uom,
+      version: recipe.version,
+      lineFamily: recipe.lineFamily,
+      targetAbvPct: recipe.targetAbvPct != null ? String(recipe.targetAbvPct) : "",
+      notes: recipe.notes,
     });
     setMaterials(lines);
 
     const linked = lines.filter((l) => l.itemId).length;
     if (items.length === 0) {
-      toast.message("Pale Ale template loaded", {
-        description: "No warehouse items yet — run seed or create brewing raw materials, then re-apply to link BOM lines.",
+      toast.message(`${label} template loaded`, {
+        description:
+          "No warehouse items yet — run seed or create raw/packaging materials, then re-apply to link BOM lines.",
       });
     } else if (linked < lines.length) {
-      toast.message("Pale Ale template loaded", {
+      toast.message(`${label} template loaded`, {
         description: `Linked ${linked}/${lines.length} BOM lines to warehouse items. Select items for any remaining lines.`,
       });
     } else {
-      toast.success("Pale Ale (example) BOM loaded with warehouse items linked");
+      toast.success(`${label} BOM loaded with warehouse items linked`);
     }
   }
 
@@ -160,6 +199,7 @@ export default function NewProductionRecipePage() {
       return;
     }
 
+    // Always require warehouse item selection when items exist (stock gate)
     if (items.length > 0) {
       const missingItem = validMaterials.find((line) => !line.itemId);
       if (missingItem) {
@@ -176,6 +216,8 @@ export default function NewProductionRecipePage() {
         body: JSON.stringify({
           ...form,
           batchSize: batchSizeNum,
+          lineFamily: form.lineFamily,
+          targetAbvPct: form.targetAbvPct === "" ? null : Number(form.targetAbvPct),
           productCode: form.productCode || undefined,
           notes: form.notes || undefined,
           materials: validMaterials.map((line) => ({
@@ -185,6 +227,7 @@ export default function NewProductionRecipePage() {
             quantity: Number(line.quantity),
             uom: line.uom || "KG",
             wastagePct: line.wastagePct ? Number(line.wastagePct) : 0,
+            role: line.role || undefined,
           })),
         }),
       });
@@ -206,7 +249,7 @@ export default function NewProductionRecipePage() {
     <div>
       <PageHeader
         title="New Recipe"
-        description="Create a production recipe with a Bill of Materials linked to warehouse items"
+        description="Create a brewing or spirits recipe with a Bill of Materials linked to warehouse items"
         actions={
           <Button variant="outline" asChild>
             <Link href="/production/recipes">
@@ -220,16 +263,40 @@ export default function NewProductionRecipePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
             <CardTitle className="text-base">Recipe Details</CardTitle>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={applyPaleAleTemplate}
-              disabled={submitting || itemsLoading}
-            >
-              <FlaskConical className="h-4 w-4 mr-1" />
-              Load Pale Ale (example)
-            </Button>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => applyBomTemplate(PALE_ALE_RECIPE, PALE_ALE_BOM_LINES, "Pale Ale (example)")}
+                disabled={submitting || itemsLoading}
+              >
+                <FlaskConical className="h-4 w-4 mr-1" />
+                Load Pale Ale
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => applyBomTemplate(GIN_RECIPE, GIN_BOM_LINES, "London Dry Gin (example)")}
+                disabled={submitting || itemsLoading}
+              >
+                <FlaskConical className="h-4 w-4 mr-1" />
+                Load Gin
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  applyBomTemplate(SPIRIT_BLEND_RECIPE, SPIRIT_BLEND_BOM_LINES, "Cane spirit blend (example)")
+                }
+                disabled={submitting || itemsLoading}
+              >
+                <FlaskConical className="h-4 w-4 mr-1" />
+                Load Cane blend
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -242,7 +309,7 @@ export default function NewProductionRecipePage() {
                   value={form.code}
                   onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))}
                   disabled={submitting}
-                  placeholder="e.g. RECIPE-PA"
+                  placeholder="e.g. RECIPE-PA or RECIPE-GIN-01"
                 />
               </div>
               <div className="space-y-1">
@@ -255,6 +322,40 @@ export default function NewProductionRecipePage() {
                   onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                   disabled={submitting}
                   placeholder="e.g. Pale Ale (example)"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Line family</Label>
+                <Select
+                  value={form.lineFamily}
+                  onValueChange={(v) => setForm((p) => ({ ...p, lineFamily: v }))}
+                  disabled={submitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RECIPE_LINE_FAMILIES.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>
+                        {f.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="target-abv">Target ABV %</Label>
+                <Input
+                  id="target-abv"
+                  inputMode="decimal"
+                  value={form.targetAbvPct}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, targetAbvPct: sanitizeDecimalInput(e.target.value) }))
+                  }
+                  disabled={submitting}
+                  placeholder="e.g. 40"
                 />
               </div>
             </div>
@@ -333,7 +434,8 @@ export default function NewProductionRecipePage() {
             <div>
               <CardTitle className="text-base">Bill of Materials</CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                Quantities are per batch. Prefer warehouse items so Start-batch stock checks work.
+                Quantities are per batch. Every line should link a warehouse item so Start-batch stock
+                checks work (includes packaging when needed).
               </p>
             </div>
             <Button
@@ -365,7 +467,7 @@ export default function NewProductionRecipePage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none">
-                          {items.length === 0 ? "No items — enter description" : "Select an item…"}
+                          {items.length === 0 ? "No items — run seed first" : "Select an item…"}
                         </SelectItem>
                         {items.map((it) => (
                           <SelectItem key={it.id} value={it.id}>
@@ -414,7 +516,16 @@ export default function NewProductionRecipePage() {
                       disabled={submitting}
                     />
                   </div>
-                  <div className="sm:col-span-12 flex items-center justify-between">
+                  <div className="sm:col-span-3 space-y-1">
+                    <Label>Role (optional)</Label>
+                    <Input
+                      value={line.role}
+                      onChange={(e) => updateMaterial(idx, { role: e.target.value })}
+                      disabled={submitting}
+                      placeholder="e.g. MALT, BOTANICAL, PACKAGING"
+                    />
+                  </div>
+                  <div className="sm:col-span-9 flex items-center justify-between">
                     {line.itemId ? (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Package className="h-3 w-3" />

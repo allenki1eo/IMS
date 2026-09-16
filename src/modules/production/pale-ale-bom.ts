@@ -12,6 +12,7 @@ export type PaleAleBomLine = {
   wastagePct: number;
   /** Suggested opening stock for seed/demo so a few batches can start. */
   seedStock: number;
+  role?: string;
   itemType?: string;
 };
 
@@ -23,6 +24,8 @@ export const PALE_ALE_RECIPE = {
   batchSize: 1000,
   uom: "L",
   version: "1",
+  lineFamily: "BREWING" as const,
+  targetAbvPct: 5.2,
   notes:
     "Example 1000 L pale ale BOM: base + specialty malt, bittering/aroma hops, dry ale yeast, and brewing salts. Link lines to warehouse items so batch Start stock checks work.",
 } as const;
@@ -35,6 +38,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 2,
     seedStock: 2500,
+    role: "MALT",
   },
   {
     itemCode: "RM-MALT-CRYSTAL",
@@ -43,6 +47,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 2,
     seedStock: 300,
+    role: "MALT",
   },
   {
     itemCode: "RM-MALT-MUNICH",
@@ -51,6 +56,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 2,
     seedStock: 250,
+    role: "MALT",
   },
   {
     itemCode: "RM-HOP-MAGNUM",
@@ -59,6 +65,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 1,
     seedStock: 5,
+    role: "HOPS",
   },
   {
     itemCode: "RM-HOP-CASCADE",
@@ -67,6 +74,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 1,
     seedStock: 5,
+    role: "HOPS",
   },
   {
     itemCode: "RM-HOP-CITRA",
@@ -75,6 +83,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 1,
     seedStock: 4,
+    role: "HOPS",
   },
   {
     itemCode: "RM-YEAST-US05",
@@ -83,6 +92,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 0,
     seedStock: 10,
+    role: "YEAST",
   },
   {
     itemCode: "RM-SALT-GYPSUM",
@@ -91,6 +101,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 0,
     seedStock: 5,
+    role: "WATER_CHEM",
   },
   {
     itemCode: "RM-SALT-CACL2",
@@ -99,6 +110,7 @@ export const PALE_ALE_BOM_LINES: PaleAleBomLine[] = [
     uom: "KG",
     wastagePct: 0,
     seedStock: 5,
+    role: "WATER_CHEM",
   },
 ];
 

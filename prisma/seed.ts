@@ -5,6 +5,15 @@ import {
   PALE_ALE_FINISHED_GOOD,
   PALE_ALE_RECIPE,
 } from "../src/modules/production/pale-ale-bom";
+import {
+  GIN_BOM_LINES,
+  GIN_FINISHED_GOOD,
+  GIN_RECIPE,
+  SPIRIT_BLEND_BOM_LINES,
+  SPIRIT_BLEND_FINISHED_GOOD,
+  SPIRIT_BLEND_RECIPE,
+  spiritsSeedMaterialLines,
+} from "../src/modules/production/spirits-bom";
 
 // ─── Permission definitions ──────────────────────────────
 const PERMISSIONS = [
@@ -802,8 +811,8 @@ async function main() {
     });
   }
 
-  // ── 10. Brewery demo: UOMs, warehouse, items, Pale Ale BOM ─
-  console.log("  → Creating brewery demo BOM (Pale Ale example)...");
+  // ── 10. Production BOM demo: brewing + spirits (item-linked) ─
+  console.log("  → Creating brewing + spirits demo BOMs...");
 
   const uomDefs = [
     { code: "KG", name: "Kilogram", symbol: "KG", isBase: true },
@@ -838,7 +847,29 @@ async function main() {
     },
   });
 
-  const fgCategory = await db.itemCategory.upsert({
+  const spiritsCategory = await db.itemCategory.upsert({
+    where: { companyId_code: { companyId: company.id, code: "RAW-SPIRITS" } },
+    update: { name: "Spirits Raw Materials", isActive: true },
+    create: {
+      companyId: company.id,
+      code: "RAW-SPIRITS",
+      name: "Spirits Raw Materials",
+      description: "Neutral spirit, botanicals, process water, colour",
+    },
+  });
+
+  const pkgCategory = await db.itemCategory.upsert({
+    where: { companyId_code: { companyId: company.id, code: "PKG" } },
+    update: { name: "Packaging", isActive: true },
+    create: {
+      companyId: company.id,
+      code: "PKG",
+      name: "Packaging",
+      description: "Bottles, caps, labels",
+    },
+  });
+
+  const fgBeerCategory = await db.itemCategory.upsert({
     where: { companyId_code: { companyId: company.id, code: "FG-BEER" } },
     update: { name: "Finished Beer", isActive: true },
     create: {
@@ -846,6 +877,17 @@ async function main() {
       code: "FG-BEER",
       name: "Finished Beer",
       description: "Packaged / bulk finished beer",
+    },
+  });
+
+  const fgSpiritsCategory = await db.itemCategory.upsert({
+    where: { companyId_code: { companyId: company.id, code: "FG-SPIRITS" } },
+    update: { name: "Finished Spirits", isActive: true },
+    create: {
+      companyId: company.id,
+      code: "FG-SPIRITS",
+      name: "Finished Spirits",
+      description: "Bottled / bulk finished spirits",
     },
   });
 
@@ -875,29 +917,36 @@ async function main() {
 
   const itemIdByCode: Record<string, string> = {};
 
-  for (const line of PALE_ALE_BOM_LINES) {
-    const uomId = uomByCode[line.uom] ?? uomByCode["KG"];
+  async function upsertStockedItem(opts: {
+    itemCode: string;
+    name: string;
+    uom: string;
+    itemType: string;
+    categoryId: string;
+    seedStock: number;
+  }) {
+    const uomId = uomByCode[opts.uom] ?? uomByCode["KG"];
     const item = await db.item.upsert({
-      where: { companyId_code: { companyId: company.id, code: line.itemCode } },
+      where: { companyId_code: { companyId: company.id, code: opts.itemCode } },
       update: {
-        name: line.name,
-        categoryId: brewCategory.id,
+        name: opts.name,
+        categoryId: opts.categoryId,
         uomId,
-        itemType: "RAW_MATERIAL",
+        itemType: opts.itemType,
         isActive: true,
       },
       create: {
         companyId: company.id,
-        code: line.itemCode,
-        name: line.name,
-        categoryId: brewCategory.id,
+        code: opts.itemCode,
+        name: opts.name,
+        categoryId: opts.categoryId,
         uomId,
-        itemType: "RAW_MATERIAL",
+        itemType: opts.itemType,
         minStock: 0,
         createdById: adminUser.id,
       },
     });
-    itemIdByCode[line.itemCode] = item.id;
+    itemIdByCode[opts.itemCode] = item.id;
 
     const existingBalance = await db.stockBalance.findFirst({
       where: {
@@ -909,107 +958,191 @@ async function main() {
     if (existingBalance) {
       await db.stockBalance.update({
         where: { id: existingBalance.id },
-        data: { quantity: line.seedStock },
+        data: { quantity: opts.seedStock },
       });
-    } else {
+    } else if (opts.seedStock > 0) {
       await db.stockBalance.create({
         data: {
           itemId: item.id,
           warehouseId: warehouse.id,
           locationId: bulkLocation.id,
-          quantity: line.seedStock,
+          quantity: opts.seedStock,
+        },
+      });
+    }
+    return item;
+  }
+
+  for (const line of PALE_ALE_BOM_LINES) {
+    await upsertStockedItem({
+      itemCode: line.itemCode,
+      name: line.name,
+      uom: line.uom,
+      itemType: "RAW_MATERIAL",
+      categoryId: brewCategory.id,
+      seedStock: line.seedStock,
+    });
+  }
+
+  for (const line of spiritsSeedMaterialLines()) {
+    const isPkg = line.itemType === "PACKAGING" || line.role === "PACKAGING";
+    await upsertStockedItem({
+      itemCode: line.itemCode,
+      name: line.name,
+      uom: line.uom,
+      itemType: isPkg ? "PACKAGING" : "RAW_MATERIAL",
+      categoryId: isPkg ? pkgCategory.id : spiritsCategory.id,
+      seedStock: line.seedStock,
+    });
+  }
+
+  const fgPale = await upsertStockedItem({
+    itemCode: PALE_ALE_FINISHED_GOOD.itemCode,
+    name: PALE_ALE_FINISHED_GOOD.name,
+    uom: PALE_ALE_FINISHED_GOOD.uom,
+    itemType: PALE_ALE_FINISHED_GOOD.itemType,
+    categoryId: fgBeerCategory.id,
+    seedStock: PALE_ALE_FINISHED_GOOD.seedStock,
+  });
+
+  const fgGin = await upsertStockedItem({
+    itemCode: GIN_FINISHED_GOOD.itemCode,
+    name: GIN_FINISHED_GOOD.name,
+    uom: GIN_FINISHED_GOOD.uom,
+    itemType: GIN_FINISHED_GOOD.itemType,
+    categoryId: fgSpiritsCategory.id,
+    seedStock: GIN_FINISHED_GOOD.seedStock,
+  });
+
+  const fgBlend = await upsertStockedItem({
+    itemCode: SPIRIT_BLEND_FINISHED_GOOD.itemCode,
+    name: SPIRIT_BLEND_FINISHED_GOOD.name,
+    uom: SPIRIT_BLEND_FINISHED_GOOD.uom,
+    itemType: SPIRIT_BLEND_FINISHED_GOOD.itemType,
+    categoryId: fgSpiritsCategory.id,
+    seedStock: SPIRIT_BLEND_FINISHED_GOOD.seedStock,
+  });
+
+  type SeedRecipe = {
+    code: string;
+    name: string;
+    productCode: string;
+    productName: string;
+    batchSize: number;
+    uom: string;
+    version: string;
+    lineFamily: string;
+    targetAbvPct?: number;
+    notes: string;
+  };
+  type SeedBomLine = {
+    itemCode: string;
+    name: string;
+    quantity: number;
+    uom: string;
+    wastagePct: number;
+    role?: string;
+  };
+
+  async function upsertActiveRecipe(
+    recipe: SeedRecipe,
+    lines: SeedBomLine[],
+    productItemId: string
+  ) {
+    const existingRecipe = await db.productionRecipe.findFirst({
+      where: {
+        companyId: company.id,
+        code: recipe.code,
+        version: recipe.version,
+      },
+    });
+
+    const materialsCreate = lines.map((line) => {
+      const itemId = itemIdByCode[line.itemCode];
+      if (!itemId) {
+        throw new Error(`Seed BOM line ${line.itemCode} has no warehouse item`);
+      }
+      return {
+        itemId,
+        itemCode: line.itemCode,
+        description: line.name,
+        quantity: line.quantity,
+        uom: line.uom,
+        wastagePct: line.wastagePct,
+        role: line.role ?? null,
+      };
+    });
+
+    if (existingRecipe) {
+      await db.recipeMaterial.deleteMany({ where: { recipeId: existingRecipe.id } });
+      await db.productionRecipe.update({
+        where: { id: existingRecipe.id },
+        data: {
+          name: recipe.name,
+          productCode: recipe.productCode,
+          productName: recipe.productName,
+          productItemId,
+          batchSize: recipe.batchSize,
+          uom: recipe.uom,
+          lineFamily: recipe.lineFamily,
+          targetAbvPct: recipe.targetAbvPct ?? null,
+          notes: recipe.notes,
+          status: "ACTIVE",
+          materials: { create: materialsCreate },
+        },
+      });
+    } else {
+      await db.productionRecipe.create({
+        data: {
+          companyId: company.id,
+          code: recipe.code,
+          name: recipe.name,
+          productCode: recipe.productCode,
+          productName: recipe.productName,
+          productItemId,
+          batchSize: recipe.batchSize,
+          uom: recipe.uom,
+          version: recipe.version,
+          lineFamily: recipe.lineFamily,
+          targetAbvPct: recipe.targetAbvPct ?? null,
+          notes: recipe.notes,
+          status: "ACTIVE",
+          createdById: adminUser.id,
+          materials: { create: materialsCreate },
         },
       });
     }
   }
 
-  const fgUomId = uomByCode[PALE_ALE_FINISHED_GOOD.uom] ?? uomByCode["L"];
-  const fgItem = await db.item.upsert({
-    where: {
-      companyId_code: { companyId: company.id, code: PALE_ALE_FINISHED_GOOD.itemCode },
-    },
-    update: {
-      name: PALE_ALE_FINISHED_GOOD.name,
-      categoryId: fgCategory.id,
-      uomId: fgUomId,
-      itemType: PALE_ALE_FINISHED_GOOD.itemType,
-      isActive: true,
-    },
-    create: {
-      companyId: company.id,
-      code: PALE_ALE_FINISHED_GOOD.itemCode,
-      name: PALE_ALE_FINISHED_GOOD.name,
-      categoryId: fgCategory.id,
-      uomId: fgUomId,
-      itemType: PALE_ALE_FINISHED_GOOD.itemType,
-      createdById: adminUser.id,
-    },
-  });
-  itemIdByCode[PALE_ALE_FINISHED_GOOD.itemCode] = fgItem.id;
-
-  const existingRecipe = await db.productionRecipe.findFirst({
-    where: {
-      companyId: company.id,
-      code: PALE_ALE_RECIPE.code,
-      version: PALE_ALE_RECIPE.version,
-    },
-  });
-
-  if (existingRecipe) {
-    await db.recipeMaterial.deleteMany({ where: { recipeId: existingRecipe.id } });
-    await db.productionRecipe.update({
-      where: { id: existingRecipe.id },
-      data: {
-        name: PALE_ALE_RECIPE.name,
-        productCode: PALE_ALE_RECIPE.productCode,
-        productName: PALE_ALE_RECIPE.productName,
-        productItemId: fgItem.id,
-        batchSize: PALE_ALE_RECIPE.batchSize,
-        uom: PALE_ALE_RECIPE.uom,
-        notes: PALE_ALE_RECIPE.notes,
-        status: "ACTIVE",
-        materials: {
-          create: PALE_ALE_BOM_LINES.map((line) => ({
-            itemId: itemIdByCode[line.itemCode] ?? null,
-            itemCode: line.itemCode,
-            description: line.name,
-            quantity: line.quantity,
-            uom: line.uom,
-            wastagePct: line.wastagePct,
-          })),
-        },
-      },
-    });
-  } else {
-    await db.productionRecipe.create({
-      data: {
+  // Drop empty / demo orphans that used to pollute QA seeds (no batches)
+  {
+    const nonsense = await db.productionRecipe.findMany({
+      where: {
         companyId: company.id,
-        code: PALE_ALE_RECIPE.code,
-        name: PALE_ALE_RECIPE.name,
-        productCode: PALE_ALE_RECIPE.productCode,
-        productName: PALE_ALE_RECIPE.productName,
-        productItemId: fgItem.id,
-        batchSize: PALE_ALE_RECIPE.batchSize,
-        uom: PALE_ALE_RECIPE.uom,
-        version: PALE_ALE_RECIPE.version,
-        notes: PALE_ALE_RECIPE.notes,
-        status: "ACTIVE",
-        createdById: adminUser.id,
-        materials: {
-          create: PALE_ALE_BOM_LINES.map((line) => ({
-            itemId: itemIdByCode[line.itemCode] ?? null,
-            itemCode: line.itemCode,
-            description: line.name,
-            quantity: line.quantity,
-            uom: line.uom,
-            wastagePct: line.wastagePct,
-          })),
-        },
+        OR: [
+          { code: { contains: "TEST" } },
+          { code: { contains: "DEMO" } },
+          { name: { contains: "Test" } },
+          { name: { contains: "Demo" } },
+        ],
       },
+      include: { _count: { select: { batches: true } } },
     });
+    for (const row of nonsense) {
+      if (row._count.batches === 0) {
+        await db.recipeMaterial.deleteMany({ where: { recipeId: row.id } });
+        await db.productionRecipe.delete({ where: { id: row.id } });
+      }
+    }
   }
 
-  console.log(`   Pale Ale recipe: ${PALE_ALE_RECIPE.code} (${PALE_ALE_BOM_LINES.length} BOM lines)`);
+  await upsertActiveRecipe(PALE_ALE_RECIPE, PALE_ALE_BOM_LINES, fgPale.id);
+  await upsertActiveRecipe(GIN_RECIPE, GIN_BOM_LINES, fgGin.id);
+  await upsertActiveRecipe(SPIRIT_BLEND_RECIPE, SPIRIT_BLEND_BOM_LINES, fgBlend.id);
+
+  console.log(`   Pale Ale: ${PALE_ALE_RECIPE.code} (${PALE_ALE_BOM_LINES.length} BOM lines, BREWING)`);
+  console.log(`   Gin:      ${GIN_RECIPE.code} (${GIN_BOM_LINES.length} BOM lines, SPIRITS)`);
+  console.log(`   Blend:    ${SPIRIT_BLEND_RECIPE.code} (${SPIRIT_BLEND_BOM_LINES.length} BOM lines, SPIRITS)`);
 
   console.log("");
   console.log("✅ Seed complete!");
