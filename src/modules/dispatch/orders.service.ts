@@ -1,15 +1,14 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { generateDatedRef } from "@/lib/timezone";
 
 type DispatchOrderListRow = {
   _count: { lines: number };
 };
 
 function generateRef(): string {
-  const d = new Date();
-  const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  return `DO-${date}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+  return generateDatedRef("DO");
 }
 
 export async function listOrders(

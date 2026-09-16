@@ -66,6 +66,7 @@ export async function createStandard(
     name: string;
     itemId?: string | null;
     description?: string | null;
+    isActive?: boolean;
   },
   userId: string,
   userName: string,
@@ -82,6 +83,12 @@ export async function createStandard(
   });
   if (existing) throw new Error("A standard with this code already exists");
 
+  // New standards start inactive; cannot create as Active with zero parameters.
+  const wantActive = data.isActive === true;
+  if (wantActive) {
+    throw new Error("Cannot activate a quality standard with no parameters");
+  }
+
   const standard = await db.qualityStandard.create({
     data: {
       companyId,
@@ -89,7 +96,7 @@ export async function createStandard(
       name: data.name,
       itemId: data.itemId ?? null,
       description: data.description ?? null,
-      isActive: true,
+      isActive: false,
       createdById: userId,
     },
   });
@@ -139,6 +146,13 @@ export async function updateStandard(
       where: { companyId, code: data.code, NOT: { id } },
     });
     if (duplicate) throw new Error("A standard with this code already exists");
+  }
+
+  if (data.isActive === true) {
+    const paramCount = await db.qualityStandardParameter.count({ where: { standardId: id } });
+    if (paramCount < 1) {
+      throw new Error("Cannot activate a quality standard with no parameters");
+    }
   }
 
   const updateData: Record<string, unknown> = {};
@@ -212,6 +226,13 @@ export async function removeParameter(
   const parameter = await db.qualityStandardParameter.findUnique({ where: { id: parameterId } });
   if (!parameter) throw new Error("Parameter not found");
   if (parameter.standardId !== standardId) throw new Error("Parameter not found");
+
+  if (standard.isActive) {
+    const paramCount = await db.qualityStandardParameter.count({ where: { standardId } });
+    if (paramCount <= 1) {
+      throw new Error("Cannot remove the last parameter from an active quality standard");
+    }
+  }
 
   await db.qualityStandardParameter.delete({ where: { id: parameterId } });
 }

@@ -1,11 +1,9 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { generateDatedRef } from "@/lib/timezone";
 
 function generateRef(prefix: string): string {
-  const d = new Date();
-  const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  const suffix = String(Math.floor(Math.random() * 9000) + 1000);
-  return `${prefix}-${date}-${suffix}`;
+  return generateDatedRef(prefix);
 }
 
 async function upsertStockBalance(params: {

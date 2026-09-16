@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { code, name, itemId, description } = body;
+  const { code, name, itemId, description, isActive } = body;
 
   if (!code || typeof code !== "string") return badRequest("code is required");
   if (!name || typeof name !== "string") return badRequest("name is required");
@@ -52,7 +52,13 @@ export async function POST(request: NextRequest) {
   try {
     const standard = await createStandard(
       companyId,
-      { code, name, itemId: itemId ?? null, description: description ?? null },
+      {
+        code,
+        name,
+        itemId: itemId ?? null,
+        description: description ?? null,
+        ...(typeof isActive === "boolean" ? { isActive } : {}),
+      },
       auth.user.id,
       auth.user.fullName,
       ipAddress
@@ -60,7 +66,11 @@ export async function POST(request: NextRequest) {
     return created(standard);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    if (msg === "Item not found" || msg === "A standard with this code already exists")
+    if (
+      msg === "Item not found" ||
+      msg === "A standard with this code already exists" ||
+      msg === "Cannot activate a quality standard with no parameters"
+    )
       return badRequest(msg);
     return handleError(err);
   }

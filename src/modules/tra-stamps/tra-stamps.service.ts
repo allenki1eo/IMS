@@ -1,11 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { generateDatedRef } from "@/lib/timezone";
 
 function generateRef(): string {
-  const d = new Date();
-  const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  return `TRA-${date}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+  return generateDatedRef("TRA");
 }
 
 export async function listStampBatches(
