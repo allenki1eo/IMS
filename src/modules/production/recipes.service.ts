@@ -96,6 +96,36 @@ export async function createProductionRecipe(
     }
   }
 
+  // Resolve itemCode → itemId so BOM lines stay linked for stock gates
+  const codesToResolve = Array.from(
+    new Set(
+      data.materials
+        .filter((m) => !m.itemId && m.itemCode)
+        .map((m) => String(m.itemCode).trim())
+        .filter(Boolean)
+    )
+  );
+  const resolvedByCode =
+    codesToResolve.length > 0
+      ? await db.item.findMany({
+          where: { companyId, code: { in: codesToResolve } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const codeToId = new Map(resolvedByCode.map((i) => [i.code, i.id]));
+
+  const materialsToCreate = data.materials.map((line) => {
+    const itemId = line.itemId ?? codeToId.get(line.itemCode?.trim() ?? "") ?? null;
+    return {
+      itemId,
+      itemCode: line.itemCode ?? null,
+      description: line.description,
+      quantity: line.quantity,
+      uom: line.uom ?? "KG",
+      wastagePct: line.wastagePct ?? 0,
+    };
+  });
+
   const recipe = await db.productionRecipe.create({
     data: {
       companyId,
@@ -110,14 +140,7 @@ export async function createProductionRecipe(
       notes: data.notes ?? null,
       createdById,
       materials: {
-        create: data.materials.map((line) => ({
-          itemId: line.itemId ?? null,
-          itemCode: line.itemCode ?? null,
-          description: line.description,
-          quantity: line.quantity,
-          uom: line.uom ?? "KG",
-          wastagePct: line.wastagePct ?? 0,
-        })),
+        create: materialsToCreate,
       },
     },
     include: { materials: true },
