@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { ChartSkeleton } from "@/components/charts/ChartSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
 
 // Lazy-load recharts pieces so the ~100kB library stays out of the initial bundle
 const StockBarChart = dynamic(
@@ -21,27 +22,48 @@ const StatusPieChart = dynamic(
 export default function OperationsAnalyticsPage() {
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/analytics/operations");
-        const json = await res.json();
-        if (res.ok) {
-          setMetrics(json.data);
-        } else {
-          toast.error(json.message || "Failed to load metrics");
-        }
-      } catch {
-        toast.error("Failed to load operational metrics");
-      } finally {
-        setLoading(false);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch("/api/analytics/operations");
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setMetrics(json.data);
+      } else {
+        setMetrics(null);
+        const msg = json.message || "Failed to load metrics";
+        setLoadError(msg);
+        toast.error(msg);
       }
+    } catch {
+      setMetrics(null);
+      const msg = "Failed to load operational metrics";
+      setLoadError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
-    fetchData();
   }, []);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, retryCount]);
+
   if (loading) return <LoadingState text="Loading operational analytics..." />;
+  if (loadError || !metrics) {
+    return (
+      <ErrorState
+        title="Could not load operational analytics"
+        description="Charts were not loaded. Empty charts would look like no stock, trips, or QC activity."
+        error={loadError}
+        onRetry={() => setRetryCount((c) => c + 1)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -51,28 +73,28 @@ export default function OperationsAnalyticsPage() {
         <Card>
           <CardHeader><CardTitle>Stock by Warehouse</CardTitle></CardHeader>
           <CardContent>
-            <StockBarChart data={metrics?.stockByWarehouse || []} />
+            <StockBarChart data={metrics.stockByWarehouse || []} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Trip Status Breakdown</CardTitle></CardHeader>
           <CardContent>
-            <StatusPieChart data={metrics?.tripStatusBreakdown || []} />
+            <StatusPieChart data={metrics.tripStatusBreakdown || []} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Work Order Status</CardTitle></CardHeader>
           <CardContent>
-            <StatusPieChart data={metrics?.maintenanceByStatus || []} />
+            <StatusPieChart data={metrics.maintenanceByStatus || []} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>QC Test Results</CardTitle></CardHeader>
           <CardContent>
-            <StatusPieChart data={metrics?.qcResults || []} />
+            <StatusPieChart data={metrics.qcResults || []} />
           </CardContent>
         </Card>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -30,40 +31,74 @@ export default function AnalyticsPage() {
   const [kpis, setKpis] = useState<any>(null);
   const [trends, setTrends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [kpiRes, trendRes] = await Promise.all([
-          fetch("/api/analytics/kpis"),
-          fetch("/api/analytics/trends?months=6"),
-        ]);
-        const kpiJson = await kpiRes.json();
-        const trendJson = await trendRes.json();
-        if (kpiRes.ok) setKpis(kpiJson.data);
-        if (trendRes.ok) setTrends(trendJson.data ?? []);
-      } catch {
-        toast.error("Failed to load analytics");
-      } finally {
-        setLoading(false);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const [kpiRes, trendRes] = await Promise.all([
+        fetch("/api/analytics/kpis"),
+        fetch("/api/analytics/trends?months=6"),
+      ]);
+      const kpiJson = await kpiRes.json().catch(() => ({}));
+      const trendJson = await trendRes.json().catch(() => ({}));
+
+      if (!kpiRes.ok) {
+        setKpis(null);
+        setTrends([]);
+        const msg = kpiJson.message || "Failed to load analytics KPIs";
+        setLoadError(msg);
+        toast.error(msg);
+        return;
       }
+
+      setKpis(kpiJson.data);
+      if (trendRes.ok) {
+        setTrends(trendJson.data ?? []);
+      } else {
+        setTrends([]);
+        toast.error(trendJson.message || "Failed to load analytics trends");
+      }
+    } catch {
+      setKpis(null);
+      setTrends([]);
+      const msg = "Failed to load analytics";
+      setLoadError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
-    fetchData();
   }, []);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, retryCount]);
+
   if (loading) return <LoadingState text="Loading analytics..." />;
+  if (loadError || !kpis) {
+    return (
+      <ErrorState
+        title="Could not load management analytics"
+        description="KPI cards were not loaded. This is not the same as having zero activity."
+        error={loadError}
+        onRetry={() => setRetryCount((c) => c + 1)}
+      />
+    );
+  }
 
   const kpiCards = [
-    { label: "Users", value: kpis?.totalUsers || 0, icon: Users, href: "/admin/users" },
-    { label: "Items", value: kpis?.totalItems || 0, icon: Warehouse, href: "/warehouse/items" },
-    { label: "Vehicles", value: kpis?.totalVehicles || 0, icon: Truck, href: "/transport/vehicles" },
-    { label: "Fuel Tanks", value: kpis?.totalFuelTanks || 0, icon: Fuel, href: "/fuel/tanks" },
-    { label: "Open Work Orders", value: kpis?.openWorkOrders || 0, icon: Wrench, href: "/maintenance/work-orders" },
-    { label: "Suppliers", value: kpis?.totalSuppliers || 0, icon: ShoppingCart, href: "/procurement/suppliers" },
-    { label: "Active Batches", value: kpis?.activeBatches || 0, icon: Factory, href: "/production/batches" },
-    { label: "Open NCRs", value: kpis?.openNCRs || 0, icon: FlaskConical, href: "/qc/ncr" },
-    { label: "Pending Dispatch", value: kpis?.pendingDispatchOrders || 0, icon: SendHorizonal, href: "/dispatch/orders" },
-    { label: "Bank Balance", value: `${currency} ${(kpis?.totalBankBalance || 0).toLocaleString()}`, icon: Landmark, href: "/finance/bank-accounts" },
+    { label: "Users", value: kpis.totalUsers ?? 0, icon: Users, href: "/admin/users" },
+    { label: "Items", value: kpis.totalItems ?? 0, icon: Warehouse, href: "/warehouse/items" },
+    { label: "Vehicles", value: kpis.totalVehicles ?? 0, icon: Truck, href: "/transport/vehicles" },
+    { label: "Fuel Tanks", value: kpis.totalFuelTanks ?? 0, icon: Fuel, href: "/fuel/tanks" },
+    { label: "Open Work Orders", value: kpis.openWorkOrders ?? 0, icon: Wrench, href: "/maintenance/work-orders" },
+    { label: "Suppliers", value: kpis.totalSuppliers ?? 0, icon: ShoppingCart, href: "/procurement/suppliers" },
+    { label: "Active Batches", value: kpis.activeBatches ?? 0, icon: Factory, href: "/production/batches" },
+    { label: "Open NCRs", value: kpis.openNCRs ?? 0, icon: FlaskConical, href: "/qc/ncr" },
+    { label: "Pending Dispatch", value: kpis.pendingDispatchOrders ?? 0, icon: SendHorizonal, href: "/dispatch/orders" },
+    { label: "Bank Balance", value: `${currency} ${(kpis.totalBankBalance ?? 0).toLocaleString()}`, icon: Landmark, href: "/finance/bank-accounts" },
   ];
 
   return (
