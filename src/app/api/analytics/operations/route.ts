@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getOperationalMetrics } from "@/modules/analytics/analytics.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "analytics:operations:read");
@@ -15,6 +15,6 @@ export async function GET(request: NextRequest) {
     return success(metrics);
   } catch (err) {
     console.error("[Analytics operations]", err);
-    return badRequest("Failed to load operational metrics");
+    return handleError(err);
   }
 }
