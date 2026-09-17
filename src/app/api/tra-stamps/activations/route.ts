@@ -37,12 +37,18 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { ipAddress } = getRequestMeta(request);
 
-  if (!body.batchId || !body.productName || !body.quantity) {
-    return badRequest("batchId, productName, and quantity are required");
+  if (!body.batchId || !body.fgProductId || !body.fgLotId || !body.quantity) {
+    return badRequest("batchId, fgProductId, fgLotId, and quantity are required");
   }
 
   try {
-    const activation = await createStampActivation(companyId, body, auth.user.id, auth.user.fullName, ipAddress);
+    const activation = await createStampActivation(
+      companyId,
+      body,
+      auth.user.id,
+      auth.user.fullName,
+      ipAddress
+    );
     return created(activation);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
@@ -53,7 +59,11 @@ export async function POST(request: NextRequest) {
       msg.includes("not found") ||
       msg.includes("active") ||
       msg.includes("expired") ||
-      msg.includes("Insufficient")
+      msg.includes("Insufficient") ||
+      msg.includes("mismatch") ||
+      msg.includes("unreleased") ||
+      msg.includes("does not") ||
+      msg.includes("missing")
     ) {
       return badRequest(msg);
     }

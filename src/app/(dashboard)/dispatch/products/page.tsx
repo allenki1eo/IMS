@@ -20,8 +20,11 @@ interface ProductRow {
   name: string;
   uom: string;
   unitPrice?: number | null;
+  lineFamily?: string;
+  requiresTraStamp?: boolean;
   lotCount?: number;
   isActive: boolean;
+  _count?: { lots: number };
 }
 
 const PAGE_SIZE = 20;
@@ -68,9 +71,21 @@ export default function FgProductsPage() {
       ),
     },
     {
+      key: "lineFamily",
+      header: "Family",
+      cell: (row: ProductRow) => <span>{row.lineFamily ?? "BREWING"}</span>,
+    },
+    {
       key: "uom",
       header: "UOM",
       cell: (row: ProductRow) => <span className="text-muted-foreground">{row.uom}</span>,
+    },
+    {
+      key: "requiresTraStamp",
+      header: "TRA",
+      cell: (row: ProductRow) => (
+        <span className="text-muted-foreground">{row.requiresTraStamp ? "Required" : "—"}</span>
+      ),
     },
     {
       key: "unitPrice",

@@ -22,6 +22,7 @@ interface LotRow {
   availableQty: number;
   bestBefore?: string | null;
   status: string;
+  qaStatus?: string;
   warehouse?: { name: string } | null;
 }
 
@@ -32,6 +33,13 @@ interface Product {
   uom: string;
   unitPrice?: number | null;
   description?: string | null;
+  lineFamily?: string;
+  abvPct?: number | null;
+  packSize?: number | null;
+  packUom?: string | null;
+  unitsPerCase?: number | null;
+  requiresTraStamp?: boolean;
+  traStampType?: string | null;
   isActive: boolean;
   createdAt: string;
   lots?: LotRow[];
@@ -235,6 +243,31 @@ export default function FgProductDetailPage() {
                 <p className="mt-1">{product.uom}</p>
               </div>
               <div>
+                <p className="text-muted-foreground">Line Family</p>
+                <p className="mt-1">{product.lineFamily ?? "BREWING"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">ABV %</p>
+                <p className="mt-1">{product.abvPct != null ? `${product.abvPct}%` : "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Pack</p>
+                <p className="mt-1">
+                  {product.packSize != null
+                    ? `${product.packSize}${product.packUom ? " " + product.packUom : ""}`
+                    : "—"}
+                  {product.unitsPerCase != null ? ` · ${product.unitsPerCase}/case` : ""}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">TRA Stamp</p>
+                <p className="mt-1">
+                  {product.requiresTraStamp
+                    ? `Required (${product.traStampType ?? "—"})`
+                    : "Not required"}
+                </p>
+              </div>
+              <div>
                 <p className="text-muted-foreground">Unit Price</p>
                 <p className="mt-1">
                   {product.unitPrice != null
@@ -279,13 +312,14 @@ export default function FgProductDetailPage() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Available</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Best Before</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">QA</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Warehouse</th>
                 </tr>
               </thead>
               <tbody>
                 {lots.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                       No lots found for this product
                     </td>
                   </tr>
@@ -299,12 +333,15 @@ export default function FgProductDetailPage() {
                       </td>
                       <td className="px-4 py-3">{lot.quantityIn.toLocaleString()}</td>
                       <td className="px-4 py-3">{lot.quantityOut.toLocaleString()}</td>
-                      <td className="px-4 py-3 font-medium">{lot.availableQty.toLocaleString()}</td>
+                      <td className="px-4 py-3 font-medium">{(lot.availableQty ?? (lot.quantityIn - lot.quantityOut)).toLocaleString()}</td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         {lot.bestBefore ? format(new Date(lot.bestBefore), "dd MMM yyyy") : "—"}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={lot.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={lot.qaStatus ?? "PENDING"} />
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {lot.warehouse?.name ?? "—"}

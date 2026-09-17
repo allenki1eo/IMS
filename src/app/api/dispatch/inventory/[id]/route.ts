@@ -34,7 +34,17 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { lotNumber, unitCost, bestBefore, warehouseId, status, notes } = body;
+  const {
+    lotNumber,
+    unitCost,
+    bestBefore,
+    warehouseId,
+    status,
+    qaStatus,
+    abvPct,
+    productionBatchId,
+    notes,
+  } = body;
 
   const { ipAddress } = getRequestMeta(request);
 
@@ -48,6 +58,9 @@ export async function PATCH(
         ...(bestBefore !== undefined ? { bestBefore } : {}),
         ...(warehouseId !== undefined ? { warehouseId } : {}),
         ...(status !== undefined ? { status } : {}),
+        ...(qaStatus !== undefined ? { qaStatus } : {}),
+        ...(abvPct !== undefined ? { abvPct } : {}),
+        ...(productionBatchId !== undefined ? { productionBatchId } : {}),
         ...(notes !== undefined ? { notes } : {}),
       },
       auth.user.id,
@@ -59,11 +72,14 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Lot not found") return notFound(msg);
     if (
-      msg === "Warehouse not found" ||
-      msg === "Unit cost cannot be negative" ||
-      msg === "Best before date is invalid" ||
-      msg === "Depleted lots cannot be marked available"
-    ) return badRequest(msg);
+      msg.includes("required") ||
+      msg.includes("not found") ||
+      msg.includes("must be") ||
+      msg.includes("cannot be") ||
+      msg.includes("invalid") ||
+      msg.includes("Depleted")
+    )
+      return badRequest(msg);
     return handleError(err);
   }
 }

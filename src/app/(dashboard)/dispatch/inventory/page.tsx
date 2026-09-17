@@ -32,6 +32,7 @@ interface LotRow {
   bestBefore?: string | null;
   warehouse?: { name: string } | null;
   status: string;
+  qaStatus?: string;
 }
 
 const STATUS_FILTERS = [
@@ -119,6 +120,11 @@ export default function FgInventoryPage() {
       key: "status",
       header: "Status",
       cell: (row: LotRow) => <StatusBadge status={row.status} />,
+    },
+    {
+      key: "qaStatus",
+      header: "QA",
+      cell: (row: LotRow) => <StatusBadge status={row.qaStatus ?? "PENDING"} />,
     },
     {
       key: "actions",

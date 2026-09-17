@@ -75,7 +75,17 @@ export async function getOrder(companyId: string, id: string) {
               quantityIn: true,
               quantityOut: true,
               status: true,
-              product: { select: { id: true, code: true, name: true } },
+              qaStatus: true,
+              product: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  requiresTraStamp: true,
+                  traStampType: true,
+                  lineFamily: true,
+                },
+              },
             },
           },
         },
@@ -98,6 +108,15 @@ export async function getOrder(companyId: string, id: string) {
   return order;
 }
 
+export type CreateOrderLineInput = {
+  lotId?: string | null;
+  productId?: string | null;
+  description?: string | null;
+  quantity: number;
+  uom?: string | null;
+  unitPrice?: number | null;
+};
+
 export async function createOrder(
   companyId: string,
   data: {
@@ -108,11 +127,14 @@ export async function createOrder(
     vehicleId?: string | null;
     driverId?: string | null;
     notes?: string | null;
+    lines?: CreateOrderLineInput[];
   },
   userId: string,
   userName: string,
   ipAddress?: string
 ) {
+  if (!data.customerName?.trim()) throw new Error("Customer name is required");
+
   if (data.vehicleId) {
     const vehicle = await db.vehicle.findUnique({ where: { id: data.vehicleId } });
     if (!vehicle) throw new Error("Vehicle not found");
@@ -126,21 +148,30 @@ export async function createOrder(
   }
 
   const reference = generateRef();
+  const lines = data.lines ?? [];
 
-  const order = await db.dispatchOrder.create({
-    data: {
-      companyId,
-      reference,
-      status: "DRAFT",
-      customerName: data.customerName,
-      customerContact: data.customerContact ?? null,
-      deliveryAddress: data.deliveryAddress ?? null,
-      scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
-      vehicleId: data.vehicleId ?? null,
-      driverId: data.driverId ?? null,
-      notes: data.notes ?? null,
-      createdById: userId,
-    },
+  const order = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.dispatchOrder.create({
+      data: {
+        companyId,
+        reference,
+        status: "DRAFT",
+        customerName: data.customerName.trim(),
+        customerContact: data.customerContact ?? null,
+        deliveryAddress: data.deliveryAddress ?? null,
+        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
+        vehicleId: data.vehicleId ?? null,
+        driverId: data.driverId ?? null,
+        notes: data.notes ?? null,
+        createdById: userId,
+      },
+    });
+
+    for (const line of lines) {
+      await addLineTx(tx, companyId, created.id, line);
+    }
+
+    return created;
   });
 
   await createAuditLog({
@@ -150,13 +181,13 @@ export async function createOrder(
     module: "dispatch",
     resource: "order",
     recordId: order.id,
-    newValue: { reference, customerName: data.customerName, status: "DRAFT" },
+    newValue: { reference, customerName: data.customerName, status: "DRAFT", lineCount: lines.length },
     description: `Created dispatch order: ${reference} for ${data.customerName}`,
     ipAddress,
     companyId,
   });
 
-  return order;
+  return getOrder(companyId, order.id);
 }
 
 export async function updateOrder(
@@ -271,17 +302,46 @@ export async function dispatchOrder(
   if (!existing) throw new Error("Dispatch order not found");
   if (existing.companyId !== companyId) throw new Error("Dispatch order not found");
   if (existing.status !== "CONFIRMED") throw new Error("Only CONFIRMED orders can be dispatched");
+  if (existing.lines.length === 0) {
+    throw new Error("Cannot dispatch an order with 0 lines");
+  }
 
-  // Validate lot availability before transaction
+  // Validate lot availability / QA / TRA before transaction
   for (const line of existing.lines) {
-    if (line.lotId) {
-      const lot = await db.fGLot.findUnique({ where: { id: line.lotId } });
-      if (!lot) throw new Error(`Lot not found for line: ${line.description}`);
-      if (lot.companyId !== companyId) throw new Error(`Lot not found for line: ${line.description}`);
-      const available = lot.quantityIn - lot.quantityOut;
-      if (available < line.quantity) {
+    if (!line.lotId) {
+      throw new Error(`Lot is required on every line before dispatch (${line.description})`);
+    }
+    const lot = await db.fGLot.findUnique({
+      where: { id: line.lotId },
+      include: { product: true },
+    });
+    if (!lot) throw new Error(`Lot not found for line: ${line.description}`);
+    if (lot.companyId !== companyId) throw new Error(`Lot not found for line: ${line.description}`);
+    if (lot.qaStatus !== "RELEASED") {
+      throw new Error(
+        `Lot${lot.lotNumber ? " " + lot.lotNumber : ""} is not QA-released (status: ${lot.qaStatus})`
+      );
+    }
+    const available = lot.quantityIn - lot.quantityOut;
+    if (available < line.quantity) {
+      throw new Error(
+        `Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${line.quantity}`
+      );
+    }
+    if (lot.product.requiresTraStamp) {
+      const activations = await db.traStampActivation.findMany({
+        where: {
+          companyId,
+          dispatchOrderId: id,
+          OR: [{ fgLotId: lot.id }, { fgProductId: lot.productId }],
+        },
+      });
+      const covered = activations
+        .filter((a) => a.fgLotId === lot.id || (!a.fgLotId && a.fgProductId === lot.productId))
+        .reduce((sum, a) => sum + a.quantity, 0);
+      if (covered < line.quantity) {
         throw new Error(
-          `Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${line.quantity}`
+          `TRA stamp activation required for ${lot.product.code}: covered ${covered}, required ${line.quantity}`
         );
       }
     }
@@ -296,32 +356,31 @@ export async function dispatchOrder(
     });
 
     for (const line of existing.lines) {
-      if (line.lotId) {
-        const lot = await tx.fGLot.findUnique({ where: { id: line.lotId } });
-        if (!lot) throw new Error(`Lot not found for line: ${line.description}`);
-        const updatedLot = await tx.fGLot.updateMany({
-          where: {
-            id: line.lotId,
-            companyId,
-            status: "AVAILABLE",
-            quantityOut: { lte: lot.quantityIn - line.quantity },
-          },
-          data: { quantityOut: { increment: line.quantity } },
-        });
-        if (updatedLot.count === 0) {
-          const available = lot.quantityIn - lot.quantityOut;
-          throw new Error(
-            `Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${line.quantity}`
-          );
-        }
+      const lot = await tx.fGLot.findUnique({ where: { id: line.lotId! } });
+      if (!lot) throw new Error(`Lot not found for line: ${line.description}`);
+      const updatedLot = await tx.fGLot.updateMany({
+        where: {
+          id: line.lotId!,
+          companyId,
+          status: "AVAILABLE",
+          qaStatus: "RELEASED",
+          quantityOut: { lte: lot.quantityIn - line.quantity },
+        },
+        data: { quantityOut: { increment: line.quantity } },
+      });
+      if (updatedLot.count === 0) {
+        const available = lot.quantityIn - lot.quantityOut;
+        throw new Error(
+          `Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${line.quantity}`
+        );
+      }
 
-        const refreshed = await tx.fGLot.findUnique({ where: { id: line.lotId } });
-        if (refreshed && refreshed.quantityOut >= refreshed.quantityIn) {
-          await tx.fGLot.update({
-            where: { id: line.lotId },
-            data: { status: "DEPLETED" },
-          });
-        }
+      const refreshed = await tx.fGLot.findUnique({ where: { id: line.lotId! } });
+      if (refreshed && refreshed.quantityOut >= refreshed.quantityIn) {
+        await tx.fGLot.update({
+          where: { id: line.lotId! },
+          data: { status: "DEPLETED" },
+        });
       }
     }
 
@@ -447,68 +506,86 @@ export async function cancelOrder(
   return updated;
 }
 
+async function addLineTx(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+  orderId: string,
+  data: CreateOrderLineInput & { description?: string | null }
+) {
+  if (!Number.isFinite(data.quantity) || data.quantity <= 0) {
+    throw new Error("Quantity must be greater than zero");
+  }
+  if (data.unitPrice != null && (!Number.isFinite(data.unitPrice) || data.unitPrice < 0)) {
+    throw new Error("Unit price cannot be negative");
+  }
+
+  let productId = data.productId ?? null;
+  let description = data.description?.trim() || "";
+  let uom = data.uom?.trim() || "UNIT";
+
+  if (data.lotId) {
+    const lot = await tx.fGLot.findUnique({
+      where: { id: data.lotId },
+      include: { product: true },
+    });
+    if (!lot) throw new Error("Lot not found");
+    if (lot.companyId !== companyId) throw new Error("Lot not found");
+    if (lot.status !== "AVAILABLE") throw new Error("Lot is not available");
+    const available = lot.quantityIn - lot.quantityOut;
+    if (available < data.quantity) {
+      throw new Error(
+        `Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${data.quantity}`
+      );
+    }
+    if (productId && productId !== lot.productId) {
+      throw new Error("Selected product does not match the lot");
+    }
+    productId = lot.productId;
+    if (!description) description = lot.product.name;
+    if (!data.uom) uom = lot.product.uom || "UNIT";
+  }
+
+  if (!description) throw new Error("Description is required");
+
+  if (productId) {
+    const product = await tx.fGProduct.findUnique({ where: { id: productId } });
+    if (!product) throw new Error("Product not found");
+    if (product.companyId !== companyId) throw new Error("Product not found");
+    if (!product.isActive) throw new Error("Product is inactive");
+    if (!data.uom) uom = product.uom || uom;
+    if (!data.description) description = product.name;
+  }
+
+  const totalPrice =
+    data.unitPrice !== undefined && data.unitPrice !== null
+      ? data.quantity * data.unitPrice
+      : null;
+
+  return tx.dispatchOrderLine.create({
+    data: {
+      orderId,
+      lotId: data.lotId ?? null,
+      productId,
+      description,
+      quantity: data.quantity,
+      uom,
+      unitPrice: data.unitPrice ?? null,
+      totalPrice,
+    },
+  });
+}
+
 export async function addLine(
   companyId: string,
   orderId: string,
-  data: {
-    lotId?: string | null;
-    productId?: string | null;
-    description: string;
-    quantity: number;
-    uom?: string | null;
-    unitPrice?: number | null;
-  }
+  data: CreateOrderLineInput & { description?: string | null }
 ) {
   const order = await db.dispatchOrder.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("Dispatch order not found");
   if (order.companyId !== companyId) throw new Error("Dispatch order not found");
   if (order.status !== "DRAFT") throw new Error("Lines can only be added to DRAFT orders");
 
-  if (!Number.isFinite(data.quantity) || data.quantity <= 0) throw new Error("Quantity must be greater than zero");
-  if (data.unitPrice != null && (!Number.isFinite(data.unitPrice) || data.unitPrice < 0)) {
-    throw new Error("Unit price cannot be negative");
-  }
-
-  let productId = data.productId ?? null;
-  if (data.lotId) {
-    const lot = await db.fGLot.findUnique({ where: { id: data.lotId } });
-    if (!lot) throw new Error("Lot not found");
-    if (lot.companyId !== companyId) throw new Error("Lot not found");
-    if (lot.status !== "AVAILABLE") throw new Error("Lot is not available");
-    const available = lot.quantityIn - lot.quantityOut;
-    if (available < data.quantity) {
-      throw new Error(`Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${data.quantity}`);
-    }
-    if (productId && productId !== lot.productId) throw new Error("Selected product does not match the lot");
-    productId = lot.productId;
-  }
-
-  if (productId) {
-    const product = await db.fGProduct.findUnique({ where: { id: productId } });
-    if (!product) throw new Error("Product not found");
-    if (product.companyId !== companyId) throw new Error("Product not found");
-    if (!product.isActive) throw new Error("Product is inactive");
-  }
-
-  const totalPrice =
-    data.quantity !== undefined && data.unitPrice !== undefined && data.unitPrice !== null
-      ? data.quantity * data.unitPrice
-      : null;
-
-  const line = await db.dispatchOrderLine.create({
-    data: {
-      orderId,
-      lotId: data.lotId ?? null,
-      productId,
-      description: data.description,
-      quantity: data.quantity,
-      uom: data.uom ?? "UNIT",
-      unitPrice: data.unitPrice ?? null,
-      totalPrice,
-    },
-  });
-
-  return line;
+  return db.$transaction(async (tx: Prisma.TransactionClient) => addLineTx(tx, companyId, orderId, data));
 }
 
 export async function removeLine(

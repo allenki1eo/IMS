@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     vehicleId,
     driverId,
     notes,
+    lines,
   } = body;
 
   if (!customerName || typeof customerName !== "string" || !customerName.trim())
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
         vehicleId: vehicleId ?? null,
         driverId: driverId ?? null,
         notes: notes ?? null,
+        lines: Array.isArray(lines) ? lines : undefined,
       },
       auth.user.id,
       auth.user.fullName,
@@ -73,7 +75,15 @@ export async function POST(request: NextRequest) {
     return created(order);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    if (msg === "Vehicle not found" || msg === "Driver not found") return badRequest(msg);
+    if (
+      msg.includes("not found") ||
+      msg.includes("required") ||
+      msg.includes("must be") ||
+      msg.includes("Insufficient") ||
+      msg.includes("inactive") ||
+      msg.includes("available")
+    )
+      return badRequest(msg);
     return handleError(err);
   }
 }

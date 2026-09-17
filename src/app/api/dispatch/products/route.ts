@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
   const search = searchParams.get("search") ?? undefined;
+  const lineFamily = searchParams.get("lineFamily") ?? undefined;
   const isActiveStr = searchParams.get("isActive");
   const isActive = isActiveStr === "true" ? true : isActiveStr === "false" ? false : undefined;
 
@@ -21,6 +22,7 @@ export async function GET(request: NextRequest) {
     const { data, meta } = await listProducts(companyId, {
       search,
       isActive,
+      lineFamily,
       page: pagination.page,
       pageSize: pagination.pageSize,
     });
@@ -40,7 +42,21 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { code, name, description, uom, unitPrice } = body;
+  const {
+    code,
+    name,
+    description,
+    uom,
+    unitPrice,
+    lineFamily,
+    abvPct,
+    packSize,
+    packUom,
+    unitsPerCase,
+    requiresTraStamp,
+    traStampType,
+    defaultWarehouseId,
+  } = body;
 
   if (!code || typeof code !== "string") return badRequest("code is required");
   if (!name || typeof name !== "string") return badRequest("name is required");
@@ -50,7 +66,21 @@ export async function POST(request: NextRequest) {
   try {
     const product = await createProduct(
       companyId,
-      { code, name, description: description ?? null, uom: uom ?? null, unitPrice: unitPrice ?? null },
+      {
+        code,
+        name,
+        description: description ?? null,
+        uom: uom ?? null,
+        unitPrice: unitPrice ?? null,
+        lineFamily: lineFamily ?? "BREWING",
+        abvPct: abvPct ?? null,
+        packSize: packSize ?? null,
+        packUom: packUom ?? null,
+        unitsPerCase: unitsPerCase ?? null,
+        requiresTraStamp: requiresTraStamp ?? null,
+        traStampType: traStampType ?? null,
+        defaultWarehouseId: defaultWarehouseId ?? null,
+      },
       auth.user.id,
       auth.user.fullName,
       ipAddress
@@ -59,11 +89,14 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (
-      msg === "A product with this code already exists" ||
-      msg === "Product code is required" ||
-      msg === "Product name is required" ||
-      msg === "Unit price cannot be negative"
-    ) return badRequest(msg);
+      msg.includes("required") ||
+      msg.includes("already exists") ||
+      msg.includes("must be") ||
+      msg.includes("cannot be") ||
+      msg.includes("not found") ||
+      msg.includes("lineFamily")
+    )
+      return badRequest(msg);
     return handleError(err);
   }
 }

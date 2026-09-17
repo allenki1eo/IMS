@@ -17,16 +17,16 @@ export async function POST(
   const body = await request.json();
   const { lotId, productId, description, quantity, uom, unitPrice } = body;
 
-  if (!description || typeof description !== "string")
-    return badRequest("description is required");
   if (!quantity || typeof quantity !== "number" || quantity <= 0)
     return badRequest("quantity must be a positive number");
+  if (!lotId && (!description || typeof description !== "string"))
+    return badRequest("description is required when no lot is selected");
 
   try {
     const line = await addLine(companyId, id, {
       lotId: lotId ?? null,
       productId: productId ?? null,
-      description,
+      description: description ?? null,
       quantity,
       uom: uom ?? null,
       unitPrice: unitPrice ?? null,
@@ -44,6 +44,7 @@ export async function POST(
       msg === "Selected product does not match the lot" ||
       msg === "Unit price cannot be negative" ||
       msg === "Quantity must be greater than zero" ||
+      msg === "Description is required" ||
       msg.startsWith("Insufficient quantity")
     )
       return badRequest(msg);
