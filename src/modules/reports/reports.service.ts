@@ -260,30 +260,63 @@ export async function getProcurementReport(companyId: string, fromDate?: string,
 
 // ─── PRODUCTION ────────────────────────────────────────────
 
+/**
+ * Production report for Reports → Production tab.
+ *
+ * Root-cause note: the previous implementation used Promise.all over
+ * productionBatch (include materials) + productionLine (nested batches) +
+ * productionRecipe (include materials + nested batches). Full recipe/material
+ * rows SELECT every scalar — including newer columns such as lineFamily /
+ * targetAbvPct / role — so a Turso DB that has not been pushed those columns
+ * throws a SQLite "no such column" and the whole tab surfaces a database error.
+ * Nested full batch includes on every line/recipe compound the same risk.
+ *
+ * Fix: only query what the UI renders (batches + summary), with a narrow
+ * `select` (line/recipe name only — no materials). Line/recipe rollups are
+ * derived from that batch list so we never touch drifted recipe_materials
+ * columns. Empty periods return zeros/empty arrays (not an error).
+ */
 export async function getProductionReport(companyId: string, fromDate?: string, toDate?: string) {
   const { from, to } = getDateRange(fromDate, toDate);
 
-  const [batches, lines, recipes] = await Promise.all([
-    db.productionBatch.findMany({
-      where: { companyId, createdAt: { gte: from, lte: to } },
-      include: { line: { select: { name: true } }, recipe: { select: { name: true } }, materials: true },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    }),
-    db.productionLine.findMany({
-      where: { companyId },
-      include: { batches: { where: { createdAt: { gte: from, lte: to } } } },
-    }),
-    db.productionRecipe.findMany({
-      where: { companyId },
-      include: { materials: true, batches: { where: { createdAt: { gte: from, lte: to } } } },
-    }),
-  ]);
+  const batches = (await db.productionBatch.findMany({
+    where: { companyId, createdAt: { gte: from, lte: to } },
+    select: {
+      id: true,
+      reference: true,
+      status: true,
+      plannedQty: true,
+      actualQty: true,
+      productName: true,
+      batchType: true,
+      uom: true,
+      createdAt: true,
+      line: { select: { name: true } },
+      recipe: { select: { name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  })) as AnyRow[];
 
-  const batchRows = batches as AnyRow[];
-  const completedBatches = batchRows.filter((batch) => batch.status === "COMPLETED");
+  const completedBatches = batches.filter((batch) => batch.status === "COMPLETED");
   const totalPlanned = sumBy(completedBatches, (batch) => batch.plannedQty);
   const totalActual = sumBy(completedBatches, (batch) => batch.actualQty);
+
+  // Derive line / recipe rollups from the period's batches only (tab isolation:
+  // never pull procurement or other module metrics).
+  const lineMap = new Map<string, { name: string; batchCount: number; status: string }>();
+  const recipeMap = new Map<string, { name: string; batchCount: number; materialCount: number }>();
+  for (const batch of batches) {
+    const lineName = batch.line?.name ?? "Unassigned";
+    const lineEntry = lineMap.get(lineName) ?? { name: lineName, batchCount: 0, status: "ACTIVE" };
+    lineEntry.batchCount += 1;
+    lineMap.set(lineName, lineEntry);
+
+    const recipeName = batch.recipe?.name ?? batch.productName ?? "Unassigned";
+    const recipeEntry = recipeMap.get(recipeName) ?? { name: recipeName, batchCount: 0, materialCount: 0 };
+    recipeEntry.batchCount += 1;
+    recipeMap.set(recipeName, recipeEntry);
+  }
 
   return {
     summary: {
@@ -294,8 +327,8 @@ export async function getProductionReport(companyId: string, fromDate?: string, 
       yieldRate: totalPlanned > 0 ? ((totalActual / totalPlanned) * 100).toFixed(1) : "0",
     },
     batches,
-    lines: (lines as AnyRow[]).map((line) => ({ name: line.name, batchCount: line.batches.length, status: line.status })),
-    recipes: (recipes as AnyRow[]).map((recipe) => ({ name: recipe.name, batchCount: recipe.batches.length, materialCount: recipe.materials.length })),
+    lines: Array.from(lineMap.values()),
+    recipes: Array.from(recipeMap.values()),
   };
 }
 
