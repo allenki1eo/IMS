@@ -415,9 +415,10 @@ model Warehouse {
   grns          GoodsReceivedNote[]
   fromTransfers StockTransfer[]     @relation("TransferFrom")
   toTransfers   StockTransfer[]     @relation("TransferTo")
-  adjustments   StockAdjustment[]
-  storeIssues   StoreIssue[]
-  fgLots        FGLot[]
+  adjustments        StockAdjustment[]
+  storeIssues        StoreIssue[]
+  fgLots             FGLot[]
+  defaultFgProducts  FGProduct[] @relation("FGProductDefaultWarehouse")
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1407,6 +1408,7 @@ model ProductionBatch {
   brewMaterialUsages BrewMaterialUsage[]
   unitankAnalyses    UnitankAnalysis[]
   bbtAnalyses        BBTAnalysis[]
+  fgLots             FGLot[]
 
   @@index([companyId])
   @@index([status])
@@ -1561,48 +1563,68 @@ model NonConformance {
 // ─── Phase 9: Finished Goods & Dispatch ───────────────────────────────────────
 
 model FGProduct {
-  id          String   @id @default(cuid())
-  companyId   String
-  code        String
-  name        String
-  description String?
-  uom         String   @default("UNIT")
-  unitPrice   Float?
-  isActive    Boolean  @default(true)
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  companyId          String
+  code               String
+  name               String
+  description        String?
+  uom                String   @default("UNIT")
+  unitPrice          Float?
+  lineFamily         String   @default("BREWING") // BREWING | SPIRITS
+  abvPct             Float?
+  packSize           Float?
+  packUom            String?
+  unitsPerCase       Int?
+  requiresTraStamp   Boolean  @default(false)
+  traStampType       String?  // Align with TraStampBatch.stampType (BEER, SPIRITS, …)
+  defaultWarehouseId String?
+  isActive           Boolean  @default(true)
+  createdById        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  lots FGLot[]
+  lots               FGLot[]
+  defaultWarehouse   Warehouse?            @relation("FGProductDefaultWarehouse", fields: [defaultWarehouseId], references: [id])
+  traActivations     TraStampActivation[]
 
   @@unique([companyId, code])
   @@index([companyId])
+  @@index([lineFamily])
   @@map("fg_products")
 }
 
 model FGLot {
-  id          String    @id @default(cuid())
-  companyId   String
-  productId   String
-  lotNumber   String?
-  quantityIn  Float
-  quantityOut Float     @default(0)
-  unitCost    Float?
-  bestBefore  DateTime?
-  warehouseId String?
-  status      String    @default("AVAILABLE")
-  notes       String?
-  createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  companyId          String
+  productId          String
+  lotNumber          String?
+  quantityIn         Float
+  quantityOut        Float     @default(0)
+  unitCost           Float?
+  bestBefore         DateTime?
+  warehouseId        String?
+  productionBatchId  String?
+  abvPct             Float?
+  qaStatus           String    @default("PENDING") // PENDING | RELEASED | HOLD
+  qaReleasedAt       DateTime?
+  qaReleasedById     String?
+  status             String    @default("AVAILABLE")
+  notes              String?
+  createdById        String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  product       FGProduct          @relation(fields: [productId], references: [id])
-  warehouse     Warehouse?         @relation(fields: [warehouseId], references: [id])
-  dispatchLines DispatchOrderLine[]
+  product         FGProduct           @relation(fields: [productId], references: [id])
+  warehouse       Warehouse?          @relation(fields: [warehouseId], references: [id])
+  productionBatch ProductionBatch?    @relation(fields: [productionBatchId], references: [id])
+  dispatchLines   DispatchOrderLine[]
+  traActivations  TraStampActivation[]
 
   @@index([companyId])
   @@index([productId])
   @@index([status])
+  @@index([qaStatus])
+  @@index([productionBatchId])
   @@map("fg_lots")
 }
 
@@ -1624,9 +1646,10 @@ model DispatchOrder {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  lines   DispatchOrderLine[]
-  vehicle Vehicle?            @relation(fields: [vehicleId], references: [id])
-  driver  Driver?             @relation(fields: [driverId], references: [id])
+  lines          DispatchOrderLine[]
+  vehicle        Vehicle?             @relation(fields: [vehicleId], references: [id])
+  driver         Driver?              @relation(fields: [driverId], references: [id])
+  traActivations TraStampActivation[]
 
   @@index([companyId])
   @@index([status])
@@ -2077,21 +2100,30 @@ model TraStampBatch {
 }
 
 model TraStampActivation {
-  id          String   @id @default(cuid())
-  companyId   String
-  batchId     String
-  reference   String   @unique
-  productName String
-  quantity    Int
-  activatedAt DateTime @default(now())
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdById String
+  id              String   @id @default(cuid())
+  companyId       String
+  batchId         String
+  reference       String   @unique
+  productName     String
+  fgProductId     String?
+  fgLotId         String?
+  dispatchOrderId String?
+  quantity        Int
+  activatedAt     DateTime @default(now())
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
 
-  batch TraStampBatch @relation(fields: [batchId], references: [id])
+  batch         TraStampBatch  @relation(fields: [batchId], references: [id])
+  fgProduct     FGProduct?     @relation(fields: [fgProductId], references: [id])
+  fgLot         FGLot?         @relation(fields: [fgLotId], references: [id])
+  dispatchOrder DispatchOrder? @relation(fields: [dispatchOrderId], references: [id])
 
   @@index([companyId])
+  @@index([fgProductId])
+  @@index([fgLotId])
+  @@index([dispatchOrderId])
   @@map("tra_stamp_activations")
 }
 

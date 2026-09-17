@@ -34,7 +34,22 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { code, name, description, uom, unitPrice, isActive } = body;
+  const {
+    code,
+    name,
+    description,
+    uom,
+    unitPrice,
+    isActive,
+    lineFamily,
+    abvPct,
+    packSize,
+    packUom,
+    unitsPerCase,
+    requiresTraStamp,
+    traStampType,
+    defaultWarehouseId,
+  } = body;
 
   const { ipAddress } = getRequestMeta(request);
 
@@ -49,6 +64,14 @@ export async function PATCH(
         ...(uom !== undefined ? { uom } : {}),
         ...(unitPrice !== undefined ? { unitPrice } : {}),
         ...(isActive !== undefined ? { isActive } : {}),
+        ...(lineFamily !== undefined ? { lineFamily } : {}),
+        ...(abvPct !== undefined ? { abvPct } : {}),
+        ...(packSize !== undefined ? { packSize } : {}),
+        ...(packUom !== undefined ? { packUom } : {}),
+        ...(unitsPerCase !== undefined ? { unitsPerCase } : {}),
+        ...(requiresTraStamp !== undefined ? { requiresTraStamp } : {}),
+        ...(traStampType !== undefined ? { traStampType } : {}),
+        ...(defaultWarehouseId !== undefined ? { defaultWarehouseId } : {}),
       },
       auth.user.id,
       auth.user.fullName,
@@ -59,11 +82,14 @@ export async function PATCH(
     const msg = err instanceof Error ? err.message : "Failed";
     if (msg === "Product not found") return notFound(msg);
     if (
-      msg === "A product with this code already exists" ||
-      msg === "Product code is required" ||
-      msg === "Product name is required" ||
-      msg === "Unit price cannot be negative"
-    ) return badRequest(msg);
+      msg.includes("required") ||
+      msg.includes("already exists") ||
+      msg.includes("must be") ||
+      msg.includes("cannot be") ||
+      msg.includes("not found") ||
+      msg.includes("lineFamily")
+    )
+      return badRequest(msg);
     return handleError(err);
   }
 }

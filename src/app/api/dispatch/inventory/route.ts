@@ -15,11 +15,13 @@ export async function GET(request: NextRequest) {
   const pagination = parsePagination(searchParams);
   const productId = searchParams.get("productId") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
+  const qaStatus = searchParams.get("qaStatus") ?? undefined;
 
   try {
     const { data, meta } = await listLots(companyId, {
       productId,
       status,
+      qaStatus,
       page: pagination.page,
       pageSize: pagination.pageSize,
     });
@@ -39,9 +41,22 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { productId, lotNumber, quantityIn, unitCost, bestBefore, warehouseId, notes } = body;
+  const {
+    productId,
+    lotNumber,
+    quantityIn,
+    unitCost,
+    bestBefore,
+    warehouseId,
+    productionBatchId,
+    abvPct,
+    notes,
+  } = body;
 
   if (!productId || typeof productId !== "string") return badRequest("productId is required");
+  if (!lotNumber || typeof lotNumber !== "string" || !lotNumber.trim())
+    return badRequest("lotNumber is required");
+  if (!warehouseId || typeof warehouseId !== "string") return badRequest("warehouseId is required");
   if (!quantityIn || typeof quantityIn !== "number" || quantityIn <= 0)
     return badRequest("quantityIn must be a positive number");
 
@@ -52,11 +67,13 @@ export async function POST(request: NextRequest) {
       companyId,
       {
         productId,
-        lotNumber: lotNumber ?? null,
+        lotNumber,
         quantityIn,
         unitCost: unitCost ?? null,
         bestBefore: bestBefore ?? null,
-        warehouseId: warehouseId ?? null,
+        warehouseId,
+        productionBatchId: productionBatchId ?? null,
+        abvPct: abvPct ?? null,
         notes: notes ?? null,
       },
       auth.user.id,
@@ -67,12 +84,12 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
     if (
-      msg === "Product not found" ||
-      msg === "Product is inactive" ||
-      msg === "Warehouse not found" ||
-      msg === "Quantity must be greater than zero" ||
-      msg === "Unit cost cannot be negative" ||
-      msg === "Best before date is invalid"
+      msg.includes("required") ||
+      msg.includes("not found") ||
+      msg.includes("inactive") ||
+      msg.includes("must be") ||
+      msg.includes("cannot be") ||
+      msg.includes("invalid")
     )
       return badRequest(msg);
     return handleError(err);

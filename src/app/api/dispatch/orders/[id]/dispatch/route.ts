@@ -25,7 +25,11 @@ export async function POST(
     if (
       msg === "Only CONFIRMED orders can be dispatched" ||
       msg.startsWith("Insufficient quantity") ||
-      msg.startsWith("Lot not found")
+      msg.startsWith("Lot not found") ||
+      msg.startsWith("Cannot dispatch") ||
+      msg.startsWith("Lot is required") ||
+      msg.includes("not QA-released") ||
+      msg.includes("TRA stamp activation required")
     )
       return badRequest(msg);
     return handleError(err);

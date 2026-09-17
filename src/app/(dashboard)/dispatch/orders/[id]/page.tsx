@@ -54,6 +54,7 @@ interface LotOption {
   product?: { code: string; name: string } | null;
   lotNumber?: string | null;
   availableQty: number;
+  qaStatus?: string;
 }
 
 interface ProductOption {
@@ -105,7 +106,7 @@ export default function DispatchOrderDetailPage() {
   useEffect(() => {
     if (!showAddLine) return;
     Promise.all([
-      fetch("/api/dispatch/inventory?status=AVAILABLE&pageSize=200").then((r) => r.json()),
+      fetch("/api/dispatch/inventory?status=AVAILABLE&qaStatus=RELEASED&pageSize=200").then((r) => r.json()),
       fetch("/api/dispatch/products?pageSize=200").then((r) => r.json()),
     ])
       .then(([lotsData, productsData]) => {
@@ -146,6 +147,10 @@ export default function DispatchOrderDetailPage() {
 
   async function handleAddLine(e: React.FormEvent) {
     e.preventDefault();
+    if (!lineForm.lotId) {
+      toast.error("Lot is required (QA RELEASED lots only)");
+      return;
+    }
     if (!lineForm.description.trim()) {
       toast.error("Description is required");
       return;
@@ -345,7 +350,7 @@ export default function DispatchOrderDetailPage() {
               <form onSubmit={handleAddLine} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label>Lot (optional)</Label>
+                    <Label>Lot (required, QA RELEASED)</Label>
                     <Select
                       value={lineForm.lotId || "__none"}
                       onValueChange={(v) => setLineForm((p) => ({ ...p, lotId: v === "__none" ? "" : v }))}

@@ -57,6 +57,9 @@ type StampBatchInput = {
 type StampActivationInput = {
   batchId?: unknown;
   productName?: unknown;
+  fgProductId?: unknown;
+  fgLotId?: unknown;
+  dispatchOrderId?: unknown;
   quantity?: unknown;
   activatedAt?: unknown;
   notes?: unknown;
@@ -163,7 +166,12 @@ export async function listStampActivations(
       skip,
       take: pageSize,
       orderBy: { activatedAt: "desc" },
-      include: { batch: { select: { batchNumber: true, stampType: true } } },
+      include: {
+        batch: { select: { batchNumber: true, stampType: true } },
+        fgProduct: { select: { id: true, code: true, name: true, traStampType: true } },
+        fgLot: { select: { id: true, lotNumber: true, qaStatus: true } },
+        dispatchOrder: { select: { id: true, reference: true } },
+      },
     }),
     db.traStampActivation.count({ where }),
   ]);
@@ -178,15 +186,46 @@ export async function createStampActivation(
   ipAddress?: string
 ) {
   const batchId = asTrimmedString(data.batchId);
-  const productName = asTrimmedString(data.productName);
+  const fgProductId = asTrimmedString(data.fgProductId);
+  const fgLotId = asTrimmedString(data.fgLotId);
+  const dispatchOrderId = asTrimmedString(data.dispatchOrderId) || null;
   const qty = positiveInteger(data.quantity, "Quantity");
   const activatedAt = optionalDate(data.activatedAt, "Activation date") ?? new Date();
 
   if (!batchId) throw new Error("Stamp batch is required");
-  if (!productName) throw new Error("Product name is required");
+  if (!fgProductId) throw new Error("FG product is required");
+  if (!fgLotId) throw new Error("FG lot is required");
+
+  const product = await db.fGProduct.findUnique({ where: { id: fgProductId } });
+  if (!product || product.companyId !== companyId) throw new Error("FG product not found");
+  if (!product.requiresTraStamp) {
+    throw new Error("Selected FG product does not require TRA stamps");
+  }
+  if (!product.traStampType) {
+    throw new Error("FG product is missing traStampType");
+  }
+
+  const lot = await db.fGLot.findUnique({ where: { id: fgLotId } });
+  if (!lot || lot.companyId !== companyId) throw new Error("FG lot not found");
+  if (lot.productId !== product.id) throw new Error("FG lot does not belong to the selected product");
+  if (lot.qaStatus !== "RELEASED") {
+    throw new Error("Cannot activate TRA stamps on an unreleased lot");
+  }
+
+  if (dispatchOrderId) {
+    const order = await db.dispatchOrder.findUnique({ where: { id: dispatchOrderId } });
+    if (!order || order.companyId !== companyId) throw new Error("Dispatch order not found");
+  }
+
+  const productName = asTrimmedString(data.productName) || product.name;
 
   const batch = await db.traStampBatch.findUnique({ where: { id: batchId } }) as StampBatch | null;
   if (!batch || batch.companyId !== companyId) throw new Error("Stamp batch not found");
+  if (batch.stampType.toUpperCase() !== product.traStampType.toUpperCase()) {
+    throw new Error(
+      `Stamp type mismatch: batch is ${batch.stampType}, product requires ${product.traStampType}`
+    );
+  }
   assertBatchCanActivate(batch, qty, activatedAt);
 
   const activation = await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -218,6 +257,9 @@ export async function createStampActivation(
         batchId,
         reference: generateRef(),
         productName,
+        fgProductId,
+        fgLotId,
+        dispatchOrderId,
         quantity: qty,
         activatedAt,
         notes: optionalString(data.notes),
@@ -233,7 +275,7 @@ export async function createStampActivation(
     module: "tra-stamps",
     resource: "stamp-activation",
     recordId: activation.id,
-    newValue: { productName, quantity: qty },
+    newValue: { productName, fgProductId, fgLotId, quantity: qty },
     description: "Activated TRA stamps",
     ipAddress,
     companyId,

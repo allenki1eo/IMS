@@ -40,6 +40,9 @@ interface FgLot {
   bestBefore?: string | null;
   warehouse?: { name: string } | null;
   status: string;
+  qaStatus?: string;
+  abvPct?: number | null;
+  qaReleasedAt?: string | null;
   notes?: string | null;
   createdAt: string;
   dispatchLines?: DispatchLine[];
@@ -56,12 +59,15 @@ export default function FgLotDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [releasing, setReleasing] = useState(false);
   const [editForm, setEditForm] = useState({
     lotNumber: "",
     unitCost: "",
     bestBefore: "",
     notes: "",
     status: "AVAILABLE",
+    qaStatus: "PENDING",
+    abvPct: "",
   });
 
   const loadData = useCallback(() => {
@@ -82,6 +88,8 @@ export default function FgLotDetailPage() {
           bestBefore: l.bestBefore ? l.bestBefore.split("T")[0] : "",
           notes: l.notes ?? "",
           status: l.status,
+          qaStatus: l.qaStatus ?? "PENDING",
+          abvPct: l.abvPct != null ? String(l.abvPct) : "",
         });
       })
       .catch(() => toast.error("Failed to load lot"))
@@ -108,6 +116,8 @@ export default function FgLotDetailPage() {
           bestBefore: editForm.bestBefore || undefined,
           notes: editForm.notes.trim() || undefined,
           status: editForm.status,
+          qaStatus: editForm.qaStatus,
+          abvPct: editForm.abvPct ? parseFloat(editForm.abvPct) : undefined,
         }),
       });
       const json = await res.json();
@@ -119,6 +129,25 @@ export default function FgLotDetailPage() {
       toast.error("Network error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleReleaseQa() {
+    setReleasing(true);
+    try {
+      const res = await fetch(`/api/dispatch/inventory/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qaStatus: "RELEASED" }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Failed to release lot"); return; }
+      toast.success("Lot QA released — eligible for dispatch");
+      loadData();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setReleasing(false);
     }
   }
 
@@ -140,6 +169,12 @@ export default function FgLotDetailPage() {
                 Back
               </Link>
             </Button>
+            {lot.qaStatus !== "RELEASED" && (
+              <Button onClick={handleReleaseQa} disabled={releasing}>
+                {releasing && <LoadingSpinner className="mr-2" />}
+                Release QA
+              </Button>
+            )}
             {lot.product && (
               <Button variant="outline" asChild>
                 <Link href={`/dispatch/products/${lot.product.id}`}>View Product</Link>
@@ -155,6 +190,7 @@ export default function FgLotDetailPage() {
           <CardTitle className="text-base">Lot Info</CardTitle>
           <div className="flex items-center gap-2">
             <StatusBadge status={lot.status} />
+            <StatusBadge status={lot.qaStatus ?? "PENDING"} />
             {!editing && (
               <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
                 Edit
@@ -202,22 +238,55 @@ export default function FgLotDetailPage() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label>Stock Status</Label>
+                  <Select
+                    value={editForm.status}
+                    onValueChange={(v) => setEditForm((p) => ({ ...p, status: v }))}
+                    disabled={saving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LOT_STATUSES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>QA Status</Label>
+                  <Select
+                    value={editForm.qaStatus}
+                    onValueChange={(v) => setEditForm((p) => ({ ...p, qaStatus: v }))}
+                    disabled={saving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PENDING">PENDING</SelectItem>
+                      <SelectItem value="RELEASED">RELEASED</SelectItem>
+                      <SelectItem value="HOLD">HOLD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-1">
-                <Label>Status</Label>
-                <Select
-                  value={editForm.status}
-                  onValueChange={(v) => setEditForm((p) => ({ ...p, status: v }))}
+                <Label htmlFor="edit-abvPct">ABV %</Label>
+                <Input
+                  id="edit-abvPct"
+                  name="abvPct"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="any"
+                  value={editForm.abvPct}
+                  onChange={handleEditChange}
                   disabled={saving}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LOT_STATUSES.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-notes">Notes</Label>
@@ -260,6 +329,14 @@ export default function FgLotDetailPage() {
               <div>
                 <p className="text-muted-foreground">Warehouse</p>
                 <p className="mt-1">{lot.warehouse?.name ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">QA Status</p>
+                <p className="mt-1"><StatusBadge status={lot.qaStatus ?? "PENDING"} /></p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">ABV %</p>
+                <p className="mt-1">{lot.abvPct != null ? `${lot.abvPct}%` : "—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Qty In</p>

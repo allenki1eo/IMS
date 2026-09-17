@@ -23,6 +23,8 @@ interface ProductOption {
   id: string;
   code: string;
   name: string;
+  abvPct?: number | null;
+  defaultWarehouseId?: string | null;
 }
 
 interface WarehouseOption {
@@ -38,6 +40,7 @@ interface FormData {
   unitCost: string;
   bestBefore: string;
   warehouseId: string;
+  abvPct: string;
   notes: string;
 }
 
@@ -53,6 +56,7 @@ export default function NewFgLotPage() {
     unitCost: "",
     bestBefore: "",
     warehouseId: "",
+    abvPct: "",
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -65,21 +69,51 @@ export default function NewFgLotPage() {
       fetch("/api/warehouses?pageSize=200").then((r) => r.json()),
     ])
       .then(([prodData, whData]) => {
-        setProducts(prodData.data ?? []);
+        const prods: ProductOption[] = prodData.data ?? [];
+        setProducts(prods);
         setWarehouses(whData.data ?? []);
+        if (prefillProductId) {
+          const p = prods.find((x) => x.id === prefillProductId);
+          if (p) {
+            setForm((prev) => ({
+              ...prev,
+              abvPct: p.abvPct != null ? String(p.abvPct) : prev.abvPct,
+              warehouseId: p.defaultWarehouseId ?? prev.warehouseId,
+            }));
+          }
+        }
       })
       .catch(() => {});
-  }, []);
+  }, [prefillProductId]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  function handleProductChange(v: string) {
+    const productId = v === "__none" ? "" : v;
+    const p = products.find((x) => x.id === productId);
+    setForm((prev) => ({
+      ...prev,
+      productId,
+      abvPct: p?.abvPct != null ? String(p.abvPct) : "",
+      warehouseId: p?.defaultWarehouseId || prev.warehouseId,
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.productId) {
       toast.error("Product is required");
+      return;
+    }
+    if (!form.lotNumber.trim()) {
+      toast.error("Lot number is required");
+      return;
+    }
+    if (!form.warehouseId) {
+      toast.error("Warehouse is required");
       return;
     }
     if (!form.quantityIn || parseFloat(form.quantityIn) <= 0) {
@@ -94,17 +128,21 @@ export default function NewFgLotPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId: form.productId,
-          lotNumber: form.lotNumber.trim() || undefined,
+          lotNumber: form.lotNumber.trim(),
           quantityIn: parseFloat(form.quantityIn),
           unitCost: form.unitCost ? parseFloat(form.unitCost) : undefined,
           bestBefore: form.bestBefore || undefined,
-          warehouseId: form.warehouseId || undefined,
+          warehouseId: form.warehouseId,
+          abvPct: form.abvPct ? parseFloat(form.abvPct) : undefined,
           notes: form.notes.trim() || undefined,
         }),
       });
       const json = await res.json();
-      if (!res.ok) { toast.error(json.error ?? "Failed to receive stock"); return; }
-      toast.success("Stock received");
+      if (!res.ok) {
+        toast.error(json.error ?? "Failed to receive stock");
+        return;
+      }
+      toast.success("Stock received (QA PENDING)");
       router.push(`/dispatch/inventory/${json.data?.id ?? ""}`);
     } catch {
       toast.error("Network error");
@@ -117,7 +155,7 @@ export default function NewFgLotPage() {
     <div>
       <PageHeader
         title="Receive FG Stock"
-        description="Record incoming finished goods into a new lot"
+        description="Record incoming finished goods into a new lot (starts as QA PENDING)"
         actions={
           <Button variant="outline" asChild>
             <Link href="/dispatch/inventory">
@@ -135,10 +173,12 @@ export default function NewFgLotPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <Label>Product <span className="text-destructive">*</span></Label>
+              <Label>
+                Product <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={form.productId || "__none"}
-                onValueChange={(v) => setForm((p) => ({ ...p, productId: v === "__none" ? "" : v }))}
+                onValueChange={handleProductChange}
                 disabled={submitting}
               >
                 <SelectTrigger>
@@ -156,7 +196,9 @@ export default function NewFgLotPage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="lotNumber">Lot Number (optional)</Label>
+              <Label htmlFor="lotNumber">
+                Lot Number <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="lotNumber"
                 name="lotNumber"
@@ -164,12 +206,15 @@ export default function NewFgLotPage() {
                 onChange={handleChange}
                 placeholder="e.g. LOT-2026-001"
                 disabled={submitting}
+                required
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="quantityIn">Quantity In <span className="text-destructive">*</span></Label>
+                <Label htmlFor="quantityIn">
+                  Quantity In <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="quantityIn"
                   name="quantityIn"
@@ -184,6 +229,24 @@ export default function NewFgLotPage() {
                 />
               </div>
               <div className="space-y-1">
+                <Label htmlFor="abvPct">ABV % (optional override)</Label>
+                <Input
+                  id="abvPct"
+                  name="abvPct"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="any"
+                  value={form.abvPct}
+                  onChange={handleChange}
+                  placeholder="Defaults from product"
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
                 <Label htmlFor="unitCost">Unit Cost (optional)</Label>
                 <Input
                   id="unitCost"
@@ -197,22 +260,23 @@ export default function NewFgLotPage() {
                   disabled={submitting}
                 />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="bestBefore">Best Before Date (optional)</Label>
+                <Input
+                  id="bestBefore"
+                  name="bestBefore"
+                  type="date"
+                  value={form.bestBefore}
+                  onChange={handleChange}
+                  disabled={submitting}
+                />
+              </div>
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="bestBefore">Best Before Date (optional)</Label>
-              <Input
-                id="bestBefore"
-                name="bestBefore"
-                type="date"
-                value={form.bestBefore}
-                onChange={handleChange}
-                disabled={submitting}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label>Warehouse (optional)</Label>
+              <Label>
+                Warehouse <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={form.warehouseId || "__none"}
                 onValueChange={(v) => setForm((p) => ({ ...p, warehouseId: v === "__none" ? "" : v }))}
@@ -222,7 +286,7 @@ export default function NewFgLotPage() {
                   <SelectValue placeholder="Select warehouse" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none">No warehouse</SelectItem>
+                  <SelectItem value="__none">Select warehouse</SelectItem>
                   {warehouses.map((wh) => (
                     <SelectItem key={wh.id} value={wh.id}>
                       {wh.name}
