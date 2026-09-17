@@ -19,9 +19,13 @@ interface UserRow {
   fullName: string;
   username: string;
   email: string;
-  status: string;
+  isActive?: boolean;
+  status?: string;
   lastLoginAt: string | null;
-  roles: { id: string; name: string }[];
+  roles?: Array<
+    | { id: string; name: string }
+    | { role?: { id: string; name: string } | null }
+  >;
 }
 
 export default function UsersPage() {
@@ -44,7 +48,7 @@ export default function UsersPage() {
     fetch(`/api/users?${params}`)
       .then((r) => r.json())
       .then((d) => {
-        setUsers(d.data ?? []);
+        setUsers(Array.isArray(d.data) ? d.data : []);
         setTotal(d.meta?.total ?? 0);
       })
       .catch(() => toast.error("Failed to load users"))
@@ -70,24 +74,34 @@ export default function UsersPage() {
     {
       key: "roles",
       header: "Roles",
-      cell: (row: UserRow) => (
-        <div className="flex flex-wrap gap-1">
-          {row.roles?.length ? (
-            row.roles.map((r) => (
-              <Badge key={r.id} variant="secondary" className="text-xs">
-                {r.name}
-              </Badge>
-            ))
-          ) : (
-            <span className="text-muted-foreground text-xs">No roles</span>
-          )}
-        </div>
-      ),
+      cell: (row: UserRow) => {
+        const roles = (row.roles ?? [])
+          .map((r) => ("role" in r && r.role ? r.role : "id" in r && "name" in r ? r : null))
+          .filter((r): r is { id: string; name: string } => Boolean(r?.id && r?.name));
+        return (
+          <div className="flex flex-wrap gap-1">
+            {roles.length ? (
+              roles.map((r) => (
+                <Badge key={r.id} variant="secondary" className="text-xs">
+                  {r.name}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-muted-foreground text-xs">No roles</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "status",
       header: "Status",
-      cell: (row: UserRow) => <StatusBadge status={row.status} />,
+      cell: (row: UserRow) => {
+        const status =
+          row.status ??
+          (typeof row.isActive === "boolean" ? (row.isActive ? "ACTIVE" : "INACTIVE") : "INACTIVE");
+        return <StatusBadge status={status} />;
+      },
     },
     {
       key: "lastLoginAt",

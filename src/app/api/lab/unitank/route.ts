@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getRequestMeta, getCompanyId, parseBody } from "@/lib/api-helpers";
 import { listUnitankAnalyses, createUnitankAnalysis } from "@/modules/lab/lab.service";
-import { success, created, badRequest } from "@/lib/response";
+import { created, badRequest, paginated, handleError } from "@/lib/response";
+import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "lab:unitank:read");
@@ -11,13 +12,23 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not found");
 
   const { searchParams } = request.nextUrl;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const pageSize = Math.min(100, parseInt(searchParams.get("pageSize") ?? "20"));
+  const pagination = parsePagination(searchParams);
   const batchId = searchParams.get("batchId") ?? undefined;
   const tankNumber = searchParams.get("tankNumber") ?? undefined;
 
-  const data = await listUnitankAnalyses({ companyId, page, pageSize, batchId, tankNumber });
-  return success(data);
+  try {
+    const { analyses, total } = await listUnitankAnalyses({
+      companyId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      batchId,
+      tankNumber,
+    });
+    return paginated(analyses, buildMeta(total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -37,29 +48,33 @@ export async function POST(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
-  const record = await createUnitankAnalysis({
-    companyId,
-    batchId: b.batchId,
-    tankNumber: b.tankNumber,
-    brand: b.brand,
-    stage: b.stage,
-    sampleDate: new Date(b.sampleDate),
-    sampleTime: b.sampleTime,
-    alc: b.alc,
-    oe: b.oe,
-    pg: b.pg,
-    ph: b.ph,
-    fg: b.fg,
-    col: b.col,
-    bu: b.bu,
-    adf: b.adf,
-    analystId: b.analystId,
-    notes: b.notes,
-    createdById: auth.user.id,
-    userName: auth.user.fullName,
-    ipAddress,
-    userAgent,
-  });
-
-  return created(record);
+  try {
+    const record = await createUnitankAnalysis({
+      companyId,
+      batchId: b.batchId,
+      tankNumber: b.tankNumber,
+      brand: b.brand,
+      stage: b.stage,
+      sampleDate: new Date(b.sampleDate),
+      sampleTime: b.sampleTime,
+      alc: b.alc,
+      oe: b.oe,
+      pg: b.pg,
+      ph: b.ph,
+      fg: b.fg,
+      col: b.col,
+      bu: b.bu,
+      adf: b.adf,
+      analystId: b.analystId,
+      notes: b.notes,
+      createdById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    return created(record);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }

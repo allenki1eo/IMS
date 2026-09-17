@@ -29,7 +29,7 @@ const PAGE_SIZE = 25;
 
 export default function BBTAnalysisPage() {
   const [page, setPage] = useState(1);
-  const { data: analyses, total, loading } = usePagedData<BBTRow>(
+  const { data: analyses, total, loading, error, mutate } = usePagedData<BBTRow>(
     `/api/lab/bbt?page=${page}&pageSize=${PAGE_SIZE}`
   );
 
@@ -78,6 +78,8 @@ export default function BBTAnalysisPage() {
         page={page}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
+        error={error}
+        onRetry={() => mutate()}
         emptyTitle="No BBT analyses recorded yet"
       />
     </div>

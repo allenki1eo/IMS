@@ -23,7 +23,7 @@ const PAGE_SIZE = 20;
 
 export default function ProductSpecsPage() {
   const [page, setPage] = useState(1);
-  const { data: specs, total, loading } = usePagedData<SpecRow>(
+  const { data: specs, total, loading, error, mutate } = usePagedData<SpecRow>(
     `/api/lab/specs?page=${page}&pageSize=${PAGE_SIZE}`
   );
 
@@ -31,7 +31,7 @@ export default function ProductSpecsPage() {
     { key: "brand", header: "Brand", cell: (row: SpecRow) => <strong>{row.brand}</strong> },
     { key: "productCode", header: "Product Code", cell: (row: SpecRow) => row.productCode ?? "-" },
     { key: "version", header: "Version", cell: (row: SpecRow) => `v${row.version}` },
-    { key: "parameters", header: "Parameters", cell: (row: SpecRow) => row.parameters.length },
+    { key: "parameters", header: "Parameters", cell: (row: SpecRow) => (row.parameters?.length ?? 0) },
     { key: "isActive", header: "Status", cell: (row: SpecRow) => <StatusBadge status={row.isActive ? "ACTIVE" : "INACTIVE"} /> },
     {
       key: "actions", header: "",
@@ -67,6 +67,8 @@ export default function ProductSpecsPage() {
         page={page}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
+        error={error}
+        onRetry={() => mutate()}
         emptyTitle="No product specs defined yet"
       />
     </div>

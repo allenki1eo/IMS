@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getRequestMeta, getCompanyId, parseBody } from "@/lib/api-helpers";
 import { listCIPRecords, createCIPRecord } from "@/modules/brewing/brewing.service";
-import { success, created, badRequest } from "@/lib/response";
+import { created, badRequest, paginated, handleError } from "@/lib/response";
+import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "brewing:cip:read");
@@ -11,12 +12,21 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not found");
 
   const { searchParams } = request.nextUrl;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const pageSize = Math.min(100, parseInt(searchParams.get("pageSize") ?? "20"));
+  const pagination = parsePagination(searchParams);
   const vessel = searchParams.get("vessel") ?? undefined;
 
-  const data = await listCIPRecords({ companyId, page, pageSize, vessel });
-  return success(data);
+  try {
+    const { records, total } = await listCIPRecords({
+      companyId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      vessel,
+    });
+    return paginated(records, buildMeta(total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -34,30 +44,34 @@ export async function POST(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
-  const record = await createCIPRecord({
-    companyId,
-    vessel: b.vessel,
-    cipDate: new Date(b.cipDate),
-    startTime: b.startTime,
-    endTime: b.endTime,
-    causticTemp: b.causticTemp,
-    causticHL: b.causticHL,
-    causticTimeMin: b.causticTimeMin,
-    causticCondition: b.causticCondition,
-    pushWaterHL: b.pushWaterHL,
-    nitricAcidPct: b.nitricAcidPct,
-    nitricHL: b.nitricHL,
-    nitricTimeMin: b.nitricTimeMin,
-    rinsingWaterHL: b.rinsingWaterHL,
-    rinsingTimeMin: b.rinsingTimeMin,
-    carryOver: b.carryOver,
-    operatorSign: b.operatorSign,
-    notes: b.notes,
-    createdById: auth.user.id,
-    userName: auth.user.fullName,
-    ipAddress,
-    userAgent,
-  });
-
-  return created(record);
+  try {
+    const record = await createCIPRecord({
+      companyId,
+      vessel: b.vessel,
+      cipDate: new Date(b.cipDate),
+      startTime: b.startTime,
+      endTime: b.endTime,
+      causticTemp: b.causticTemp,
+      causticHL: b.causticHL,
+      causticTimeMin: b.causticTimeMin,
+      causticCondition: b.causticCondition,
+      pushWaterHL: b.pushWaterHL,
+      nitricAcidPct: b.nitricAcidPct,
+      nitricHL: b.nitricHL,
+      nitricTimeMin: b.nitricTimeMin,
+      rinsingWaterHL: b.rinsingWaterHL,
+      rinsingTimeMin: b.rinsingTimeMin,
+      carryOver: b.carryOver,
+      operatorSign: b.operatorSign,
+      notes: b.notes,
+      createdById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    return created(record);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }

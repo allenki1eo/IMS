@@ -33,7 +33,7 @@ const PAGE_SIZE = 25;
 
 export default function UnitankAnalysisPage() {
   const [page, setPage] = useState(1);
-  const { data: analyses, total, loading } = usePagedData<UTRow>(
+  const { data: analyses, total, loading, error, mutate } = usePagedData<UTRow>(
     `/api/lab/unitank?page=${page}&pageSize=${PAGE_SIZE}`
   );
 
@@ -82,6 +82,8 @@ export default function UnitankAnalysisPage() {
         page={page}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
+        error={error}
+        onRetry={() => mutate()}
         emptyTitle="No unitank analyses recorded yet"
       />
     </div>

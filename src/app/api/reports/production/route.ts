@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getProductionReport } from "@/modules/reports/reports.service";
 import { requirePermission, getCompanyId } from "@/lib/api-helpers";
-import { success, badRequest } from "@/lib/response";
+import { success, badRequest, handleError } from "@/lib/response";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "reports:report:read");
@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     if (err instanceof Error && (err.message === "Invalid date range" || err.message === "From date must be before to date")) {
       return badRequest(err.message);
     }
-    return badRequest("Failed to generate production report");
+    console.error("[API Error] production report", err);
+    return handleError(err);
   }
 }

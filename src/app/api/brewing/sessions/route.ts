@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requirePermission, getRequestMeta, getCompanyId, parseBody } from "@/lib/api-helpers";
 import { listBrewingSessions, createBrewingSession } from "@/modules/brewing/brewing.service";
-import { success, created, badRequest } from "@/lib/response";
+import { created, badRequest, paginated, handleError } from "@/lib/response";
+import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "brewing:session:read");
@@ -11,13 +12,23 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not found");
 
   const { searchParams } = request.nextUrl;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const pageSize = Math.min(100, parseInt(searchParams.get("pageSize") ?? "20"));
+  const pagination = parsePagination(searchParams);
   const batchId = searchParams.get("batchId") ?? undefined;
   const brand = searchParams.get("brand") ?? undefined;
 
-  const data = await listBrewingSessions({ companyId, page, pageSize, batchId, brand });
-  return success(data);
+  try {
+    const { sessions, total } = await listBrewingSessions({
+      companyId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      batchId,
+      brand,
+    });
+    return paginated(sessions, buildMeta(total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -36,19 +47,23 @@ export async function POST(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
-  const session = await createBrewingSession({
-    companyId,
-    batchId,
-    brewDate: new Date(brewDate),
-    brand,
-    brewNumber,
-    activities,
-    notes,
-    createdById: auth.user.id,
-    userName: auth.user.fullName,
-    ipAddress,
-    userAgent,
-  });
-
-  return created(session);
+  try {
+    const session = await createBrewingSession({
+      companyId,
+      batchId,
+      brewDate: new Date(brewDate),
+      brand,
+      brewNumber,
+      activities,
+      notes,
+      createdById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    return created(session);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }

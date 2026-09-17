@@ -26,7 +26,7 @@ const PAGE_SIZE = 20;
 
 export default function BrewingSessionsPage() {
   const [page, setPage] = useState(1);
-  const { data: sessions, total, loading } = usePagedData<SessionRow>(
+  const { data: sessions, total, loading, error, mutate } = usePagedData<SessionRow>(
     `/api/brewing/sessions?page=${page}&pageSize=${PAGE_SIZE}`
   );
 
@@ -62,7 +62,7 @@ export default function BrewingSessionsPage() {
       key: "activities",
       header: "Activities",
       cell: (row: SessionRow) => (
-        <span className="text-muted-foreground">{row.activities.length}</span>
+        <span className="text-muted-foreground">{(row.activities?.length ?? 0)}</span>
       ),
     },
     { key: "status", header: "Status", cell: (row: SessionRow) => <StatusBadge status={row.status} /> },
@@ -101,6 +101,8 @@ export default function BrewingSessionsPage() {
         page={page}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
+        error={error}
+        onRetry={() => mutate()}
         emptyTitle="No brewing sessions recorded yet"
       />
     </div>

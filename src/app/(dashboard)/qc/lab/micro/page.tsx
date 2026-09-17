@@ -21,7 +21,7 @@ const PAGE_SIZE = 20;
 
 export default function MicroReportsPage() {
   const [page, setPage] = useState(1);
-  const { data: reports, total, loading } = usePagedData<MicroRow>(
+  const { data: reports, total, loading, error, mutate } = usePagedData<MicroRow>(
     `/api/lab/micro?page=${page}&pageSize=${PAGE_SIZE}`
   );
 
@@ -34,8 +34,8 @@ export default function MicroReportsPage() {
   const columns = [
     { key: "reference", header: "Reference", cell: (row: MicroRow) => <strong>{row.reference}</strong> },
     { key: "reportDate", header: "Date", cell: (row: MicroRow) => format(new Date(row.reportDate), "dd MMM yyyy") },
-    { key: "samples", header: "Samples", cell: (row: MicroRow) => row.samples.length },
-    { key: "result", header: "Summary", cell: (row: MicroRow) => getSummary(row.samples) },
+    { key: "samples", header: "Samples", cell: (row: MicroRow) => (row.samples?.length ?? 0) },
+    { key: "result", header: "Summary", cell: (row: MicroRow) => getSummary(row.samples ?? []) },
     {
       key: "actions", header: "",
       cell: (row: MicroRow) => (
@@ -70,6 +70,8 @@ export default function MicroReportsPage() {
         page={page}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
+        error={error}
+        onRetry={() => mutate()}
         emptyTitle="No micro reports recorded yet"
       />
     </div>

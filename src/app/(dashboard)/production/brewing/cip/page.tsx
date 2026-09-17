@@ -30,7 +30,7 @@ const PAGE_SIZE = 20;
 
 export default function CIPRecordsPage() {
   const [page, setPage] = useState(1);
-  const { data: records, total, loading } = usePagedData<CIPRow>(
+  const { data: records, total, loading, error, mutate } = usePagedData<CIPRow>(
     `/api/brewing/cip?page=${page}&pageSize=${PAGE_SIZE}`
   );
 
@@ -74,6 +74,8 @@ export default function CIPRecordsPage() {
         page={page}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
+        error={error}
+        onRetry={() => mutate()}
         emptyTitle="No CIP records yet"
       />
     </div>

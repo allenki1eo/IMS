@@ -135,18 +135,20 @@ export function DataTable<T extends { id: string }>({
   onImport,
   mobileCardRender,
 }: DataTableProps<T>) {
+  // Guard against non-array payloads (API shape mismatches) so `.map` never throws
+  const safeData = React.useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const totalPages = Math.ceil(total / pageSize);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
 
   const toggleAll = () => {
-    if (selected.size === data.length) {
+    if (selected.size === safeData.length) {
       const next = new Set<string>();
       setSelected(next);
       onSelectionChange?.([]);
     } else {
-      const next = new Set(data.map((r) => r.id));
+      const next = new Set(safeData.map((r) => r.id));
       setSelected(next);
       onSelectionChange?.(Array.from(next));
     }
@@ -173,14 +175,14 @@ export function DataTable<T extends { id: string }>({
   };
 
   const sortedData = React.useMemo(() => {
-    if (!sortKey || !sortDir) return data;
-    return [...data].sort((a, b) => {
+    if (!sortKey || !sortDir) return safeData;
+    return [...safeData].sort((a, b) => {
       const av = (a as any)[sortKey] ?? "";
       const bv = (b as any)[sortKey] ?? "";
       const cmp = String(av).localeCompare(String(bv));
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [data, sortKey, sortDir]);
+  }, [safeData, sortKey, sortDir]);
 
   const allCols = [
     ...(selectable ? [{ key: "__select", header: "", className: "w-10" }] : []),
@@ -251,7 +253,7 @@ export function DataTable<T extends { id: string }>({
                 {selectable && (
                   <th className="w-10 px-4 py-3">
                     <Checkbox
-                      checked={data.length > 0 && selected.size === data.length}
+                      checked={safeData.length > 0 && selected.size === safeData.length}
                       onCheckedChange={toggleAll}
                       aria-label="Select all"
                     />
@@ -378,7 +380,7 @@ export function DataTable<T extends { id: string }>({
                 )}
               </span>
             )}
-            {exportable && data.length > 0 && (
+            {exportable && safeData.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
@@ -387,15 +389,15 @@ export function DataTable<T extends { id: string }>({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => exportCsv(exportCols, data, exportFilename)}>
+                  <DropdownMenuItem onClick={() => exportCsv(exportCols, safeData, exportFilename)}>
                     <Download className="h-3.5 w-3.5 mr-2" />
                     Export CSV
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportExcel(exportCols, data, exportFilename)}>
+                  <DropdownMenuItem onClick={() => exportExcel(exportCols, safeData, exportFilename)}>
                     <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />
                     Export Excel
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportPdf(exportCols, data, exportFilename)}>
+                  <DropdownMenuItem onClick={() => exportPdf(exportCols, safeData, exportFilename)}>
                     <FileText className="h-3.5 w-3.5 mr-2" />
                     Export PDF
                   </DropdownMenuItem>
