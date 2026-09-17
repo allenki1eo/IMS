@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,7 @@ export default function ReportsPage() {
   const [report, setReport] = useState<any>(null);
   const [reportModule, setReportModule] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   async function fetchReport(moduleKey: string = activeModule) {
     if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
@@ -54,6 +56,7 @@ export default function ReportsPage() {
     setLoading(true);
     setReport(null);
     setReportModule(null); // clear previous module data so tabs never show stale numbers
+    setLoadError(null);
     try {
       const params = new URLSearchParams();
       if (fromDate) params.set("fromDate", fromDate);
@@ -64,15 +67,20 @@ export default function ReportsPage() {
       if (res.ok) {
         setReport(json.data ?? null);
         setReportModule(moduleKey);
+        setLoadError(null);
       } else {
         setReport(null);
         setReportModule(null);
-        toast.error(json.error || json.message || "Failed to load report");
+        const msg = json.error || json.message || "Failed to load report";
+        setLoadError(msg);
+        toast.error(msg);
       }
     } catch {
       setReport(null);
       setReportModule(null);
-      toast.error("Failed to load report");
+      const msg = "Failed to load report";
+      setLoadError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -129,7 +137,16 @@ export default function ReportsPage() {
 
       {loading && <LoadingState text={`Loading ${activeModule} report...`} />}
 
-      {report && reportModule === activeModule && (
+      {!loading && loadError && (
+        <ErrorState
+          title={`Could not load ${activeModule} report`}
+          description="The report query failed. This is not the same as an empty period — retry or check the API/database."
+          error={loadError}
+          onRetry={() => fetchReport(activeModule)}
+        />
+      )}
+
+      {!loading && !loadError && report && reportModule === activeModule && (
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
