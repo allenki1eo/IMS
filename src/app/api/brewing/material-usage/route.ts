@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getRequestMeta, getCompanyId, parseBody } from "@/lib/api-helpers";
 import { listBrewMaterialUsages, createBrewMaterialUsage } from "@/modules/brewing/brewing.service";
-import { success, created, badRequest } from "@/lib/response";
+import { created, badRequest, paginated, handleError } from "@/lib/response";
+import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "brewing:material:read");
@@ -11,12 +12,21 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not found");
 
   const { searchParams } = request.nextUrl;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const pageSize = Math.min(100, parseInt(searchParams.get("pageSize") ?? "20"));
+  const pagination = parsePagination(searchParams);
   const batchId = searchParams.get("batchId") ?? undefined;
 
-  const data = await listBrewMaterialUsages({ companyId, page, pageSize, batchId });
-  return success(data);
+  try {
+    const { usages, total } = await listBrewMaterialUsages({
+      companyId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      batchId,
+    });
+    return paginated(usages, buildMeta(total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -35,18 +45,22 @@ export async function POST(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
-  const usage = await createBrewMaterialUsage({
-    companyId,
-    batchId,
-    brewDate: new Date(brewDate),
-    brand,
-    items,
-    notes,
-    createdById: auth.user.id,
-    userName: auth.user.fullName,
-    ipAddress,
-    userAgent,
-  });
-
-  return created(usage);
+  try {
+    const usage = await createBrewMaterialUsage({
+      companyId,
+      batchId,
+      brewDate: new Date(brewDate),
+      brand,
+      items,
+      notes,
+      createdById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    return created(usage);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }

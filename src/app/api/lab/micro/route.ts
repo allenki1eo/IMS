@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getRequestMeta, getCompanyId, parseBody } from "@/lib/api-helpers";
 import { listMicroReports, createMicroReport } from "@/modules/lab/lab.service";
-import { success, created, badRequest } from "@/lib/response";
+import { created, badRequest, paginated, handleError } from "@/lib/response";
+import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "lab:micro:read");
@@ -11,11 +12,19 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not found");
 
   const { searchParams } = request.nextUrl;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const pageSize = Math.min(100, parseInt(searchParams.get("pageSize") ?? "20"));
+  const pagination = parsePagination(searchParams);
 
-  const data = await listMicroReports({ companyId, page, pageSize });
-  return success(data);
+  try {
+    const { reports, total } = await listMicroReports({
+      companyId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
+    return paginated(reports, buildMeta(total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -34,17 +43,21 @@ export async function POST(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
-  const report = await createMicroReport({
-    companyId,
-    reportDate: new Date(b.reportDate),
-    analystId: b.analystId,
-    samples: b.samples,
-    notes: b.notes,
-    createdById: auth.user.id,
-    userName: auth.user.fullName,
-    ipAddress,
-    userAgent,
-  });
-
-  return created(report);
+  try {
+    const report = await createMicroReport({
+      companyId,
+      reportDate: new Date(b.reportDate),
+      analystId: b.analystId,
+      samples: b.samples,
+      notes: b.notes,
+      createdById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    return created(report);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }

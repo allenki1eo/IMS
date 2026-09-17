@@ -23,7 +23,7 @@ const PAGE_SIZE = 20;
 
 export default function BrewMaterialUsagePage() {
   const [page, setPage] = useState(1);
-  const { data: usages, total, loading } = usePagedData<UsageRow>(
+  const { data: usages, total, loading, error, mutate } = usePagedData<UsageRow>(
     `/api/brewing/material-usage?page=${page}&pageSize=${PAGE_SIZE}`
   );
 
@@ -31,7 +31,7 @@ export default function BrewMaterialUsagePage() {
     { key: "reference", header: "Reference", cell: (row: UsageRow) => <span className="font-semibold">{row.reference}</span> },
     { key: "brewDate", header: "Brew Date", cell: (row: UsageRow) => format(new Date(row.brewDate), "dd MMM yyyy") },
     { key: "brand", header: "Brand", cell: (row: UsageRow) => row.brand },
-    { key: "items", header: "Items", cell: (row: UsageRow) => row.items.length },
+    { key: "items", header: "Items", cell: (row: UsageRow) => (row.items?.length ?? 0) },
     { key: "batch", header: "Batch", cell: (row: UsageRow) => row.batch?.reference ?? "-" },
     {
       key: "actions", header: "",
@@ -67,6 +67,8 @@ export default function BrewMaterialUsagePage() {
         page={page}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
+        error={error}
+        onRetry={() => mutate()}
         emptyTitle="No material usage records yet"
       />
     </div>

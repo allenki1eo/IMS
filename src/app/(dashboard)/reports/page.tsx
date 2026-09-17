@@ -42,28 +42,36 @@ export default function ReportsPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [report, setReport] = useState<any>(null);
+  const [reportModule, setReportModule] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function fetchReport() {
+  async function fetchReport(moduleKey: string = activeModule) {
     if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
       toast.error("From date must be before to date");
       return;
     }
 
     setLoading(true);
+    setReport(null);
+    setReportModule(null); // clear previous module data so tabs never show stale numbers
     try {
       const params = new URLSearchParams();
       if (fromDate) params.set("fromDate", fromDate);
       if (toDate) params.set("toDate", toDate);
       const query = params.toString();
-      const res = await fetch(`/api/reports/${activeModule}${query ? `?${query}` : ""}`);
+      const res = await fetch(`/api/reports/${moduleKey}${query ? `?${query}` : ""}`);
       const json = await res.json();
       if (res.ok) {
-        setReport(json.data);
+        setReport(json.data ?? null);
+        setReportModule(moduleKey);
       } else {
+        setReport(null);
+        setReportModule(null);
         toast.error(json.error || json.message || "Failed to load report");
       }
     } catch {
+      setReport(null);
+      setReportModule(null);
       toast.error("Failed to load report");
     } finally {
       setLoading(false);
@@ -71,7 +79,8 @@ export default function ReportsPage() {
   }
 
   useEffect(() => {
-    fetchReport();
+    fetchReport(activeModule);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch on module tab change only
   }, [activeModule]);
 
   function formatDate(d: string) {
@@ -99,7 +108,7 @@ export default function ReportsPage() {
               <Label>To Date</Label>
               <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
             </div>
-            <Button onClick={fetchReport} disabled={loading}>{loading ? "Loading..." : "Generate Report"}</Button>
+            <Button onClick={() => fetchReport()} disabled={loading}>{loading ? "Loading..." : "Generate Report"}</Button>
           </div>
         </CardContent>
       </Card>
@@ -120,7 +129,7 @@ export default function ReportsPage() {
 
       {loading && <LoadingState text={`Loading ${activeModule} report...`} />}
 
-      {report && (
+      {report && reportModule === activeModule && (
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">

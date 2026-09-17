@@ -27,7 +27,10 @@ export async function listBrewingSessions(params: {
       skip,
       take: pageSize,
       orderBy: { brewDate: "desc" },
-      include: { batch: { select: { id: true, reference: true, productName: true } } },
+      include: {
+        batch: { select: { id: true, reference: true, productName: true } },
+        activities: { select: { id: true } },
+      },
     }),
     db.brewingSession.count({ where }),
   ]);

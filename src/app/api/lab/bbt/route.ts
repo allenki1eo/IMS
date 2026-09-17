@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getRequestMeta, getCompanyId, parseBody } from "@/lib/api-helpers";
 import { listBBTAnalyses, createBBTAnalysis } from "@/modules/lab/lab.service";
-import { success, created, badRequest } from "@/lib/response";
+import { created, badRequest, paginated, handleError } from "@/lib/response";
+import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "lab:bbt:read");
@@ -11,12 +12,21 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not found");
 
   const { searchParams } = request.nextUrl;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const pageSize = Math.min(100, parseInt(searchParams.get("pageSize") ?? "20"));
+  const pagination = parsePagination(searchParams);
   const batchId = searchParams.get("batchId") ?? undefined;
 
-  const data = await listBBTAnalyses({ companyId, page, pageSize, batchId });
-  return success(data);
+  try {
+    const { analyses, total } = await listBBTAnalyses({
+      companyId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      batchId,
+    });
+    return paginated(analyses, buildMeta(total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -36,31 +46,35 @@ export async function POST(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
-  const record = await createBBTAnalysis({
-    companyId,
-    batchId: b.batchId,
-    fromTankNumber: b.fromTankNumber,
-    bbtNumber: b.bbtNumber,
-    brand: b.brand,
-    sampleDate: new Date(b.sampleDate),
-    sampleTime: b.sampleTime,
-    pg: b.pg,
-    og: b.og,
-    alc: b.alc,
-    haze: b.haze,
-    ph: b.ph,
-    col: b.col,
-    dissolvedO2: b.dissolvedO2,
-    bitterness: b.bitterness,
-    bbtTemp: b.bbtTemp,
-    adf: b.adf,
-    analystId: b.analystId,
-    notes: b.notes,
-    createdById: auth.user.id,
-    userName: auth.user.fullName,
-    ipAddress,
-    userAgent,
-  });
-
-  return created(record);
+  try {
+    const record = await createBBTAnalysis({
+      companyId,
+      batchId: b.batchId,
+      fromTankNumber: b.fromTankNumber,
+      bbtNumber: b.bbtNumber,
+      brand: b.brand,
+      sampleDate: new Date(b.sampleDate),
+      sampleTime: b.sampleTime,
+      pg: b.pg,
+      og: b.og,
+      alc: b.alc,
+      haze: b.haze,
+      ph: b.ph,
+      col: b.col,
+      dissolvedO2: b.dissolvedO2,
+      bitterness: b.bitterness,
+      bbtTemp: b.bbtTemp,
+      adf: b.adf,
+      analystId: b.analystId,
+      notes: b.notes,
+      createdById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    return created(record);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }

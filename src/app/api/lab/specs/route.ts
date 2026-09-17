@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, getRequestMeta, getCompanyId, parseBody } from "@/lib/api-helpers";
 import { listProductSpecs, createProductSpec } from "@/modules/lab/lab.service";
-import { success, created, badRequest } from "@/lib/response";
+import { created, badRequest, paginated, handleError } from "@/lib/response";
+import { parsePagination, buildMeta } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, "lab:spec:read");
@@ -11,11 +12,19 @@ export async function GET(request: NextRequest) {
   if (!companyId) return badRequest("Company not found");
 
   const { searchParams } = request.nextUrl;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const pageSize = Math.min(100, parseInt(searchParams.get("pageSize") ?? "50"));
+  const pagination = parsePagination(searchParams);
 
-  const data = await listProductSpecs({ companyId, page, pageSize });
-  return success(data);
+  try {
+    const { specs, total } = await listProductSpecs({
+      companyId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    });
+    return paginated(specs, buildMeta(total, pagination));
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -34,18 +43,22 @@ export async function POST(request: NextRequest) {
 
   const { ipAddress, userAgent } = getRequestMeta(request);
 
-  const spec = await createProductSpec({
-    companyId,
-    brand: b.brand,
-    productCode: b.productCode,
-    version: b.version,
-    parameters: b.parameters,
-    notes: b.notes,
-    createdById: auth.user.id,
-    userName: auth.user.fullName,
-    ipAddress,
-    userAgent,
-  });
-
-  return created(spec);
+  try {
+    const spec = await createProductSpec({
+      companyId,
+      brand: b.brand,
+      productCode: b.productCode,
+      version: b.version,
+      parameters: b.parameters,
+      notes: b.notes,
+      createdById: auth.user.id,
+      userName: auth.user.fullName,
+      ipAddress,
+      userAgent,
+    });
+    return created(spec);
+  } catch (err) {
+    console.error("[API Error]", err);
+    return handleError(err);
+  }
 }
