@@ -57,9 +57,10 @@ export class InsufficientStockError extends Error {
 
   constructor(shortages: BatchMaterialStockStatus[]) {
     const list = shortages
-      .map(
-        (s) =>
-          `${s.description}: need ${s.requiredQty} ${s.uom}, have ${s.availableStock} ${s.uom}`
+      .map((s) =>
+        s.status === "UNKNOWN"
+          ? `${s.description}: item not linked (need ${s.requiredQty} ${s.uom})`
+          : `${s.description}: need ${s.requiredQty} ${s.uom}, have ${s.availableStock} ${s.uom}`
       )
       .join("; ");
     super(

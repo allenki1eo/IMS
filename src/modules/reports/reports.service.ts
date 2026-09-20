@@ -28,7 +28,11 @@ function getDateRange(fromDate?: string, toDate?: string) {
 type AnyRow = Record<string, any>;
 
 function sumBy<T>(rows: T[], pick: (row: T) => number | null | undefined) {
-  return rows.reduce((sum, row) => sum + (pick(row) ?? 0), 0);
+  return rows.reduce((sum, row) => {
+    const raw = pick(row);
+    const n = typeof raw === "number" ? raw : Number(raw ?? 0);
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
 }
 
 function sumLineTotal(row: { lines?: Array<{ totalCost?: number | null; totalPrice?: number | null }> | null }) {
@@ -346,9 +350,15 @@ export async function getProductionReport(
     take: 100,
   })) as AnyRow[];
 
+  // Summary must match the listed batches. Planned qty includes PLANNED /
+  // IN_PROGRESS / COMPLETED (exclude CANCELLED). Actual is coalesced null→0 so
+  // open batches contribute honest zeros rather than blanking the total.
+  // Previous bug: only COMPLETED were summed, so a table of planned 1000 L
+  // batches showed Total Planned / Actual / Yield as 0.
+  const countableBatches = batches.filter((batch) => batch.status !== "CANCELLED");
   const completedBatches = batches.filter((batch) => batch.status === "COMPLETED");
-  const totalPlanned = sumBy(completedBatches, (batch) => batch.plannedQty);
-  const totalActual = sumBy(completedBatches, (batch) => batch.actualQty);
+  const totalPlanned = sumBy(countableBatches, (batch) => Number(batch.plannedQty ?? 0));
+  const totalActual = sumBy(countableBatches, (batch) => Number(batch.actualQty ?? 0));
 
   // Derive line / recipe rollups from the period's batches only (tab isolation:
   // never pull procurement or other module metrics).

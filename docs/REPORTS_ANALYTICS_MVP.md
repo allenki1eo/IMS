@@ -29,3 +29,8 @@ Production / Stock / Dispatch accept `lineFamily`. Date windows use EAT bounds.
 ## Shortage “available Unknown”
 
 Daystore + batch stock UI now show **Not linked** when the material has no item link (status `UNKNOWN` unchanged in APIs).
+
+## P1 live-verify follow-ups (#134)
+
+- **Production summary:** `totalPlannedQuantity` / `totalActualQuantity` / `yieldRate` sum all non-`CANCELLED` batches in the listed window (not only `COMPLETED`). Planned batches with qty must move the Total Planned card.
+- **Shortage available:** unlinked materials (`status=UNKNOWN`) render **Not linked** in Available / daystore stock cells (never "Unknown" or a lying 0).

@@ -56,6 +56,10 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   RECEIVED: { label: "Received", variant: "success" },
   // Production
   ARCHIVED: { label: "Archived", variant: "secondary" },
+  UNKNOWN: { label: "Not linked", variant: "secondary" },
+  NOT_LINKED: { label: "Not linked", variant: "secondary" },
+  SHORTAGE: { label: "Shortage", variant: "destructive" },
+  OK: { label: "OK", variant: "success" },
   // Finance / cash
   POSTED: { label: "Posted", variant: "success" },
   PAID: { label: "Paid", variant: "success" },

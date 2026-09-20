@@ -154,7 +154,7 @@ async function getShortageSummary(
         requiredQty: m.requiredQty,
         availableQty: m.status === "UNKNOWN" ? null : m.daystoreStock,
         availableLabel:
-          m.status === "UNKNOWN" ? "Not linked to stock" : String(m.daystoreStock),
+          m.status === "UNKNOWN" ? "Not linked" : String(m.daystoreStock),
         uom: m.uom,
         status: (m.status === "UNKNOWN" ? "NOT_LINKED" : "SHORTAGE") as
           | "SHORTAGE"
