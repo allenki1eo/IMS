@@ -19,12 +19,21 @@ async function upsertStockBalance(params: {
   });
 
   if (existing) {
+    const next = existing.quantity + delta;
+    if (next < 0) {
+      throw new Error(
+        `Insufficient stock: available ${existing.quantity}, change ${delta}`
+      );
+    }
     await db.stockBalance.update({
       where: { id: existing.id },
-      data: { quantity: existing.quantity + delta },
+      data: { quantity: next },
     });
-    return existing.quantity + delta;
+    return next;
   } else {
+    if (delta < 0) {
+      throw new Error(`Insufficient stock: available 0, change ${delta}`);
+    }
     await db.stockBalance.create({
       data: { itemId, warehouseId, locationId: locationId ?? null, quantity: delta },
     });
@@ -199,24 +208,71 @@ export async function dispatchTransfer(
   if (!transfer) throw new Error("Transfer not found");
   if (transfer.status !== "DRAFT") throw new Error("Only DRAFT transfers can be dispatched");
 
+  // Re-validate source stock at dispatch time (draft may have sat while other issues depleted stock)
+  const itemIds = transfer.lines.map((l) => l.itemId);
+  const [balances, items] = await Promise.all([
+    db.stockBalance.findMany({
+      where: { itemId: { in: itemIds }, warehouseId: transfer.fromWarehouseId },
+    }),
+    db.item.findMany({
+      where: { id: { in: itemIds } },
+      select: { id: true, name: true },
+    }),
+  ]);
+  const availableByItem = new Map<string, number>();
+  for (const b of balances) {
+    availableByItem.set(b.itemId, (availableByItem.get(b.itemId) ?? 0) + b.quantity);
+  }
+  const needByItem = new Map<string, number>();
+  for (const line of transfer.lines) {
+    needByItem.set(line.itemId, (needByItem.get(line.itemId) ?? 0) + line.quantity);
+  }
+  const itemName = new Map(items.map((i) => [i.id, i.name]));
+  for (const [itemId, need] of needByItem) {
+    const available = availableByItem.get(itemId) ?? 0;
+    if (available < need) {
+      throw new Error(
+        `Insufficient stock for item ${itemName.get(itemId) ?? itemId}: available ${available}, requested ${need}`
+      );
+    }
+  }
+
   const now = new Date();
 
-  await db.stockTransfer.update({
-    where: { id },
-    data: { status: "DISPATCHED", dispatchedAt: now },
-  });
+  // Atomic: status flip + stock deductions so a mid-loop failure cannot leave DISPATCHED with partial ledger
+  await db.$transaction(async (tx) => {
+    await tx.stockTransfer.update({
+      where: { id },
+      data: { status: "DISPATCHED", dispatchedAt: now },
+    });
 
-  // Deduct from source warehouse and create TRANSFER_OUT ledger entries (parallel)
-  await Promise.all(
-    transfer.lines.map(async (line) => {
-      const balanceAfter = await upsertStockBalance({
-        itemId: line.itemId,
-        warehouseId: transfer.fromWarehouseId,
-        locationId: line.fromLocationId,
-        delta: -line.quantity,
+    for (const line of transfer.lines) {
+      const existing = await tx.stockBalance.findFirst({
+        where: {
+          itemId: line.itemId,
+          warehouseId: transfer.fromWarehouseId,
+          locationId: line.fromLocationId ?? null,
+        },
       });
+      const current = existing?.quantity ?? 0;
+      if (current < line.quantity) {
+        throw new Error(
+          `Insufficient stock for item ${itemName.get(line.itemId) ?? line.itemId}: available ${current}, requested ${line.quantity}`
+        );
+      }
+      const balanceAfter = current - line.quantity;
+      if (existing) {
+        await tx.stockBalance.update({
+          where: { id: existing.id },
+          data: { quantity: balanceAfter },
+        });
+      } else {
+        throw new Error(
+          `Insufficient stock for item ${itemName.get(line.itemId) ?? line.itemId}: available 0, requested ${line.quantity}`
+        );
+      }
 
-      await db.stockLedger.create({
+      await tx.stockLedger.create({
         data: {
           companyId: transfer.companyId,
           itemId: line.itemId,
@@ -231,8 +287,8 @@ export async function dispatchTransfer(
           createdById: dispatchedById,
         },
       });
-    })
-  );
+    }
+  });
 
   await createAuditLog({
     userId: dispatchedById,

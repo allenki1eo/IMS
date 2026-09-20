@@ -306,7 +306,12 @@ export async function dispatchOrder(
     throw new Error("Cannot dispatch an order with 0 lines");
   }
 
-  // Validate lot availability / QA / TRA before transaction
+  // Validate lot availability / QA / TRA before transaction.
+  // Accumulate lot qty + TRA coverage across lines so multi-line orders cannot
+  // double-count the same RELEASED lot remaining qty or the same stamp activations.
+  const lotNeed = new Map<string, number>();
+  const traNeedByLot = new Map<string, { productCode: string; productId: string; need: number }>();
+
   for (const line of existing.lines) {
     if (!line.lotId) {
       throw new Error(`Lot is required on every line before dispatch (${line.description})`);
@@ -322,28 +327,57 @@ export async function dispatchOrder(
         `Lot${lot.lotNumber ? " " + lot.lotNumber : ""} is not QA-released (status: ${lot.qaStatus})`
       );
     }
+    lotNeed.set(line.lotId, (lotNeed.get(line.lotId) ?? 0) + line.quantity);
+    if (lot.product.requiresTraStamp) {
+      const prev = traNeedByLot.get(lot.id);
+      traNeedByLot.set(lot.id, {
+        productCode: lot.product.code,
+        productId: lot.productId,
+        need: (prev?.need ?? 0) + line.quantity,
+      });
+    }
+  }
+
+  for (const [lotId, need] of lotNeed) {
+    const lot = await db.fGLot.findUnique({ where: { id: lotId } });
+    if (!lot) throw new Error("Lot not found");
     const available = lot.quantityIn - lot.quantityOut;
-    if (available < line.quantity) {
+    if (available < need) {
       throw new Error(
-        `Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${line.quantity}`
+        `Insufficient quantity for lot${lot.lotNumber ? " " + lot.lotNumber : ""}: available ${available}, required ${need}`
       );
     }
-    if (lot.product.requiresTraStamp) {
-      const activations = await db.traStampActivation.findMany({
-        where: {
-          companyId,
-          dispatchOrderId: id,
-          OR: [{ fgLotId: lot.id }, { fgProductId: lot.productId }],
-        },
-      });
-      const covered = activations
-        .filter((a) => a.fgLotId === lot.id || (!a.fgLotId && a.fgProductId === lot.productId))
-        .reduce((sum, a) => sum + a.quantity, 0);
-      if (covered < line.quantity) {
+  }
+
+  if (traNeedByLot.size > 0) {
+    const activations = await db.traStampActivation.findMany({
+      where: { companyId, dispatchOrderId: id },
+    });
+    // Allocate each activation once (prefer exact lot match; legacy product-only last).
+    const remainingByLot = new Map<string, number>();
+    const remainingByProduct = new Map<string, number>();
+    for (const a of activations) {
+      if (a.fgLotId) {
+        remainingByLot.set(a.fgLotId, (remainingByLot.get(a.fgLotId) ?? 0) + a.quantity);
+      } else if (a.fgProductId) {
+        remainingByProduct.set(a.fgProductId, (remainingByProduct.get(a.fgProductId) ?? 0) + a.quantity);
+      }
+    }
+    for (const [lotId, { productCode, productId, need }] of traNeedByLot) {
+      const covered = remainingByLot.get(lotId) ?? 0;
+      if (covered >= need) {
+        remainingByLot.set(lotId, covered - need);
+        continue;
+      }
+      const stillNeed = need - covered;
+      remainingByLot.set(lotId, 0);
+      const productPool = remainingByProduct.get(productId) ?? 0;
+      if (productPool < stillNeed) {
         throw new Error(
-          `TRA stamp activation required for ${lot.product.code}: covered ${covered}, required ${line.quantity}`
+          `TRA stamp activation required for ${productCode}: covered ${covered + productPool}, required ${need}`
         );
       }
+      remainingByProduct.set(productId, productPool - stillNeed);
     }
   }
 

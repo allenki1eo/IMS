@@ -195,6 +195,23 @@ export default function FinancePage() {
         }
       />
 
+      {/* Empty CoA guidance — zeros here are blank state, not a load failure */}
+      {(stats?.totalAccounts ?? 0) === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-6">
+            <div>
+              <p className="font-medium">Chart of Accounts is empty</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Create GL accounts before journals and payments. Zero KPIs above mean no data yet — not a system error.
+              </p>
+            </div>
+            <Button asChild>
+              <Link href="/finance/accounts/new">Add first account</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {kpis.map((k) => (
