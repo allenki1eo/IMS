@@ -10,9 +10,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-function qty(n: number, uom: string) {
-  return `${n.toLocaleString()} ${uom}`.trim();
-}
+import { formatAvailableStock, qty } from "../_components/production-ui";
 
 interface DaystoreBatch {
   id: string;
@@ -103,7 +101,7 @@ export default function DaystorePage() {
         {unknownCount > 0 && (
           <Badge variant="secondary" className="gap-1">
             <AlertTriangle className="h-3 w-3" />
-            {unknownCount} unmapped
+            {unknownCount} not linked
           </Badge>
         )}
         {shortageCount === 0 && unknownCount === 0 && plan && plan.materials.length > 0 && (
@@ -229,8 +227,8 @@ export default function DaystorePage() {
                         )}
                       </td>
                       <td className="px-4 py-3">{qty(mat.requiredQty, mat.uom)}</td>
-                      <td className="px-4 py-3">{qty(mat.daystoreStock, mat.uom)}</td>
-                      <td className="px-4 py-3">{qty(mat.totalStock, mat.uom)}</td>
+                      <td className="px-4 py-3">{formatAvailableStock(mat.status, mat.daystoreStock, mat.uom)}</td>
+                      <td className="px-4 py-3">{formatAvailableStock(mat.status, mat.totalStock, mat.uom)}</td>
                       <td className="px-4 py-3">
                         {mat.shortfall > 0 ? (
                           <span className="text-destructive font-medium">{qty(mat.shortfall, mat.uom)}</span>

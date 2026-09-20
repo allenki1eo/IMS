@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LINE_TYPES, qty } from "../../_components/production-ui";
+import { LINE_TYPES, formatAvailableStock, qty } from "../../_components/production-ui";
 
 interface LineOption { id: string; code: string; name: string }
 interface RecipeOption {
@@ -198,8 +198,10 @@ export default function NewProductionBatchPage() {
                   {capacity.materials.map((mat, i) => (
                     <div key={i} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{mat.description}</span>
-                      <span className={mat.status === "SHORTAGE" ? "text-destructive" : mat.status === "OK" ? "text-green-600" : "text-muted-foreground"}>
-                        {qty(mat.availableStock, "")} / {qty(mat.requiredPerBatch, "")} per batch
+                      <span className={mat.status === "SHORTAGE" ? "text-destructive" : mat.status === "OK" ? "text-green-600" : "text-amber-700"}>
+                        {mat.status === "UNKNOWN"
+                          ? formatAvailableStock(mat.status, mat.availableStock)
+                          : `${qty(mat.availableStock, "")} / ${qty(mat.requiredPerBatch, "")} per batch`}
                       </span>
                     </div>
                   ))}

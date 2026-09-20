@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PermissionGuard } from "@/components/shared/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { qty } from "../../_components/production-ui";
+import { formatAvailableStock, qty } from "../../_components/production-ui";
 
 interface Recipe {
   id: string;
@@ -126,15 +126,24 @@ export default function RecipeDetailPage() {
                 <span className="text-muted-foreground">Batch Size</span>
                 <span>{qty(capacity.batchSize, recipe.uom)}</span>
               </div>
-              {capacity.limitingMaterial && (
+              {capacity.limitingMaterial && (() => {
+                const limStatus =
+                  capacity.materials.find(
+                    (m) => m.description === capacity.limitingMaterial?.description
+                  )?.status ?? "SHORTAGE";
+                return (
                 <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-2.5">
                   <p className="text-amber-700 dark:text-amber-400 font-medium text-xs mb-0.5">Limiting Material</p>
                   <p className="text-foreground">{capacity.limitingMaterial.description}</p>
                   <p className="text-muted-foreground text-xs">
-                    Needs {qty(capacity.limitingMaterial.requiredPerBatch, "")} per batch · {qty(capacity.limitingMaterial.availableStock, "")} in stock
+                    Needs {qty(capacity.limitingMaterial.requiredPerBatch, "")} per batch ·{" "}
+                    {limStatus === "UNKNOWN"
+                      ? formatAvailableStock(limStatus, capacity.limitingMaterial.availableStock)
+                      : `${qty(capacity.limitingMaterial.availableStock, "")} in stock`}
                   </p>
                 </div>
-              )}
+                );
+              })()}
             </CardContent>
           </Card>
         )}

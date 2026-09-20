@@ -42,6 +42,16 @@ export function qty(value: number | null | undefined, uom = "") {
   return `${formatNumber(value)}${uom ? ` ${uom}` : ""}`;
 }
 
+/** Stock gate / daystore: never show a lying 0 or "Unknown" for unlinked materials. */
+export function formatAvailableStock(
+  status: string | null | undefined,
+  value: number | null | undefined,
+  uom = "",
+) {
+  if (status === "UNKNOWN") return "Not linked";
+  return qty(value, uom);
+}
+
 
 /** Allow typing decimals without type=number fighting the controlled value. */
 export function sanitizeDecimalInput(raw: string): string {

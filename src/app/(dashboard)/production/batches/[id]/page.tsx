@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate, qty } from "../../_components/production-ui";
+import { formatAvailableStock, formatDate, qty } from "../../_components/production-ui";
 
 interface MaterialStockStatus {
   materialId?: string;
@@ -326,7 +326,7 @@ export default function ProductionBatchDetailPage() {
                 <td className={`px-4 py-3 ${stock && stock.status !== "OK" ? "text-destructive font-medium" : ""}`}>
                   {stock
                     ? stock.status === "UNKNOWN"
-                      ? "Not linked"
+                      ? formatAvailableStock(stock.status, stock.availableStock)
                       : `${qty(stock.availableStock, "")} / ${qty(stock.requiredQty, "")}`
                     : "-"}
                 </td>
