@@ -1,14 +1,27 @@
 import { db } from "@/lib/db";
+import { eatDayBounds } from "@/modules/finance/spend-today.service";
+import { todayCalendarDate } from "@/lib/timezone";
 
+export type LineFamilyFilter = "BREWING" | "SPIRITS" | "ALL";
+
+function normalizeLineFamily(raw?: string | null): LineFamilyFilter {
+  const v = (raw ?? "ALL").toUpperCase();
+  if (v === "BREWING" || v === "SPIRITS") return v;
+  return "ALL";
+}
+
+/** EAT calendar-day bounds for report windows (Africa/Dar_es_Salaam). */
 function getDateRange(fromDate?: string, toDate?: string) {
-  const from = fromDate ? new Date(`${fromDate}T00:00:00`) : new Date(new Date().getFullYear(), 0, 1);
-  const to = toDate ? new Date(`${toDate}T23:59:59`) : new Date();
-  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+  const fromKey = fromDate?.trim() || `${todayCalendarDate().slice(0, 4)}-01-01`;
+  const toKey = toDate?.trim() || todayCalendarDate();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromKey) || !/^\d{4}-\d{2}-\d{2}$/.test(toKey)) {
     throw new Error("Invalid date range");
   }
-  if (from > to) {
+  if (fromKey > toKey) {
     throw new Error("From date must be before to date");
   }
+  const from = eatDayBounds(fromKey).start;
+  const to = eatDayBounds(toKey).end;
   return { from, to };
 }
 
@@ -24,8 +37,14 @@ function sumLineTotal(row: { lines?: Array<{ totalCost?: number | null; totalPri
 
 // ─── WAREHOUSE ─────────────────────────────────────────────
 
-export async function getWarehouseReport(companyId: string, fromDate?: string, toDate?: string) {
+export async function getWarehouseReport(
+  companyId: string,
+  fromDate?: string,
+  toDate?: string,
+  lineFamily?: string | null,
+) {
   const { from, to } = getDateRange(fromDate, toDate);
+  const family = normalizeLineFamily(lineFamily);
 
   const [grns, transfers, adjustments, stockValue] = await Promise.all([
     db.goodsReceivedNote.findMany({
@@ -57,6 +76,23 @@ export async function getWarehouseReport(companyId: string, fromDate?: string, t
     totalAmount: sumLineTotal(grn),
   }));
 
+  
+  const fgLots = await db.fGLot.findMany({
+    where: {
+      companyId,
+      ...(family === "ALL" ? {} : { product: { lineFamily: family } }),
+    },
+    select: {
+      id: true,
+      lotNumber: true,
+      quantityIn: true,
+      quantityOut: true,
+      qaStatus: true,
+      product: { select: { code: true, name: true, lineFamily: true } },
+    },
+    take: 100,
+  });
+
   return {
     summary: {
       totalGRNs: grns.length,
@@ -68,6 +104,8 @@ export async function getWarehouseReport(companyId: string, fromDate?: string, t
     grns: normalizedGrns,
     transfers,
     adjustments,
+    fgLots,
+    lineFamily: family,
   };
 }
 
@@ -276,11 +314,21 @@ export async function getProcurementReport(companyId: string, fromDate?: string,
  * derived from that batch list so we never touch drifted recipe_materials
  * columns. Empty periods return zeros/empty arrays (not an error).
  */
-export async function getProductionReport(companyId: string, fromDate?: string, toDate?: string) {
+export async function getProductionReport(
+  companyId: string,
+  fromDate?: string,
+  toDate?: string,
+  lineFamily?: string | null,
+) {
   const { from, to } = getDateRange(fromDate, toDate);
+  const family = normalizeLineFamily(lineFamily);
 
   const batches = (await db.productionBatch.findMany({
-    where: { companyId, createdAt: { gte: from, lte: to } },
+    where: {
+      companyId,
+      createdAt: { gte: from, lte: to },
+      ...(family === "ALL" ? {} : { batchType: family }),
+    },
     select: {
       id: true,
       reference: true,
@@ -377,12 +425,30 @@ export async function getQCReport(companyId: string, fromDate?: string, toDate?:
  * that has not been `prisma db push`'d throws "no such column" and blanks the
  * whole tab. UI only needs product name/code + lot counts in the period.
  */
-export async function getDispatchReport(companyId: string, fromDate?: string, toDate?: string) {
+export async function getDispatchReport(
+  companyId: string,
+  fromDate?: string,
+  toDate?: string,
+  lineFamily?: string | null,
+) {
   const { from, to } = getDateRange(fromDate, toDate);
+  const family = normalizeLineFamily(lineFamily);
 
   const [orders, products] = await Promise.all([
     db.dispatchOrder.findMany({
-      where: { companyId, createdAt: { gte: from, lte: to } },
+      where: {
+        companyId,
+        createdAt: { gte: from, lte: to },
+        ...(family === "ALL"
+          ? {}
+          : {
+              lines: {
+                some: {
+                  lot: { product: { lineFamily: family } },
+                },
+              },
+            }),
+      },
       select: {
         id: true,
         reference: true,
@@ -406,7 +472,10 @@ export async function getDispatchReport(companyId: string, fromDate?: string, to
       take: 100,
     }),
     db.fGProduct.findMany({
-      where: { companyId },
+      where: {
+        companyId,
+        ...(family === "ALL" ? {} : { lineFamily: family }),
+      },
       select: {
         id: true,
         name: true,

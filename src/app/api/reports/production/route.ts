@@ -13,9 +13,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const fromDate = searchParams.get("fromDate") || undefined;
   const toDate = searchParams.get("toDate") || undefined;
+  const lineFamily = searchParams.get("lineFamily") || undefined;
 
   try {
-    const report = await getProductionReport(companyId, fromDate, toDate);
+    const report = await getProductionReport(companyId, fromDate, toDate, lineFamily);
     return success(report);
   } catch (err) {
     if (err instanceof Error && (err.message === "Invalid date range" || err.message === "From date must be before to date")) {

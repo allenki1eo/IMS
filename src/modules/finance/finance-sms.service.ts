@@ -8,6 +8,17 @@ import {
   DEFAULT_APP_TIMEZONE,
 } from "@/lib/timezone";
 import { normalizePhoneE164, sendSwalaSms } from "@/lib/sms/swala";
+import {
+  eatDayBounds,
+  computeSpendByCompany,
+  type SpendTodayLine,
+} from "@/modules/finance/spend-today.service";
+
+/** @deprecated Prefer SpendTodayLine from spend-today.service — kept for SMS typings. */
+export type EodCompanySpend = SpendTodayLine;
+
+/** Re-export so existing callers keep working; dashboards must use spend-today. */
+export { eatDayBounds, computeSpendByCompany as computeEodSpendByCompany };
 
 export const FINANCE_SMS_ALERT = {
   DEPOSIT: "DEPOSIT",
@@ -37,19 +48,6 @@ function formatTzs(amount: number): string {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
   }).format(Math.round(amount));
-}
-
-/** Inclusive EAT calendar-day bounds as UTC Date objects for Prisma filters. */
-export function eatDayBounds(calendarDate: string): { start: Date; end: Date } {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(calendarDate.trim());
-  if (!m) throw new Error("Invalid calendar date (expected YYYY-MM-DD)");
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  // EAT = UTC+3 → day start 00:00 EAT = previous day 21:00 UTC
-  const start = new Date(Date.UTC(y, mo - 1, d, -3, 0, 0, 0));
-  const end = new Date(Date.UTC(y, mo - 1, d + 1, -3, 0, 0, 0) - 1);
-  return { start, end };
 }
 
 export async function getOrCreateSetting(scopeKey: string, alertType: string) {
@@ -319,55 +317,6 @@ export async function notifyDepositPosted(params: {
   }
 }
 
-export type EodCompanySpend = {
-  companyId: string;
-  companyName: string;
-  spend: number;
-};
-
-export async function computeEodSpendByCompany(calendarDate: string): Promise<EodCompanySpend[]> {
-  const { start, end } = eatDayBounds(calendarDate);
-  const companies = await db.company.findMany({
-    where: { isActive: true },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
-
-  const results: EodCompanySpend[] = [];
-
-  for (const company of companies) {
-    const [cashPayments, bankWithdrawals] = await Promise.all([
-      db.cashbookEntry.aggregate({
-        where: {
-          companyId: company.id,
-          type: "PAYMENT",
-          date: { gte: start, lte: end },
-        },
-        _sum: { amount: true },
-      }),
-      db.bankTransaction.aggregate({
-        where: {
-          companyId: company.id,
-          type: "WITHDRAWAL",
-          transactionDate: { gte: start, lte: end },
-        },
-        _sum: { amount: true },
-      }),
-    ]);
-
-    const spend =
-      (cashPayments._sum.amount ?? 0) + (bankWithdrawals._sum.amount ?? 0);
-
-    results.push({
-      companyId: company.id,
-      companyName: company.name,
-      spend,
-    });
-  }
-
-  return results;
-}
-
 function buildEodBody(calendarDate: string, lines: EodCompanySpend[], grandTotal: number): string {
   const dateLabel = formatDateInAppTz(calendarDate);
   const parts = [
@@ -401,7 +350,7 @@ export async function runEodSpendSms(options?: {
     return { calendarDate, skipped: true, reason: "EOD SMS disabled", grandTotal: 0, sent: 0, failed: 0 };
   }
 
-  const lines = await computeEodSpendByCompany(calendarDate);
+  const lines = await computeSpendByCompany(calendarDate);
   const grandTotal = lines.reduce((sum, l) => sum + l.spend, 0);
 
   if (setting.skipIfZero && grandTotal <= 0 && !options?.force) {

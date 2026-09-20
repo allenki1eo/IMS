@@ -224,8 +224,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <BarChart3 className="h-4 w-4" />,
         permission: "analytics:dashboard:read",
         children: [
-          { label: "Dashboard", href: "/analytics", icon: <BarChart3 className="h-4 w-4" />, permission: "analytics:dashboard:read" },
-          { label: "Operations", href: "/analytics/operations", icon: <Factory className="h-4 w-4" />, permission: "analytics:operations:read" },
+          { label: "Director home", href: "/analytics", icon: <BarChart3 className="h-4 w-4" />, permission: "analytics:dashboard:read" },
+          { label: "Ops home", href: "/analytics/operations", icon: <Factory className="h-4 w-4" />, permission: "analytics:operations:read" },
           { label: "Financial", href: "/analytics/financial", icon: <Landmark className="h-4 w-4" />, permission: "analytics:financial:read" },
         ],
       },
