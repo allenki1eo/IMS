@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { listStandards, createStandard } from "@/modules/qc/standards.service";
+import { listStandards, createStandard, coerceIsActive } from "@/modules/qc/standards.service";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
 import { paginated, created, badRequest, handleError } from "@/lib/response";
 import { parsePagination, buildMeta } from "@/lib/pagination";
@@ -42,7 +42,11 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { code, name, itemId, description, isActive } = body;
+  const { code, name, itemId, description, isActive: rawIsActive } = body;
+  const isActive = coerceIsActive(rawIsActive);
+  if (rawIsActive !== undefined && rawIsActive !== null && isActive === undefined) {
+    return badRequest("isActive must be a boolean");
+  }
 
   if (!code || typeof code !== "string") return badRequest("code is required");
   if (!name || typeof name !== "string") return badRequest("name is required");
@@ -57,7 +61,7 @@ export async function POST(request: NextRequest) {
         name,
         itemId: itemId ?? null,
         description: description ?? null,
-        ...(typeof isActive === "boolean" ? { isActive } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
       },
       auth.user.id,
       auth.user.fullName,

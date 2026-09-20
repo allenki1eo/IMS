@@ -224,18 +224,25 @@ export default function QcStandardDetailPage() {
         actions={
           <div className="flex gap-2">
             <PermissionGuard require="qc:standard:update">
-              <Button
-                variant={standard.isActive ? "outline" : "default"}
-                onClick={handleToggleActive}
-                disabled={togglingActive || (!standard.isActive && standard.parameters.length < 1)}
-                title={
-                  !standard.isActive && standard.parameters.length < 1
-                    ? "Add at least one parameter before activating"
-                    : undefined
-                }
-              >
-                {togglingActive ? "Updating..." : standard.isActive ? "Deactivate" : "Activate"}
-              </Button>
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                  variant={standard.isActive ? "outline" : "default"}
+                  onClick={handleToggleActive}
+                  disabled={togglingActive || (!standard.isActive && standard.parameters.length < 1)}
+                  title={
+                    !standard.isActive && standard.parameters.length < 1
+                      ? "Add at least one parameter before activating"
+                      : undefined
+                  }
+                >
+                  {togglingActive ? "Updating..." : standard.isActive ? "Deactivate" : "Activate"}
+                </Button>
+                {!standard.isActive && standard.parameters.length < 1 && (
+                  <p className="text-xs text-amber-700 max-w-[14rem] text-right">
+                    Activate disabled — add ≥1 parameter first
+                  </p>
+                )}
+              </div>
             </PermissionGuard>
             <Button asChild>
               <Link href={`/qc/tests/new?standardId=${standard.id}`}>
@@ -267,9 +274,11 @@ export default function QcStandardDetailPage() {
             <div>
               <p className="text-muted-foreground">Status</p>
               <p className="mt-1 text-sm font-medium">{standard.isActive ? "Active" : "Inactive"}</p>
-              {!standard.isActive && standard.parameters.length < 1 && (
-                <p className="mt-1 text-xs text-amber-700">
-                  Active requires at least one parameter.
+              {standard.parameters.length < 1 && (
+                <p className={`mt-1 text-xs ${standard.isActive ? "text-destructive" : "text-amber-700"}`}>
+                  {standard.isActive
+                    ? "Invalid: Active with 0 parameters — deactivate or add a parameter."
+                    : "Active requires at least one parameter."}
                 </p>
               )}
             </div>
@@ -511,6 +520,12 @@ export default function QcStandardDetailPage() {
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
                               onClick={() => handleDeleteParam(param.id)}
+                              disabled={standard.isActive && standard.parameters.length <= 1}
+                              title={
+                                standard.isActive && standard.parameters.length <= 1
+                                  ? "Cannot remove the last parameter while Active — deactivate first"
+                                  : "Remove parameter"
+                              }
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

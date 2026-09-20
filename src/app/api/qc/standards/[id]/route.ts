@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getStandard, updateStandard } from "@/modules/qc/standards.service";
+import { getStandard, updateStandard, coerceIsActive } from "@/modules/qc/standards.service";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 import { requirePermission, getRequestMeta, getCompanyId } from "@/lib/api-helpers";
@@ -34,7 +34,11 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { code, name, itemId, description, isActive } = body;
+  const { code, name, itemId, description, isActive: rawIsActive } = body;
+  const isActive = coerceIsActive(rawIsActive);
+  if (rawIsActive !== undefined && rawIsActive !== null && isActive === undefined) {
+    return badRequest("isActive must be a boolean");
+  }
 
   const { ipAddress } = getRequestMeta(request);
 
@@ -60,7 +64,8 @@ export async function PATCH(
     if (
       msg === "Item not found" ||
       msg === "A standard with this code already exists" ||
-      msg === "Cannot activate a quality standard with no parameters"
+      msg === "Cannot activate a quality standard with no parameters" ||
+      msg === "isActive must be a boolean"
     )
       return badRequest(msg);
     return handleError(err);

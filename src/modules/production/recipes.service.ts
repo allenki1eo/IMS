@@ -118,7 +118,7 @@ export async function createProductionRecipe(
     }
   }
 
-  // Resolve itemCode → itemId so BOM lines stay linked for stock gates
+  // Resolve itemCode ↔ itemId so BOM lines stay linked for stock gates + UI Code column
   const codesToResolve = Array.from(
     new Set(
       data.materials
@@ -127,14 +127,29 @@ export async function createProductionRecipe(
         .filter(Boolean)
     )
   );
-  const resolvedByCode =
+  const idsNeedingCode = Array.from(
+    new Set(
+      data.materials
+        .filter((m) => m.itemId && !m.itemCode)
+        .map((m) => m.itemId as string)
+    )
+  );
+  const [resolvedByCode, resolvedById] = await Promise.all([
     codesToResolve.length > 0
-      ? await db.item.findMany({
+      ? db.item.findMany({
           where: { companyId, code: { in: codesToResolve } },
           select: { id: true, code: true },
         })
-      : [];
+      : Promise.resolve([] as { id: string; code: string }[]),
+    idsNeedingCode.length > 0
+      ? db.item.findMany({
+          where: { companyId, id: { in: idsNeedingCode } },
+          select: { id: true, code: true },
+        })
+      : Promise.resolve([] as { id: string; code: string }[]),
+  ]);
   const codeToId = new Map(resolvedByCode.map((i) => [i.code, i.id]));
+  const idToCode = new Map(resolvedById.map((i) => [i.id, i.code]));
 
   const materialsToCreate = data.materials.map((line) => {
     const itemId = line.itemId ?? codeToId.get(line.itemCode?.trim() ?? "") ?? null;
@@ -143,9 +158,10 @@ export async function createProductionRecipe(
         `material "${line.description}" must link to a warehouse item (itemId/itemCode) for stock gates`
       );
     }
+    const itemCode = line.itemCode ?? idToCode.get(itemId) ?? null;
     return {
       itemId,
-      itemCode: line.itemCode ?? null,
+      itemCode,
       description: line.description,
       quantity: line.quantity,
       uom: line.uom ?? "KG",

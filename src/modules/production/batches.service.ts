@@ -47,6 +47,8 @@ export type BatchMaterialStockStatus = {
   availableStock: number;
   shortfall: number;
   status: "OK" | "SHORTAGE" | "UNKNOWN";
+  /** Human-readable stock location summary (e.g. warehouse names). */
+  warehouseLabel?: string | null;
 };
 
 export class InsufficientStockError extends Error {
@@ -60,7 +62,9 @@ export class InsufficientStockError extends Error {
           `${s.description}: need ${s.requiredQty} ${s.uom}, have ${s.availableStock} ${s.uom}`
       )
       .join("; ");
-    super(`Insufficient stock to start batch. Short materials: ${list}`);
+    super(
+      `Not enough stock to start. Batch remains PLANNED (not cancelled). Short materials: ${list}`
+    );
     this.name = "InsufficientStockError";
     this.shortages = shortages;
   }
@@ -100,6 +104,18 @@ export async function assessBatchMaterialStock(
       : [];
   const codeToItemId = new Map(itemsByCode.map((i) => [i.code, i.id]));
 
+  const missingCodeItemIds = Array.from(
+    new Set(itemIds.filter((id) => !materials.find((m) => m.itemId === id && m.itemCode)))
+  );
+  const itemsById =
+    missingCodeItemIds.length > 0
+      ? await db.item.findMany({
+          where: { companyId, id: { in: missingCodeItemIds } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const idToCode = new Map(itemsById.map((i) => [i.id, i.code]));
+
   const allItemIds = Array.from(
     new Set([...itemIds, ...itemsByCode.map((i) => i.id)])
   );
@@ -107,19 +123,39 @@ export async function assessBatchMaterialStock(
     allItemIds.length > 0
       ? await db.stockBalance.findMany({
           where: { itemId: { in: allItemIds } },
-          select: { itemId: true, quantity: true },
+          select: {
+            itemId: true,
+            quantity: true,
+            warehouse: { select: { code: true, name: true } },
+          },
         })
       : [];
 
   const stockByItem = new Map<string, number>();
+  const warehousesByItem = new Map<string, string[]>();
   for (const sb of stockBalances) {
     stockByItem.set(sb.itemId, (stockByItem.get(sb.itemId) ?? 0) + (sb.quantity ?? 0));
+    const label = sb.warehouse
+      ? `${sb.warehouse.code} (${sb.warehouse.name})`
+      : "Unknown warehouse";
+    const list = warehousesByItem.get(sb.itemId) ?? [];
+    if (!list.includes(label)) list.push(label);
+    warehousesByItem.set(sb.itemId, list);
   }
 
   return materials.map((mat) => {
     const requiredQty = Math.max(0, mat.plannedQty - (mat.issuedQty ?? 0));
     const resolvedItemId = mat.itemId ?? codeToItemId.get(mat.itemCode ?? "") ?? null;
+    const resolvedCode =
+      mat.itemCode ??
+      (resolvedItemId ? idToCode.get(resolvedItemId) ?? null : null) ??
+      (resolvedItemId
+        ? itemsByCode.find((i) => i.id === resolvedItemId)?.code ?? null
+        : null);
     const availableStock = resolvedItemId ? (stockByItem.get(resolvedItemId) ?? 0) : 0;
+    const warehouseLabel = resolvedItemId
+      ? (warehousesByItem.get(resolvedItemId) ?? []).join(", ") || "No warehouse balance"
+      : null;
 
     let status: BatchMaterialStockStatus["status"];
     if (!resolvedItemId) {
@@ -135,14 +171,15 @@ export async function assessBatchMaterialStock(
 
     return {
       materialId: mat.id,
-      itemId: mat.itemId,
-      itemCode: mat.itemCode,
+      itemId: resolvedItemId ?? mat.itemId,
+      itemCode: resolvedCode,
       description: mat.description,
       uom: mat.uom,
       requiredQty,
       availableStock,
       shortfall,
       status,
+      warehouseLabel,
     };
   });
 }
@@ -213,14 +250,42 @@ export async function getProductionBatch(companyId: string, id: string) {
   });
   if (!batch || batch.companyId !== companyId) return null;
 
-  const materialStock = await assessBatchMaterialStock(companyId, batch.materials);
+  // Backfill display codes when itemId is linked but itemCode was never stored
+  const missingCodeIds = Array.from(
+    new Set(
+      batch.materials
+        .filter((m) => m.itemId && !m.itemCode)
+        .map((m) => m.itemId as string)
+    )
+  );
+  const codeById =
+    missingCodeIds.length > 0
+      ? new Map(
+          (
+            await db.item.findMany({
+              where: { companyId, id: { in: missingCodeIds } },
+              select: { id: true, code: true },
+            })
+          ).map((i) => [i.id, i.code] as const)
+        )
+      : new Map<string, string>();
+
+  const materials = batch.materials.map((m) => ({
+    ...m,
+    itemCode: m.itemCode ?? (m.itemId ? codeById.get(m.itemId) ?? null : null),
+  }));
+
+  const materialStock = await assessBatchMaterialStock(companyId, materials);
   const shortages = getBlockingShortages(materialStock);
   return {
     ...batch,
+    materials,
     materialStock,
     stockGate: {
       canStart: batch.status !== "PLANNED" ? false : shortages.length === 0,
       shortages,
+      /** Hard-block default; permissioned override is a follow-up. */
+      overrideAllowed: false,
     },
   };
 }
@@ -307,6 +372,42 @@ export async function createProductionBatch(
     throw new Error("plannedEnd cannot be before plannedStart");
   }
 
+  // Resolve itemId ↔ itemCode so material Code column and stock gate stay linked
+  const createItemIds = Array.from(
+    new Set(materials.map((m) => m.itemId).filter((id): id is string => !!id))
+  );
+  const createItemCodes = Array.from(
+    new Set(
+      materials
+        .filter((m) => !m.itemId && m.itemCode)
+        .map((m) => String(m.itemCode).trim())
+        .filter(Boolean)
+    )
+  );
+  const [itemsByIdForCreate, itemsByCodeForCreate] = await Promise.all([
+    createItemIds.length
+      ? db.item.findMany({
+          where: { companyId, id: { in: createItemIds } },
+          select: { id: true, code: true },
+        })
+      : Promise.resolve([] as { id: string; code: string }[]),
+    createItemCodes.length
+      ? db.item.findMany({
+          where: { companyId, code: { in: createItemCodes } },
+          select: { id: true, code: true },
+        })
+      : Promise.resolve([] as { id: string; code: string }[]),
+  ]);
+  const createIdToCode = new Map(itemsByIdForCreate.map((i) => [i.id, i.code]));
+  const createCodeToId = new Map(itemsByCodeForCreate.map((i) => [i.code, i.id]));
+  const resolvedMaterials = materials.map((line) => {
+    const itemId =
+      line.itemId ?? createCodeToId.get(String(line.itemCode ?? "").trim()) ?? null;
+    const itemCode =
+      line.itemCode ?? (itemId ? createIdToCode.get(itemId) ?? null : null);
+    return { ...line, itemId, itemCode };
+  });
+
   const reference = generateRef();
   const batch = await db.productionBatch.create({
     data: {
@@ -325,7 +426,7 @@ export async function createProductionBatch(
       notes: data.notes ?? null,
       createdById,
       materials: {
-        create: materials.map((line) => ({
+        create: resolvedMaterials.map((line) => ({
           itemId: line.itemId ?? null,
           itemCode: line.itemCode ?? null,
           description: line.description,

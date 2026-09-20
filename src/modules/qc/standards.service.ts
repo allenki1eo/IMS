@@ -1,6 +1,27 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 
+/** Normalize API/body isActive to boolean | undefined (rejects non-boolean junk). */
+export function coerceIsActive(value: unknown): boolean | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "boolean") return value;
+  if (value === "true" || value === 1 || value === "1") return true;
+  if (value === "false" || value === 0 || value === "0") return false;
+  return undefined;
+}
+
+export async function countStandardParameters(standardId: string): Promise<number> {
+  return db.qualityStandardParameter.count({ where: { standardId } });
+}
+
+/** Throws if activating (or staying Active) without ≥1 parameter. */
+export async function assertStandardCanBeActive(standardId: string): Promise<void> {
+  const paramCount = await countStandardParameters(standardId);
+  if (paramCount < 1) {
+    throw new Error("Cannot activate a quality standard with no parameters");
+  }
+}
+
 export async function listStandards(
   companyId: string,
   params: {
@@ -83,7 +104,7 @@ export async function createStandard(
   });
   if (existing) throw new Error("A standard with this code already exists");
 
-  // New standards start inactive; cannot create as Active with zero parameters.
+  // New standards always start Inactive. Active requires ≥1 parameter (add params then Activate).
   const wantActive = data.isActive === true;
   if (wantActive) {
     throw new Error("Cannot activate a quality standard with no parameters");
@@ -96,6 +117,7 @@ export async function createStandard(
       name: data.name,
       itemId: data.itemId ?? null,
       description: data.description ?? null,
+      // Explicit false — do not rely on schema default
       isActive: false,
       createdById: userId,
     },
@@ -148,11 +170,12 @@ export async function updateStandard(
     if (duplicate) throw new Error("A standard with this code already exists");
   }
 
+  // Only boolean true activates; coerce at API layer — refuse non-boolean here.
+  if (data.isActive !== undefined && typeof data.isActive !== "boolean") {
+    throw new Error("isActive must be a boolean");
+  }
   if (data.isActive === true) {
-    const paramCount = await db.qualityStandardParameter.count({ where: { standardId: id } });
-    if (paramCount < 1) {
-      throw new Error("Cannot activate a quality standard with no parameters");
-    }
+    await assertStandardCanBeActive(id);
   }
 
   const updateData: Record<string, unknown> = {};
@@ -160,7 +183,7 @@ export async function updateStandard(
   if (data.name !== undefined) updateData.name = data.name;
   if (data.itemId !== undefined) updateData.itemId = data.itemId;
   if (data.description !== undefined) updateData.description = data.description;
-  if (data.isActive !== undefined) updateData.isActive = data.isActive;
+  if (data.isActive !== undefined) updateData.isActive = data.isActive === true;
 
   const updated = await db.qualityStandard.update({ where: { id }, data: updateData });
 
@@ -228,7 +251,7 @@ export async function removeParameter(
   if (parameter.standardId !== standardId) throw new Error("Parameter not found");
 
   if (standard.isActive) {
-    const paramCount = await db.qualityStandardParameter.count({ where: { standardId } });
+    const paramCount = await countStandardParameters(standardId);
     if (paramCount <= 1) {
       throw new Error("Cannot remove the last parameter from an active quality standard");
     }
