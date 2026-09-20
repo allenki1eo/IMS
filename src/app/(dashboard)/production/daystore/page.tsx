@@ -251,7 +251,7 @@ export default function DaystorePage() {
                         )}
                         {mat.status === "UNKNOWN" && (
                           <Badge variant="secondary" className="gap-1">
-                            <AlertTriangle className="h-3 w-3" /> Unknown
+                            <AlertTriangle className="h-3 w-3" /> Not linked
                           </Badge>
                         )}
                       </td>

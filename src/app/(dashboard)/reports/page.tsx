@@ -18,6 +18,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/DataTable";
 import { useCurrency } from "@/hooks/useCurrency";
+import {
+  LineFamilyFilter,
+  type LineFamilyValue,
+} from "@/components/reports/LineFamilyFilter";
 
 // Lazy-load recharts so the ~100kB library stays out of the initial bundle
 const ReportBarChart = dynamic(
@@ -25,23 +29,31 @@ const ReportBarChart = dynamic(
   { ssr: false, loading: () => <ChartSkeleton height={250} /> }
 );
 
-const MODULES = [
-  { key: "warehouse", label: "Warehouse", icon: Warehouse },
+const PRIMARY_MODULES = [
+  { key: "warehouse", label: "Stock", icon: Warehouse },
+  { key: "production", label: "Production", icon: Factory },
+  { key: "dispatch", label: "Dispatch", icon: SendHorizonal },
+  { key: "finance", label: "Finance spend", icon: Landmark },
+];
+
+/** Thin / orphan stubs kept behind "More" — not on the default decision surface. */
+const SECONDARY_MODULES = [
+  { key: "qc", label: "Quality Control", icon: FlaskConical },
   { key: "transport", label: "Transport", icon: Truck },
   { key: "fuel", label: "Fuel", icon: Fuel },
   { key: "maintenance", label: "Maintenance", icon: Wrench },
   { key: "procurement", label: "Procurement", icon: ShoppingCart },
-  { key: "production", label: "Production", icon: Factory },
-  { key: "qc", label: "Quality Control", icon: FlaskConical },
-  { key: "dispatch", label: "Dispatch", icon: SendHorizonal },
-  { key: "finance", label: "Finance", icon: Landmark },
 ];
+
+const MODULES = [...PRIMARY_MODULES, ...SECONDARY_MODULES];
 
 export default function ReportsPage() {
   const currency = useCurrency();
   const [activeModule, setActiveModule] = useState("warehouse");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [lineFamily, setLineFamily] = useState<LineFamilyValue>("ALL");
+  const [showMore, setShowMore] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [reportModule, setReportModule] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,6 +73,12 @@ export default function ReportsPage() {
       const params = new URLSearchParams();
       if (fromDate) params.set("fromDate", fromDate);
       if (toDate) params.set("toDate", toDate);
+      if (
+        lineFamily !== "ALL" &&
+        ["production", "warehouse", "dispatch"].includes(moduleKey)
+      ) {
+        params.set("lineFamily", lineFamily);
+      }
       const query = params.toString();
       const res = await fetch(`/api/reports/${moduleKey}${query ? `?${query}` : ""}`);
       const json = await res.json();
@@ -88,8 +106,8 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchReport(activeModule);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch on module tab change only
-  }, [activeModule]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch on module / lineFamily change
+  }, [activeModule, lineFamily]);
 
   function formatDate(d: string) {
     if (!d) return "-";
@@ -103,7 +121,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Reports" description="View detailed module reports for any date range" />
+      <PageHeader title="Reports" description="Stock, production, dispatch, and finance spend — EAT dates. Thin stubs under More." />
 
       <Card>
         <CardContent className="pt-6">
@@ -121,8 +139,8 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
-        {MODULES.map((mod) => (
+      <div className="flex flex-wrap gap-2 items-center">
+        {PRIMARY_MODULES.map((mod) => (
           <Button
             key={mod.key}
             variant={activeModule === mod.key ? "default" : "outline"}
@@ -133,7 +151,31 @@ export default function ReportsPage() {
             {mod.label}
           </Button>
         ))}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowMore((v) => !v)}
+        >
+          {showMore ? "Hide more" : "More"}
+        </Button>
+        {showMore &&
+          SECONDARY_MODULES.map((mod) => (
+            <Button
+              key={mod.key}
+              variant={activeModule === mod.key ? "default" : "outline"}
+              onClick={() => setActiveModule(mod.key)}
+              className="flex items-center gap-2"
+            >
+              <mod.icon className="h-4 w-4" />
+              {mod.label}
+            </Button>
+          ))}
       </div>
+
+      {["production", "warehouse", "dispatch"].includes(activeModule) && (
+        <LineFamilyFilter value={lineFamily} onChange={setLineFamily} />
+      )}
 
       {loading && <LoadingState text={`Loading ${activeModule} report...`} />}
 

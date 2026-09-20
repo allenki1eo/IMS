@@ -326,7 +326,7 @@ export default function ProductionBatchDetailPage() {
                 <td className={`px-4 py-3 ${stock && stock.status !== "OK" ? "text-destructive font-medium" : ""}`}>
                   {stock
                     ? stock.status === "UNKNOWN"
-                      ? "Unknown"
+                      ? "Not linked"
                       : `${qty(stock.availableStock, "")} / ${qty(stock.requiredQty, "")}`
                     : "-"}
                 </td>
