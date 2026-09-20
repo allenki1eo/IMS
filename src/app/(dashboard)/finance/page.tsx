@@ -202,12 +202,17 @@ export default function FinancePage() {
             <div>
               <p className="font-medium">Chart of Accounts is empty</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Create GL accounts before journals and payments. Zero KPIs above mean no data yet — not a system error.
+                Run the CoA setup wizard (Brewery+Spirits or Minimal) before journals and payments. Zero KPIs above mean no data yet — not a system error.
               </p>
             </div>
-            <Button asChild>
-              <Link href="/finance/accounts/new">Add first account</Link>
-            </Button>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button asChild>
+                <Link href="/finance/accounts/setup">Setup wizard</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/finance/accounts/new">Add account</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Wand2 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
@@ -80,15 +80,23 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <PageHeader title="Chart of Accounts" description="Manage your chart of accounts" />
         {canCreate && (
-          <Link href="/finance/accounts/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Account
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/finance/accounts/setup">
+              <Button variant="outline">
+                <Wand2 className="mr-2 h-4 w-4" />
+                Setup wizard
+              </Button>
+            </Link>
+            <Link href="/finance/accounts/new">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Account
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
 
@@ -103,15 +111,23 @@ export default function AccountsPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No chart of accounts yet"
-        emptyDescription="Add your first GL account (assets, liabilities, income, expenses) before posting journals or payments. An empty CoA is normal on a new company — not an error."
+        emptyDescription="Use the setup wizard to bootstrap GL accounts from a Brewery+Spirits or Minimal template — or add accounts one by one."
         emptyAction={
           canCreate ? (
-            <Link href="/finance/accounts/new">
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Account
-              </Button>
-            </Link>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <Link href="/finance/accounts/setup">
+                <Button size="sm">
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Setup wizard
+                </Button>
+              </Link>
+              <Link href="/finance/accounts/new">
+                <Button size="sm" variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Account
+                </Button>
+              </Link>
+            </div>
           ) : undefined
         }
         error={error}

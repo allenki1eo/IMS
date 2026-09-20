@@ -79,6 +79,7 @@ const COMMANDS: CommandItem[] = [
   // Finance
   { label: "Finance Overview", href: "/finance", icon: <Landmark className="h-4 w-4" />, group: "Finance", permission: "finance:account:read" },
   { label: "Chart of Accounts", href: "/finance/accounts", icon: <Landmark className="h-4 w-4" />, group: "Finance", permission: "finance:account:read" },
+  { label: "CoA Setup Wizard", href: "/finance/accounts/setup", icon: <Landmark className="h-4 w-4" />, group: "Finance", permission: "finance:account:create" },
   { label: "Journal Entries", href: "/finance/journal-entries", icon: <Landmark className="h-4 w-4" />, group: "Finance", permission: "finance:journal:read" },
   { label: "Bank Accounts", href: "/finance/bank-accounts", icon: <Landmark className="h-4 w-4" />, group: "Finance", permission: "finance:bank:read" },
   { label: "Payments", href: "/finance/payments", icon: <Landmark className="h-4 w-4" />, group: "Finance", permission: "finance:payment:read" },
