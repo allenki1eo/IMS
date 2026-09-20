@@ -369,19 +369,54 @@ export async function getQCReport(companyId: string, fromDate?: string, toDate?:
 
 // ─── DISPATCH ──────────────────────────────────────────────
 
+/**
+ * Dispatch report for Reports → Dispatch tab.
+ *
+ * Avoid full FGProduct/FGLot includes: those SELECT every scalar including
+ * newer MVP columns (lineFamily, qaStatus, requiresTraStamp, …). A Turso DB
+ * that has not been `prisma db push`'d throws "no such column" and blanks the
+ * whole tab. UI only needs product name/code + lot counts in the period.
+ */
 export async function getDispatchReport(companyId: string, fromDate?: string, toDate?: string) {
   const { from, to } = getDateRange(fromDate, toDate);
 
   const [orders, products] = await Promise.all([
     db.dispatchOrder.findMany({
       where: { companyId, createdAt: { gte: from, lte: to } },
-      include: { lines: true, vehicle: { select: { plateNumber: true } } },
+      select: {
+        id: true,
+        reference: true,
+        status: true,
+        customerName: true,
+        createdAt: true,
+        dispatchedAt: true,
+        deliveredAt: true,
+        vehicle: { select: { plateNumber: true } },
+        lines: {
+          select: {
+            id: true,
+            quantity: true,
+            unitPrice: true,
+            totalPrice: true,
+            description: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
     db.fGProduct.findMany({
       where: { companyId },
-      include: { lots: { where: { createdAt: { gte: from, lte: to } } } },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        // id-only lot rows — never SELECT newer FGLot scalars (qaStatus, abvPct, …)
+        lots: {
+          where: { createdAt: { gte: from, lte: to } },
+          select: { id: true },
+        },
+      },
     }),
   ]);
 
@@ -401,7 +436,11 @@ export async function getDispatchReport(companyId: string, fromDate?: string, to
       totalProducts: products.length,
     },
     orders: normalizedOrders,
-    products: (products as AnyRow[]).map((product) => ({ name: product.name, code: product.code, lotCount: product.lots.length })),
+    products: (products as AnyRow[]).map((product) => ({
+      name: product.name,
+      code: product.code,
+      lotCount: product.lots?.length ?? 0,
+    })),
   };
 }
 

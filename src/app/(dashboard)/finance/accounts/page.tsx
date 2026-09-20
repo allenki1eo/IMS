@@ -102,9 +102,20 @@ export default function AccountsPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        emptyTitle="No accounts found"
-          error={error}
-          onRetry={() => mutate()}
+        emptyTitle="No chart of accounts yet"
+        emptyDescription="Add your first GL account (assets, liabilities, income, expenses) before posting journals or payments. An empty CoA is normal on a new company — not an error."
+        emptyAction={
+          canCreate ? (
+            <Link href="/finance/accounts/new">
+              <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Account
+              </Button>
+            </Link>
+          ) : undefined
+        }
+        error={error}
+        onRetry={() => mutate()}
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

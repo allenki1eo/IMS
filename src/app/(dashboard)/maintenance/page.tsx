@@ -77,8 +77,8 @@ export default function MaintenanceOverviewPage() {
           completedThisMonth: completedData.meta?.total ?? 0,
           lowStockParts: lowStockData.meta?.total ?? 0,
         });
-        setRecentWorkOrders(recentData.data ?? []);
-        setLowStockParts(lowStockData.data ?? []);
+        setRecentWorkOrders(Array.isArray(recentData.data) ? recentData.data : []);
+        setLowStockParts(Array.isArray(lowStockData.data) ? lowStockData.data : []);
       })
       .catch(() => toast.error("Failed to load maintenance overview"))
       .finally(() => setLoading(false));

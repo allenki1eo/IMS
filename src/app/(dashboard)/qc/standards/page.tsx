@@ -205,7 +205,7 @@ export default function QcStandardsPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No quality standards found"
-        emptyDescription="Create your first quality standard to get started."
+        emptyDescription="Create a standard and add ≥1 parameter before setting Active, or install a brewery template above. Empty Active list usually means standards exist but are still inactive."
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

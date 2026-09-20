@@ -33,3 +33,10 @@ DATABASE_URL="..." DATABASE_AUTH_TOKEN="..." npx prisma db push
 ```
 
 No destructive renames/drops in this change set.
+
+## Reports tab note (health pass)
+
+`getDispatchReport` uses narrow `select` (product name/code + lot ids only) so the
+Reports → Dispatch tab does **not** require the new FG columns to load.
+Dispatch / TRA / FG **module** screens still need the columns above — run
+`prisma db push` before exercising receive / QA release / TRA activation / DISPATCHED.

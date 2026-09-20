@@ -55,8 +55,8 @@ export default function DispatchOverviewPage() {
           dispatched: dispatchedData.meta?.total ?? 0,
           fgLots: lotsData.meta?.total ?? 0,
         });
-        setRecentOrders(recentData.data ?? []);
-        setRecentLots((lotsData.data ?? []).slice(0, 5));
+        setRecentOrders(Array.isArray(recentData.data) ? recentData.data : []);
+        setRecentLots((Array.isArray(lotsData.data) ? lotsData.data : []).slice(0, 5));
       })
       .catch(() => toast.error("Failed to load dispatch overview"))
       .finally(() => setLoading(false));
