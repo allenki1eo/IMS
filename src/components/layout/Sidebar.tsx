@@ -9,7 +9,7 @@ import {
   Fuel, Receipt, TrendingDown, Wrench, PenTool, ShoppingCart, FileCheck, Handshake,
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, LogOut, User, Lock,
-  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag,
+  TrendingUp, ShoppingBag, UserCheck, Target, FileText, ExternalLink, Key, Tag, MessageSquare,
   Leaf, BookMarked, LineChart, ListPlus, Droplets, TestTube, Beaker, Microscope,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -263,6 +263,7 @@ const NAV_GROUPS: NavGroup[] = [
         permission: "settings:settings:read",
         children: [
           { label: "Configuration", href: "/settings", exact: true, icon: <Settings className="h-4 w-4" />, permission: "settings:settings:read" },
+          { label: "Finance SMS", href: "/settings/finance-sms", icon: <MessageSquare className="h-4 w-4" />, permission: "settings:settings:read" },
           { label: "Manage Keys", href: "/settings/keys", icon: <Key className="h-4 w-4" />, permission: "settings:settings:update" },
         ],
       },

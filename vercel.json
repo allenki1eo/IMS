@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/finance-eod-sms",
+      "schedule": "0 15 * * *"
+    }
+  ]
+}

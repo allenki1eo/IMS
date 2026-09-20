@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { notifyDepositPosted, FINANCE_SMS_SOURCE } from "@/modules/finance/finance-sms.service";
 
 export const PAYMENT_METHODS = ["CASH", "CHEQUE", "ONLINE", "BANK_TRANSFER", "PETTY_CASH"] as const;
 
@@ -150,6 +151,19 @@ export async function createCashbookEntry(params: {
     userAgent,
     companyId: data.companyId,
   });
+
+  // Deposit SMS: cashbook RECEIPT is the primary "money in" event (see docs/FINANCE_SMS.md).
+  if (data.type === "RECEIPT") {
+    void notifyDepositPosted({
+      companyId: data.companyId,
+      sourceType: FINANCE_SMS_SOURCE.CASHBOOK_RECEIPT,
+      sourceId: entry.id,
+      amount: data.amount,
+      accountName: entry.bankAccount?.name ?? "Account",
+      reference: data.reference ?? (entry.pvNumber != null ? `PV-${entry.pvNumber}` : null),
+      occurredAt: data.date,
+    });
+  }
 
   return entry;
 }
