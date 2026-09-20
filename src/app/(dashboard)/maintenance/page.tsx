@@ -14,6 +14,7 @@ interface WorkOrderRow {
   id: string;
   reference: string;
   vehicle?: { plateNumber: string } | null;
+  plantAsset?: { code: string; name: string } | null;
   maintenanceType: string;
   priority: string;
   status: string;
@@ -182,7 +183,7 @@ export default function MaintenanceOverviewPage() {
                           </Link>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {wo.vehicle?.plateNumber ?? "—"}
+                          {wo.vehicle?.plateNumber ?? (wo.plantAsset ? `${wo.plantAsset.code} — ${wo.plantAsset.name}` : "—")}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${priorityClass(wo.priority)}`}>

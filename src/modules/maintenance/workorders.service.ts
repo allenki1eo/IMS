@@ -22,6 +22,7 @@ export async function listWorkOrders(
   companyId: string,
   params: {
     vehicleId?: string;
+    plantAssetId?: string;
     status?: string;
     priority?: string;
     completedFrom?: Date;
@@ -30,12 +31,13 @@ export async function listWorkOrders(
     pageSize: number;
   }
 ) {
-  const { vehicleId, status, priority, completedFrom, completedTo, page, pageSize } = params;
+  const { vehicleId, plantAssetId, status, priority, completedFrom, completedTo, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
     companyId,
     ...(vehicleId ? { vehicleId } : {}),
+    ...(plantAssetId ? { plantAssetId } : {}),
     ...(status ? { status } : {}),
     ...(priority ? { priority } : {}),
     ...(completedFrom || completedTo
@@ -57,6 +59,9 @@ export async function listWorkOrders(
       include: {
         vehicle: {
           select: { id: true, plateNumber: true, make: true, model: true },
+        },
+        plantAsset: {
+          select: { id: true, code: true, name: true, category: true },
         },
         schedule: {
           select: { id: true, maintenanceType: true },
@@ -85,6 +90,15 @@ export async function getWorkOrder(companyId: string, id: string) {
           odometer: true,
         },
       },
+      plantAsset: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          category: true,
+          location: true,
+        },
+      },
       schedule: {
         select: {
           id: true,
@@ -110,7 +124,8 @@ export async function getWorkOrder(companyId: string, id: string) {
 export async function createWorkOrder(
   companyId: string,
   data: {
-    vehicleId: string;
+    vehicleId?: string | null;
+    plantAssetId?: string | null;
     scheduleId?: string | null;
     maintenanceType: string;
     description?: string | null;
@@ -123,18 +138,45 @@ export async function createWorkOrder(
   userName: string,
   ipAddress?: string
 ) {
-  const vehicle = await db.vehicle.findUnique({ where: { id: data.vehicleId } });
-  if (!vehicle) throw new Error("Vehicle not found");
-  if (vehicle.companyId !== companyId) throw new Error("Vehicle not found");
+  const vehicleId = data.vehicleId?.trim() || null;
+  const plantAssetId = data.plantAssetId?.trim() || null;
+
+  if (!vehicleId && !plantAssetId) {
+    throw new Error("Either vehicleId or plantAssetId is required");
+  }
+  if (vehicleId && plantAssetId) {
+    throw new Error("Provide vehicleId or plantAssetId, not both");
+  }
+
+  let assetLabel = "";
+  let vehicle = null as Awaited<ReturnType<typeof db.vehicle.findUnique>> | null;
+  let plantAsset = null as Awaited<ReturnType<typeof db.plantAsset.findUnique>> | null;
+
+  if (vehicleId) {
+    vehicle = await db.vehicle.findUnique({ where: { id: vehicleId } });
+    if (!vehicle || vehicle.companyId !== companyId) throw new Error("Vehicle not found");
+    assetLabel = `vehicle ${vehicle.plateNumber}`;
+  } else if (plantAssetId) {
+    plantAsset = await db.plantAsset.findUnique({ where: { id: plantAssetId } });
+    if (!plantAsset || plantAsset.companyId !== companyId) throw new Error("Plant asset not found");
+    if (plantAsset.status !== "ACTIVE" || !plantAsset.isActive) {
+      throw new Error("Plant asset is not active");
+    }
+    assetLabel = `plant asset ${plantAsset.code} (${plantAsset.name})`;
+  }
+
   if (data.estimatedCost != null) {
     assertNonNegativeFiniteNumber(data.estimatedCost, "estimatedCost");
   }
 
   if (data.scheduleId) {
+    if (!vehicleId) {
+      throw new Error("Maintenance schedules can only be linked to vehicle work orders");
+    }
     const schedule = await db.maintenanceSchedule.findUnique({ where: { id: data.scheduleId } });
     if (!schedule) throw new Error("Maintenance schedule not found");
     if (schedule.companyId !== companyId) throw new Error("Maintenance schedule not found");
-    if (schedule.vehicleId !== data.vehicleId) {
+    if (schedule.vehicleId !== vehicleId) {
       throw new Error("Maintenance schedule does not belong to the selected vehicle");
     }
   }
@@ -144,7 +186,8 @@ export async function createWorkOrder(
   const workOrder = await db.workOrder.create({
     data: {
       companyId,
-      vehicleId: data.vehicleId,
+      vehicleId,
+      plantAssetId,
       scheduleId: data.scheduleId ?? null,
       reference,
       maintenanceType: data.maintenanceType,
@@ -168,11 +211,12 @@ export async function createWorkOrder(
     recordId: workOrder.id,
     newValue: {
       reference,
-      vehicleId: data.vehicleId,
+      vehicleId,
+      plantAssetId,
       maintenanceType: data.maintenanceType,
       priority: data.priority ?? "MEDIUM",
     },
-    description: `Created work order: ${reference} for vehicle ${vehicle.plateNumber}`,
+    description: `Created work order: ${reference} for ${assetLabel}`,
     ipAddress,
     companyId,
   });
@@ -283,6 +327,7 @@ export async function completeWorkOrder(
     include: {
       schedule: true,
       vehicle: true,
+      plantAsset: true,
       items: {
         include: {
           sparePart: true,
@@ -297,6 +342,9 @@ export async function completeWorkOrder(
     assertNonNegativeFiniteNumber(data.actualCost, "actualCost");
   }
   if (data.odometerAtService != null) {
+    if (!existing.vehicle) {
+      throw new Error("odometerAtService is only applicable for vehicle work orders");
+    }
     assertNonNegativeFiniteNumber(data.odometerAtService, "odometerAtService");
     if (data.odometerAtService < existing.vehicle.odometer) {
       throw new Error("odometerAtService cannot be less than the current vehicle odometer");
@@ -357,8 +405,8 @@ export async function completeWorkOrder(
       },
     });
 
-    // Update vehicle odometer if provided
-    if (data.odometerAtService != null) {
+    // Update vehicle odometer if provided (vehicle WOs only)
+    if (data.odometerAtService != null && existing.vehicleId) {
       const vehicle = await tx.vehicle.findUnique({ where: { id: existing.vehicleId } });
       if (vehicle && data.odometerAtService > vehicle.odometer) {
         await tx.vehicle.update({
@@ -414,6 +462,9 @@ export async function completeWorkOrder(
     include: {
       vehicle: {
         select: { id: true, plateNumber: true, make: true, model: true, odometer: true },
+      },
+      plantAsset: {
+        select: { id: true, code: true, name: true, category: true },
       },
       items: true,
     },

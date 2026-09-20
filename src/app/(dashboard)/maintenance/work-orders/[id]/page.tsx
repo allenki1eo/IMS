@@ -38,6 +38,7 @@ interface WorkOrder {
   completedAt?: string | null;
   createdAt: string;
   vehicle?: { id: string; plateNumber: string; make?: string; model?: string } | null;
+  plantAsset?: { id: string; code: string; name: string; category?: string; location?: string | null } | null;
   assignedTo?: { firstName: string; lastName: string } | null;
   schedule?: { id: string; maintenanceType: string } | null;
 }
@@ -246,8 +247,14 @@ export default function WorkOrderDetailPage() {
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground">Vehicle</p>
-              <p className="font-medium mt-1">{workOrder.vehicle?.plateNumber ?? "—"}</p>
+              <p className="text-muted-foreground">Asset</p>
+              <p className="font-medium mt-1">
+                {workOrder.vehicle?.plateNumber
+                  ? `${workOrder.vehicle.plateNumber}${workOrder.vehicle.make ? ` — ${workOrder.vehicle.make} ${workOrder.vehicle.model ?? ""}`.trimEnd() : ""}`
+                  : workOrder.plantAsset
+                    ? `${workOrder.plantAsset.code} — ${workOrder.plantAsset.name}${workOrder.plantAsset.category ? ` (${workOrder.plantAsset.category})` : ""}`
+                    : "—"}
+              </p>
             </div>
             <div>
               <p className="text-muted-foreground">Assigned To</p>
@@ -371,18 +378,20 @@ export default function WorkOrderDetailPage() {
                     placeholder="e.g. 320.00"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="odometerAtService">Odometer at Service (km)</Label>
-                  <Input
-                    id="odometerAtService"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={completeForm.odometerAtService}
-                    onChange={(e) => setCompleteForm((p) => ({ ...p, odometerAtService: e.target.value }))}
-                    placeholder="e.g. 145000"
-                  />
-                </div>
+                {workOrder.vehicle && (
+                  <div className="space-y-1">
+                    <Label htmlFor="odometerAtService">Odometer at Service (km)</Label>
+                    <Input
+                      id="odometerAtService"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={completeForm.odometerAtService}
+                      onChange={(e) => setCompleteForm((p) => ({ ...p, odometerAtService: e.target.value }))}
+                      placeholder="e.g. 145000"
+                    />
+                  </div>
+                )}
                 <div className="space-y-1">
                   <Label htmlFor="completionNotes">Completion Notes</Label>
                   <textarea

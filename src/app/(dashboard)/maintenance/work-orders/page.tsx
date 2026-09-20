@@ -24,12 +24,19 @@ interface WorkOrderRow {
   reference: string;
   companyId: string;
   vehicle?: { plateNumber: string } | null;
+  plantAsset?: { code: string; name: string; category?: string } | null;
   maintenanceType: string;
   priority: string;
   status: string;
   assignedTo?: { firstName: string; lastName: string } | null;
   estimatedCost?: number | null;
   createdAt: string;
+}
+
+function assetLabel(row: WorkOrderRow): string {
+  if (row.vehicle?.plateNumber) return row.vehicle.plateNumber;
+  if (row.plantAsset) return `${row.plantAsset.code} — ${row.plantAsset.name}`;
+  return "—";
 }
 
 const PAGE_SIZE = 20;
@@ -112,11 +119,11 @@ export default function WorkOrdersPage() {
       ),
     },
     {
-      key: "vehicle",
-      header: "Vehicle",
-      exportValue: (row: WorkOrderRow) => row.vehicle?.plateNumber ?? "",
+      key: "asset",
+      header: "Asset",
+      exportValue: (row: WorkOrderRow) => assetLabel(row),
       cell: (row: WorkOrderRow) => (
-        <span className="text-muted-foreground">{row.vehicle?.plateNumber ?? "—"}</span>
+        <span className="text-muted-foreground">{assetLabel(row)}</span>
       ),
     },
     {
@@ -211,7 +218,9 @@ export default function WorkOrdersPage() {
     ),
     meta: (
       <div className="flex flex-col gap-0.5">
-        {wo.vehicle?.plateNumber && <span>{wo.vehicle.plateNumber}</span>}
+        {(wo.vehicle?.plateNumber || wo.plantAsset) && (
+          <span>{assetLabel(wo)}</span>
+        )}
         {wo.assignedTo && <span>{wo.assignedTo.firstName} {wo.assignedTo.lastName}</span>}
       </div>
     ),

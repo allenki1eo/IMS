@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const pagination = parsePagination(searchParams);
   const vehicleId = searchParams.get("vehicleId") ?? undefined;
+  const plantAssetId = searchParams.get("plantAssetId") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
   const priority = searchParams.get("priority") ?? undefined;
   const fromStr = searchParams.get("from");
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data, meta } = await listWorkOrders(companyId, {
       vehicleId,
+      plantAssetId,
       status,
       priority,
       completedFrom: fromStr ? new Date(fromStr) : undefined,
@@ -47,6 +49,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     vehicleId,
+    plantAssetId,
     scheduleId,
     maintenanceType,
     description,
@@ -56,7 +59,14 @@ export async function POST(request: NextRequest) {
     estimatedCost,
   } = body;
 
-  if (!vehicleId || typeof vehicleId !== "string") return badRequest("vehicleId is required");
+  const hasVehicle = typeof vehicleId === "string" && vehicleId.length > 0;
+  const hasPlant = typeof plantAssetId === "string" && plantAssetId.length > 0;
+  if (!hasVehicle && !hasPlant) {
+    return badRequest("vehicleId or plantAssetId is required");
+  }
+  if (hasVehicle && hasPlant) {
+    return badRequest("Provide vehicleId or plantAssetId, not both");
+  }
   if (!maintenanceType || typeof maintenanceType !== "string")
     return badRequest("maintenanceType is required");
 
@@ -66,7 +76,8 @@ export async function POST(request: NextRequest) {
     const workOrder = await createWorkOrder(
       companyId,
       {
-        vehicleId,
+        vehicleId: hasVehicle ? vehicleId : null,
+        plantAssetId: hasPlant ? plantAssetId : null,
         scheduleId: scheduleId ?? null,
         maintenanceType,
         description: description ?? null,
@@ -82,7 +93,16 @@ export async function POST(request: NextRequest) {
     return created(workOrder);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed";
-    if (msg === "Vehicle not found" || msg === "Maintenance schedule not found" || msg.includes("selected vehicle"))
+    if (
+      msg === "Vehicle not found" ||
+      msg === "Plant asset not found" ||
+      msg === "Plant asset is not active" ||
+      msg === "Maintenance schedule not found" ||
+      msg.includes("selected vehicle") ||
+      msg.includes("vehicleId or plantAssetId") ||
+      msg.includes("not both") ||
+      msg.includes("only be linked")
+    )
       return badRequest(msg);
     if (msg.includes("cannot be negative")) return badRequest(msg);
     return handleError(err);

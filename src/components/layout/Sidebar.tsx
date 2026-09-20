@@ -105,6 +105,7 @@ const NAV_GROUPS: NavGroup[] = [
         children: [
           { label: "Overview", href: "/maintenance", icon: <BarChart3 className="h-4 w-4" />, permission: "maintenance:workorder:read" },
           { label: "Work Orders", href: "/maintenance/work-orders", icon: <ClipboardList className="h-4 w-4" />, permission: "maintenance:workorder:read" },
+          { label: "Plant Assets", href: "/maintenance/plant-assets", icon: <Factory className="h-4 w-4" />, permission: "maintenance:workorder:read" },
           { label: "Schedules", href: "/maintenance/schedules", icon: <PenTool className="h-4 w-4" />, permission: "maintenance:schedule:read" },
           { label: "Spare Parts", href: "/maintenance/parts", icon: <Package className="h-4 w-4" />, permission: "maintenance:part:read" },
           { label: "Parts Receipts", href: "/maintenance/receipts", icon: <Receipt className="h-4 w-4" />, permission: "maintenance:receipt:read" },
