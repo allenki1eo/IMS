@@ -47,6 +47,7 @@ export const BREWERY_STANDARD_TEMPLATES = [
   {
     code: "BEER-FINISHED",
     name: "Finished Beer Release",
+    lineFamily: "BREWING" as const,
     testType: "BRIGHT_BEER",
     testStage: "BRIGHT_BEER",
     description: "Core release checks before beer is approved for packaging or sale.",
@@ -62,6 +63,7 @@ export const BREWERY_STANDARD_TEMPLATES = [
   {
     code: "WORT-QC",
     name: "Wort Quality",
+    lineFamily: "BREWING" as const,
     testType: "WORT",
     testStage: "WORT",
     description: "Wort checks before transfer to fermentation.",
@@ -75,6 +77,7 @@ export const BREWERY_STANDARD_TEMPLATES = [
   {
     code: "PACK-QC",
     name: "Packaging Quality",
+    lineFamily: "BREWING" as const,
     testType: "PACKAGING",
     testStage: "PACKAGING",
     description: "Checks for packaged beer quality and coding.",
@@ -89,6 +92,7 @@ export const BREWERY_STANDARD_TEMPLATES = [
   {
     code: "MICRO-BEER",
     name: "Beer Microbiology",
+    lineFamily: "BREWING" as const,
     testType: "MICROBIOLOGY",
     testStage: "BRIGHT_BEER",
     description: "Microbiology checks for beer and packaging hygiene.",

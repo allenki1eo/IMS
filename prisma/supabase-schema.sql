@@ -1061,7 +1061,8 @@ CREATE TABLE "quality_standards" (
     "name" TEXT NOT NULL,
     "itemId" TEXT,
     "description" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "lineFamily" TEXT NOT NULL DEFAULT 'BREWING',
+    "isActive" BOOLEAN NOT NULL DEFAULT false,
     "createdById" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -2043,6 +2044,7 @@ CREATE INDEX "quality_standards_companyId_idx" ON "quality_standards"("companyId
 
 -- CreateIndex
 CREATE INDEX "quality_standards_itemId_idx" ON "quality_standards"("itemId");
+CREATE INDEX "quality_standards_lineFamily_idx" ON "quality_standards"("lineFamily");
 
 -- CreateIndex
 CREATE INDEX "quality_standard_parameters_standardId_idx" ON "quality_standard_parameters"("standardId");

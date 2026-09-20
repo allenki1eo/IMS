@@ -19,6 +19,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BREWERY_SAMPLE_POINTS, BREWERY_TEST_STAGES, BREWERY_TEST_TYPES } from "@/modules/qc/brewery-qc";
+import { SPIRITS_SAMPLE_POINTS, SPIRITS_TEST_STAGES, SPIRITS_TEST_TYPES } from "@/modules/qc/spirits-qc";
+
+function uniqueByValue<T extends { value: string }>(items: readonly T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (seen.has(item.value)) continue;
+    seen.add(item.value);
+    out.push(item as T);
+  }
+  return out;
+}
+
+const QC_TEST_TYPES = uniqueByValue([...BREWERY_TEST_TYPES, ...SPIRITS_TEST_TYPES]);
+const QC_TEST_STAGES = uniqueByValue([...BREWERY_TEST_STAGES, ...SPIRITS_TEST_STAGES]);
+const QC_SAMPLE_POINTS = uniqueByValue([...BREWERY_SAMPLE_POINTS, ...SPIRITS_SAMPLE_POINTS]);
 
 interface StandardOption {
   id: string;
@@ -163,7 +179,7 @@ export default function NewQcTestPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {BREWERY_TEST_TYPES.map((t) => (
+                  {QC_TEST_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -172,7 +188,7 @@ export default function NewQcTestPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label>Brewing Stage</Label>
+                <Label>Stage</Label>
                 <Select
                   value={form.testStage || "__none"}
                   onValueChange={(v) => setForm((p) => ({ ...p, testStage: v === "__none" ? "" : v }))}
@@ -181,7 +197,7 @@ export default function NewQcTestPage() {
                   <SelectTrigger><SelectValue placeholder="Select stage" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">No stage</SelectItem>
-                    {BREWERY_TEST_STAGES.map((stage) => (
+                    {QC_TEST_STAGES.map((stage) => (
                       <SelectItem key={stage.value} value={stage.value}>{stage.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -198,7 +214,7 @@ export default function NewQcTestPage() {
                   <SelectTrigger><SelectValue placeholder="Select sample point" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">No sample point</SelectItem>
-                    {BREWERY_SAMPLE_POINTS.map((point) => (
+                    {QC_SAMPLE_POINTS.map((point) => (
                       <SelectItem key={point.value} value={point.value}>{point.label}</SelectItem>
                     ))}
                   </SelectContent>

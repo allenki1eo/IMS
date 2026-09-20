@@ -25,15 +25,17 @@ interface StandardRow {
   id: string;
   code: string;
   name: string;
+  lineFamily?: string;
   item?: { name: string } | null;
   _count?: { parameters: number };
   isActive: boolean;
 }
 
-interface BreweryTemplate {
+interface QcTemplate {
   code: string;
   name: string;
   description: string;
+  lineFamily?: "BREWING" | "SPIRITS";
 }
 
 const PAGE_SIZE = 20;
@@ -41,13 +43,15 @@ const PAGE_SIZE = 20;
 export default function QcStandardsPage() {
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<BreweryTemplate[]>([]);
+  const [templates, setTemplates] = useState<QcTemplate[]>([]);
   const [templateCode, setTemplateCode] = useState("");
   const [installing, setInstalling] = useState(false);
+  const [lineFamily, setLineFamily] = useState("ALL");
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) params.set("search", debounced);
+  if (lineFamily !== "ALL") params.set("lineFamily", lineFamily);
   const { data: standards, total, loading, mutate } = usePagedData<StandardRow>(`/api/qc/standards?${params}`);
 
   useEffect(() => {
@@ -72,7 +76,7 @@ export default function QcStandardsPage() {
 
   async function handleInstallTemplate() {
     if (!templateCode) {
-      toast.error("Select a brewery template first");
+      toast.error("Select a QC template first");
       return;
     }
 
@@ -88,7 +92,8 @@ export default function QcStandardsPage() {
         toast.error(json.error ?? "Failed to install template");
         return;
       }
-      toast.success("Brewery QC template installed");
+      const family = templates.find((t) => t.code === templateCode)?.lineFamily ?? "BREWING";
+      toast.success(`${family === "SPIRITS" ? "Spirits" : "Brewery"} QC template installed`);
       setTemplateCode("");
       mutate();
     } catch {
@@ -115,6 +120,13 @@ export default function QcStandardsPage() {
         <Link href={`/qc/standards/${row.id}`} className="font-medium hover:underline">
           {row.name}
         </Link>
+      ),
+    },
+    {
+      key: "lineFamily",
+      header: "Family",
+      cell: (row: StandardRow) => (
+        <span className="text-muted-foreground">{row.lineFamily ?? "BREWING"}</span>
       ),
     },
     {
@@ -156,7 +168,7 @@ export default function QcStandardsPage() {
     <div>
       <PageHeader
         title="Quality Standards"
-        description="Manage quality standards and test parameters"
+        description="Manage quality standards and test parameters (brewery + spirits)"
         actions={
           <PermissionGuard require="qc:standard:create">
             <Button asChild>
@@ -176,16 +188,26 @@ export default function QcStandardsPage() {
           placeholder="Search by code or name..."
           className="w-full sm:max-w-xs"
         />
+        <Select value={lineFamily} onValueChange={(v) => { setLineFamily(v); setPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectValue placeholder="Line family" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All families</SelectItem>
+            <SelectItem value="BREWING">Brewing</SelectItem>
+            <SelectItem value="SPIRITS">Spirits</SelectItem>
+          </SelectContent>
+        </Select>
         <PermissionGuard require="qc:standard:create">
           <Select value={templateCode || "__none"} onValueChange={(value) => setTemplateCode(value === "__none" ? "" : value)}>
-            <SelectTrigger className="w-full sm:w-[260px]">
-              <SelectValue placeholder="Install brewery template" />
+            <SelectTrigger className="w-full sm:w-[320px]">
+              <SelectValue placeholder="Install brewery or spirits template" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none">Select brewery template</SelectItem>
+              <SelectItem value="__none">Select QC template</SelectItem>
               {templates.map((template) => (
                 <SelectItem key={template.code} value={template.code}>
-                  {template.code} - {template.name}
+                  [{template.lineFamily ?? "BREWING"}] {template.code} - {template.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -205,7 +227,7 @@ export default function QcStandardsPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No quality standards found"
-        emptyDescription="Create a standard and add ≥1 parameter before setting Active, or install a brewery template above. Empty Active list usually means standards exist but are still inactive."
+        emptyDescription="Create a standard and add ≥1 parameter before setting Active, or install a brewery/spirits template above. Empty Active list usually means standards exist but are still inactive."
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

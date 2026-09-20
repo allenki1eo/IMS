@@ -1443,6 +1443,8 @@ model QualityStandard {
   name        String
   itemId      String?
   description String?
+  /// BREWING | SPIRITS — same vocabulary as recipes / FG
+  lineFamily  String   @default("BREWING")
   isActive    Boolean  @default(false)
   createdById String
   createdAt   DateTime @default(now())
@@ -1454,6 +1456,7 @@ model QualityStandard {
 
   @@index([companyId])
   @@index([itemId])
+  @@index([lineFamily])
   @@map("quality_standards")
 }
 

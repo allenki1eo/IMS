@@ -22,6 +22,21 @@ import {
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
 import { BREWERY_TEST_STAGES, BREWERY_TEST_TYPES, RELEASE_DECISIONS } from "@/modules/qc/brewery-qc";
+import { SPIRITS_TEST_STAGES, SPIRITS_TEST_TYPES } from "@/modules/qc/spirits-qc";
+
+function uniqueByValue<T extends { value: string }>(items: readonly T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (seen.has(item.value)) continue;
+    seen.add(item.value);
+    out.push(item as T);
+  }
+  return out;
+}
+
+const QC_TEST_TYPES = uniqueByValue([...BREWERY_TEST_TYPES, ...SPIRITS_TEST_TYPES]);
+const QC_TEST_STAGES = uniqueByValue([...BREWERY_TEST_STAGES, ...SPIRITS_TEST_STAGES]);
 
 interface TestRow {
   id: string;
@@ -41,12 +56,12 @@ interface TestRow {
 
 const TYPE_FILTERS = [
   { label: "All Types", value: "ALL" },
-  ...BREWERY_TEST_TYPES,
+  ...QC_TEST_TYPES,
 ];
 
 const STAGE_FILTERS = [
   { label: "All Stages", value: "ALL" },
-  ...BREWERY_TEST_STAGES,
+  ...QC_TEST_STAGES,
 ];
 
 const STATUS_FILTERS = [
@@ -69,8 +84,13 @@ function testTypeBadge(type: string) {
     SENSORY: "bg-pink-100 text-pink-700",
     RETAIN_SAMPLE: "bg-slate-100 text-slate-700",
     CALIBRATION: "bg-gray-100 text-gray-600",
+    INCOMING_SPIRIT: "bg-amber-100 text-amber-800",
+    NEW_MAKE: "bg-violet-100 text-violet-700",
+    BLEND_PROOF: "bg-indigo-100 text-indigo-700",
+    PRE_BOTTLE: "bg-teal-100 text-teal-700",
+    PACKAGING_SPIRITS: "bg-cyan-100 text-cyan-700",
   };
-  const label = BREWERY_TEST_TYPES.find((item) => item.value === type)?.label ?? type.replace(/_/g, " ");
+  const label = QC_TEST_TYPES.find((item) => item.value === type)?.label ?? type.replace(/_/g, " ");
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-600"}`}>
       {label}
@@ -177,7 +197,7 @@ export default function QcTestsPage() {
       header: "Stage",
       cell: (row: TestRow) => (
         <span className="text-muted-foreground">
-          {labelFor(BREWERY_TEST_STAGES, row.testStage) ?? "-"}
+          {labelFor(QC_TEST_STAGES, row.testStage) ?? "-"}
         </span>
       ),
     },

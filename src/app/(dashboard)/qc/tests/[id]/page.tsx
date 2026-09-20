@@ -14,6 +14,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BREWERY_SAMPLE_POINTS, BREWERY_TEST_STAGES, BREWERY_TEST_TYPES, RELEASE_DECISIONS } from "@/modules/qc/brewery-qc";
+import { SPIRITS_SAMPLE_POINTS, SPIRITS_TEST_STAGES, SPIRITS_TEST_TYPES } from "@/modules/qc/spirits-qc";
+
+function uniqueByValue<T extends { value: string }>(items: readonly T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (seen.has(item.value)) continue;
+    seen.add(item.value);
+    out.push(item as T);
+  }
+  return out;
+}
+
+const QC_TEST_TYPES = uniqueByValue([...BREWERY_TEST_TYPES, ...SPIRITS_TEST_TYPES]);
+const QC_TEST_STAGES = uniqueByValue([...BREWERY_TEST_STAGES, ...SPIRITS_TEST_STAGES]);
+const QC_SAMPLE_POINTS = uniqueByValue([...BREWERY_SAMPLE_POINTS, ...SPIRITS_SAMPLE_POINTS]);
 
 interface TestResult {
   id: string;
@@ -72,7 +88,7 @@ function testTypeBadge(type: string) {
     RETAIN_SAMPLE: "bg-slate-100 text-slate-700",
     CALIBRATION: "bg-gray-100 text-gray-600",
   };
-  const label = labelFor(BREWERY_TEST_TYPES, type);
+  const label = labelFor(QC_TEST_TYPES, type);
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-600"}`}>
       {label}
@@ -228,7 +244,7 @@ export default function QcTestDetailPage() {
     <div>
       <PageHeader
         title={test.reference}
-        description={`Lab Test - ${labelFor(BREWERY_TEST_TYPES, test.testType)}`}
+        description={`Lab Test - ${labelFor(QC_TEST_TYPES, test.testType)}`}
         actions={
           <Button variant="outline" asChild>
             <Link href="/qc/tests">
@@ -260,11 +276,11 @@ export default function QcTestDetailPage() {
           </div>
           <div>
             <p className="text-muted-foreground">Brewing Stage</p>
-            <p className="mt-1">{labelFor(BREWERY_TEST_STAGES, test.testStage)}</p>
+            <p className="mt-1">{labelFor(QC_TEST_STAGES, test.testStage)}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Sample Point</p>
-            <p className="mt-1">{labelFor(BREWERY_SAMPLE_POINTS, test.samplePoint)}</p>
+            <p className="mt-1">{labelFor(QC_SAMPLE_POINTS, test.samplePoint)}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Standard</p>
