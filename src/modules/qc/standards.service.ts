@@ -28,17 +28,19 @@ export async function listStandards(
     search?: string;
     itemId?: string;
     isActive?: boolean;
+    lineFamily?: string;
     page: number;
     pageSize: number;
   }
 ) {
-  const { search, itemId, isActive, page, pageSize } = params;
+  const { search, itemId, isActive, lineFamily, page, pageSize } = params;
   const skip = (page - 1) * pageSize;
 
   const where = {
     companyId,
     ...(itemId ? { itemId } : {}),
     ...(isActive !== undefined ? { isActive } : {}),
+    ...(lineFamily ? { lineFamily } : {}),
     ...(search
       ? {
           OR: [
@@ -87,6 +89,7 @@ export async function createStandard(
     name: string;
     itemId?: string | null;
     description?: string | null;
+    lineFamily?: string;
     isActive?: boolean;
   },
   userId: string,
@@ -110,6 +113,9 @@ export async function createStandard(
     throw new Error("Cannot activate a quality standard with no parameters");
   }
 
+  const lineFamily =
+    data.lineFamily === "SPIRITS" || data.lineFamily === "BREWING" ? data.lineFamily : "BREWING";
+
   const standard = await db.qualityStandard.create({
     data: {
       companyId,
@@ -117,6 +123,7 @@ export async function createStandard(
       name: data.name,
       itemId: data.itemId ?? null,
       description: data.description ?? null,
+      lineFamily,
       // Explicit false — do not rely on schema default
       isActive: false,
       createdById: userId,
@@ -130,7 +137,7 @@ export async function createStandard(
     module: "qc",
     resource: "standard",
     recordId: standard.id,
-    newValue: { code: data.code, name: data.name, itemId: data.itemId },
+    newValue: { code: data.code, name: data.name, itemId: data.itemId, lineFamily },
     description: `Created quality standard: ${data.code} - ${data.name}`,
     ipAddress,
     companyId,
@@ -147,6 +154,7 @@ export async function updateStandard(
     name?: string;
     itemId?: string | null;
     description?: string | null;
+    lineFamily?: string;
     isActive?: boolean;
   },
   userId: string,
@@ -183,6 +191,12 @@ export async function updateStandard(
   if (data.name !== undefined) updateData.name = data.name;
   if (data.itemId !== undefined) updateData.itemId = data.itemId;
   if (data.description !== undefined) updateData.description = data.description;
+  if (data.lineFamily !== undefined) {
+    if (data.lineFamily !== "BREWING" && data.lineFamily !== "SPIRITS") {
+      throw new Error("lineFamily must be BREWING or SPIRITS");
+    }
+    updateData.lineFamily = data.lineFamily;
+  }
   if (data.isActive !== undefined) updateData.isActive = data.isActive === true;
 
   const updated = await db.qualityStandard.update({ where: { id }, data: updateData });

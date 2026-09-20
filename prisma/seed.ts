@@ -14,6 +14,8 @@ import {
   SPIRIT_BLEND_RECIPE,
   spiritsSeedMaterialLines,
 } from "../src/modules/production/spirits-bom";
+import { BREWERY_STANDARD_TEMPLATES } from "../src/modules/qc/brewery-qc";
+import { SPIRITS_STANDARD_TEMPLATES } from "../src/modules/qc/spirits-qc";
 
 // ─── Permission definitions ──────────────────────────────
 const PERMISSIONS = [
@@ -1143,6 +1145,94 @@ async function main() {
   console.log(`   Pale Ale: ${PALE_ALE_RECIPE.code} (${PALE_ALE_BOM_LINES.length} BOM lines, BREWING)`);
   console.log(`   Gin:      ${GIN_RECIPE.code} (${GIN_BOM_LINES.length} BOM lines, SPIRITS)`);
   console.log(`   Blend:    ${SPIRIT_BLEND_RECIPE.code} (${SPIRIT_BLEND_BOM_LINES.length} BOM lines, SPIRITS)`);
+
+  // ── 11. QC standard templates (brewery + spirits) ───────────
+  console.log("  → Seeding brewery + spirits QC standards...");
+
+  async function upsertQcTemplate(
+    template: {
+      code: string;
+      name: string;
+      description: string;
+      lineFamily: "BREWING" | "SPIRITS";
+      parameters: Array<{
+        name: string;
+        unit: string | null;
+        minValue: number | null;
+        maxValue: number | null;
+        targetValue: number | null;
+        sortOrder: number;
+        isRequired?: boolean;
+      }>;
+    }
+  ) {
+    let standard = await db.qualityStandard.findFirst({
+      where: { companyId: company.id, code: template.code },
+      include: { parameters: true },
+    });
+
+    if (!standard) {
+      standard = await db.qualityStandard.create({
+        data: {
+          companyId: company.id,
+          code: template.code,
+          name: template.name,
+          description: template.description,
+          lineFamily: template.lineFamily,
+          isActive: false,
+          createdById: adminUser.id,
+        },
+        include: { parameters: true },
+      });
+    } else {
+      standard = await db.qualityStandard.update({
+        where: { id: standard.id },
+        data: {
+          name: template.name,
+          description: template.description,
+          lineFamily: template.lineFamily,
+        },
+        include: { parameters: true },
+      });
+    }
+
+    if (standard.parameters.length === 0) {
+      for (const parameter of template.parameters) {
+        await db.qualityStandardParameter.create({
+          data: {
+            standardId: standard.id,
+            name: parameter.name,
+            unit: parameter.unit,
+            minValue: parameter.minValue,
+            maxValue: parameter.maxValue,
+            targetValue: parameter.targetValue,
+            sortOrder: parameter.sortOrder,
+            isRequired: parameter.isRequired !== false,
+          },
+        });
+      }
+    }
+
+    const paramCount = await db.qualityStandardParameter.count({
+      where: { standardId: standard.id },
+    });
+    if (paramCount >= 1 && !standard.isActive) {
+      await db.qualityStandard.update({
+        where: { id: standard.id },
+        data: { isActive: true },
+      });
+    }
+  }
+
+  for (const template of BREWERY_STANDARD_TEMPLATES) {
+    await upsertQcTemplate(template);
+  }
+  for (const template of SPIRITS_STANDARD_TEMPLATES) {
+    await upsertQcTemplate(template);
+  }
+
+  console.log(`   Brewery QC: ${BREWERY_STANDARD_TEMPLATES.length} templates (BREWING)`);
+  console.log(`   Spirits QC: ${SPIRITS_STANDARD_TEMPLATES.map((t) => t.code).join(", ")} (SPIRITS)`);
 
   console.log("");
   console.log("✅ Seed complete!");

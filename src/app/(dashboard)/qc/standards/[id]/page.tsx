@@ -36,6 +36,7 @@ interface Standard {
   code: string;
   name: string;
   description?: string | null;
+  lineFamily?: string;
   isActive: boolean;
   item?: { id: string; name: string } | null;
   parameters: Parameter[];
@@ -52,6 +53,7 @@ interface EditForm {
   name: string;
   itemId: string;
   description: string;
+  lineFamily: string;
 }
 
 interface ParamForm {
@@ -79,7 +81,7 @@ export default function QcStandardDetailPage() {
   const [standard, setStandard] = useState<Standard | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ItemOption[]>([]);
-  const [editForm, setEditForm] = useState<EditForm>({ code: "", name: "", itemId: "", description: "" });
+  const [editForm, setEditForm] = useState<EditForm>({ code: "", name: "", itemId: "", description: "", lineFamily: "BREWING" });
   const [saving, setSaving] = useState(false);
   const [showAddParam, setShowAddParam] = useState(false);
   const [paramForm, setParamForm] = useState<ParamForm>(PARAM_DEFAULT);
@@ -100,6 +102,7 @@ export default function QcStandardDetailPage() {
           name: std.name,
           itemId: std.item?.id ?? "",
           description: std.description ?? "",
+          lineFamily: std.lineFamily === "SPIRITS" ? "SPIRITS" : "BREWING",
         });
         setItems(itemsData.data ?? []);
       })
@@ -125,6 +128,7 @@ export default function QcStandardDetailPage() {
           name: editForm.name.trim(),
           itemId: editForm.itemId || undefined,
           description: editForm.description.trim() || undefined,
+          lineFamily: editForm.lineFamily || "BREWING",
         }),
       });
       const json = await res.json();
@@ -282,7 +286,11 @@ export default function QcStandardDetailPage() {
                 </p>
               )}
             </div>
-            <div className="col-span-2">
+            <div>
+              <p className="text-muted-foreground">Line family</p>
+              <p className="mt-1 font-medium">{standard.lineFamily ?? "BREWING"}</p>
+            </div>
+            <div>
               <p className="text-muted-foreground">Linked Item</p>
               <p className="mt-1">{standard.item?.name ?? "—"}</p>
             </div>
@@ -322,6 +330,22 @@ export default function QcStandardDetailPage() {
                       disabled={saving}
                     />
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <Label>Line family</Label>
+                  <Select
+                    value={editForm.lineFamily || "BREWING"}
+                    onValueChange={(v) => setEditForm((p) => ({ ...p, lineFamily: v }))}
+                    disabled={saving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BREWING">Brewing</SelectItem>
+                      <SelectItem value="SPIRITS">Spirits</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Label>Linked Item</Label>

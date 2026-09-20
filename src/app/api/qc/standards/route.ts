@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   const pagination = parsePagination(searchParams);
   const search = searchParams.get("search") ?? undefined;
   const itemId = searchParams.get("itemId") ?? undefined;
+  const lineFamily = searchParams.get("lineFamily") ?? undefined;
   const isActiveStr = searchParams.get("isActive");
   const isActive = isActiveStr === "true" ? true : isActiveStr === "false" ? false : undefined;
 
@@ -23,6 +24,7 @@ export async function GET(request: NextRequest) {
       search,
       itemId,
       isActive,
+      lineFamily,
       page: pagination.page,
       pageSize: pagination.pageSize,
     });
@@ -42,10 +44,13 @@ export async function POST(request: NextRequest) {
   if (!companyId) return badRequest("Company not configured");
 
   const body = await request.json();
-  const { code, name, itemId, description, isActive: rawIsActive } = body;
+  const { code, name, itemId, description, lineFamily, isActive: rawIsActive } = body;
   const isActive = coerceIsActive(rawIsActive);
   if (rawIsActive !== undefined && rawIsActive !== null && isActive === undefined) {
     return badRequest("isActive must be a boolean");
+  }
+  if (lineFamily !== undefined && lineFamily !== null && lineFamily !== "BREWING" && lineFamily !== "SPIRITS") {
+    return badRequest("lineFamily must be BREWING or SPIRITS");
   }
 
   if (!code || typeof code !== "string") return badRequest("code is required");
@@ -61,6 +66,7 @@ export async function POST(request: NextRequest) {
         name,
         itemId: itemId ?? null,
         description: description ?? null,
+        ...(lineFamily ? { lineFamily } : {}),
         ...(isActive !== undefined ? { isActive } : {}),
       },
       auth.user.id,

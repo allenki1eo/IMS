@@ -34,10 +34,13 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { code, name, itemId, description, isActive: rawIsActive } = body;
+  const { code, name, itemId, description, lineFamily, isActive: rawIsActive } = body;
   const isActive = coerceIsActive(rawIsActive);
   if (rawIsActive !== undefined && rawIsActive !== null && isActive === undefined) {
     return badRequest("isActive must be a boolean");
+  }
+  if (lineFamily !== undefined && lineFamily !== null && lineFamily !== "BREWING" && lineFamily !== "SPIRITS") {
+    return badRequest("lineFamily must be BREWING or SPIRITS");
   }
 
   const { ipAddress } = getRequestMeta(request);
@@ -51,6 +54,7 @@ export async function PATCH(
         ...(name !== undefined ? { name } : {}),
         ...(itemId !== undefined ? { itemId } : {}),
         ...(description !== undefined ? { description } : {}),
+        ...(lineFamily !== undefined ? { lineFamily } : {}),
         ...(isActive !== undefined ? { isActive } : {}),
       },
       auth.user.id,
@@ -65,7 +69,8 @@ export async function PATCH(
       msg === "Item not found" ||
       msg === "A standard with this code already exists" ||
       msg === "Cannot activate a quality standard with no parameters" ||
-      msg === "isActive must be a boolean"
+      msg === "isActive must be a boolean" ||
+      msg === "lineFamily must be BREWING or SPIRITS"
     )
       return badRequest(msg);
     return handleError(err);

@@ -30,6 +30,7 @@ interface FormData {
   name: string;
   itemId: string;
   description: string;
+  lineFamily: string;
 }
 
 const DEFAULT: FormData = {
@@ -37,6 +38,7 @@ const DEFAULT: FormData = {
   name: "",
   itemId: "",
   description: "",
+  lineFamily: "BREWING",
 };
 
 export default function NewQcStandardPage() {
@@ -74,6 +76,7 @@ export default function NewQcStandardPage() {
           name: form.name.trim(),
           itemId: form.itemId || undefined,
           description: form.description.trim() || undefined,
+          lineFamily: form.lineFamily || "BREWING",
         }),
       });
       const json = await res.json();
@@ -131,6 +134,23 @@ export default function NewQcStandardPage() {
                   disabled={submitting}
                 />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Line family</Label>
+              <Select
+                value={form.lineFamily}
+                onValueChange={(v) => setForm((p) => ({ ...p, lineFamily: v }))}
+                disabled={submitting}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BREWING">Brewing</SelectItem>
+                  <SelectItem value="SPIRITS">Spirits</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">
