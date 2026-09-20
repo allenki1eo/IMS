@@ -170,7 +170,7 @@ export async function getMaintenanceReport(companyId: string, fromDate?: string,
   const [workOrders, schedules, partsReceipts] = await Promise.all([
     db.workOrder.findMany({
       where: { companyId, createdAt: { gte: from, lte: to } },
-      include: { vehicle: { select: { plateNumber: true } }, items: true },
+      include: { vehicle: { select: { plateNumber: true } }, plantAsset: { select: { code: true, name: true, category: true } }, items: true },
       orderBy: { createdAt: "desc" },
       take: 100,
     }),

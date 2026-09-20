@@ -1047,6 +1047,31 @@ model FuelPrice {
 // MAINTENANCE & SPARE PARTS
 // ─────────────────────────────────────────────
 
+
+model PlantAsset {
+  id          String   @id @default(cuid())
+  companyId   String
+  branchId    String?
+  code        String
+  name        String
+  category    String
+  location    String?
+  notes       String?
+  status      String   @default("ACTIVE")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  workOrders WorkOrder[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@index([category])
+  @@map("plant_assets")
+}
+
 model MaintenanceSchedule {
   id               String    @id @default(cuid())
   companyId        String
@@ -1074,7 +1099,8 @@ model MaintenanceSchedule {
 model WorkOrder {
   id              String    @id @default(cuid())
   companyId       String
-  vehicleId       String
+  vehicleId       String?
+  plantAssetId    String?
   scheduleId      String?
   reference       String    @unique
   maintenanceType String
@@ -1094,13 +1120,15 @@ model WorkOrder {
   updatedAt       DateTime  @updatedAt
   createdById     String
 
-  vehicle  Vehicle              @relation(fields: [vehicleId], references: [id])
-  schedule MaintenanceSchedule? @relation(fields: [scheduleId], references: [id])
-  items    WorkOrderItem[]
+  vehicle    Vehicle?             @relation(fields: [vehicleId], references: [id])
+  plantAsset PlantAsset?          @relation(fields: [plantAssetId], references: [id])
+  schedule   MaintenanceSchedule? @relation(fields: [scheduleId], references: [id])
+  items      WorkOrderItem[]
 
   @@index([companyId])
   @@index([status])
   @@index([vehicleId])
+  @@index([plantAssetId])
   @@map("work_orders")
 }
 

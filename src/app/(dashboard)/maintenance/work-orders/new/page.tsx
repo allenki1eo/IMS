@@ -26,9 +26,18 @@ interface VehicleOption {
   model?: string;
 }
 
+interface PlantAssetOption {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  location?: string | null;
+}
+
 interface ScheduleOption {
   id: string;
   maintenanceType: string;
+  vehicleId?: string | null;
   vehicle?: { plateNumber: string } | null;
 }
 
@@ -38,7 +47,7 @@ interface EmployeeOption {
   lastName: string;
 }
 
-const MAINTENANCE_TYPES = [
+const VEHICLE_MAINTENANCE_TYPES = [
   { value: "OIL_CHANGE", label: "Oil Change" },
   { value: "TIRE_ROTATION", label: "Tire Rotation" },
   { value: "BRAKE_INSPECTION", label: "Brake Inspection" },
@@ -51,6 +60,15 @@ const MAINTENANCE_TYPES = [
   { value: "OTHER", label: "Other" },
 ];
 
+const PLANT_MAINTENANCE_TYPES = [
+  { value: "GENERAL_INSPECTION", label: "General Inspection" },
+  { value: "CLEANING", label: "Cleaning" },
+  { value: "CALIBRATION", label: "Calibration" },
+  { value: "SEAL_REPLACE", label: "Seal Replace" },
+  { value: "OVERHAUL", label: "Overhaul" },
+  { value: "OTHER", label: "Other" },
+];
+
 const PRIORITIES = [
   { value: "LOW", label: "Low" },
   { value: "MEDIUM", label: "Medium" },
@@ -58,8 +76,12 @@ const PRIORITIES = [
   { value: "CRITICAL", label: "Critical" },
 ];
 
+type AssetKind = "VEHICLE" | "PLANT";
+
 interface FormData {
+  assetKind: AssetKind;
   vehicleId: string;
+  plantAssetId: string;
   scheduleId: string;
   maintenanceType: string;
   description: string;
@@ -69,7 +91,9 @@ interface FormData {
 }
 
 const DEFAULT: FormData = {
+  assetKind: "VEHICLE",
   vehicleId: "",
+  plantAssetId: "",
   scheduleId: "",
   maintenanceType: "OIL_CHANGE",
   description: "",
@@ -83,17 +107,20 @@ export default function NewWorkOrderPage() {
   const [form, setForm] = useState<FormData>(DEFAULT);
   const [submitting, setSubmitting] = useState(false);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  const [plantAssets, setPlantAssets] = useState<PlantAssetOption[]>([]);
   const [schedules, setSchedules] = useState<ScheduleOption[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/vehicles?pageSize=200").then((r) => r.json()),
+      fetch("/api/maintenance/plant-assets?pageSize=200&status=ACTIVE").then((r) => r.json()),
       fetch("/api/maintenance/schedules?pageSize=200").then((r) => r.json()),
       fetch("/api/employees?pageSize=200").then((r) => r.json()),
     ])
-      .then(([vehiclesData, schedulesData, employeesData]) => {
+      .then(([vehiclesData, plantData, schedulesData, employeesData]) => {
         setVehicles(vehiclesData.data ?? []);
+        setPlantAssets(plantData.data ?? []);
         setSchedules(schedulesData.data ?? []);
         setEmployees(employeesData.data ?? []);
       })
@@ -105,10 +132,29 @@ export default function NewWorkOrderPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  function setAssetKind(kind: AssetKind) {
+    setForm((prev) => ({
+      ...prev,
+      assetKind: kind,
+      vehicleId: "",
+      plantAssetId: "",
+      scheduleId: "",
+      maintenanceType: kind === "VEHICLE" ? "OIL_CHANGE" : "GENERAL_INSPECTION",
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.vehicleId || !form.maintenanceType) {
-      toast.error("Vehicle and maintenance type are required");
+    if (form.assetKind === "VEHICLE" && !form.vehicleId) {
+      toast.error("Vehicle is required");
+      return;
+    }
+    if (form.assetKind === "PLANT" && !form.plantAssetId) {
+      toast.error("Plant asset is required");
+      return;
+    }
+    if (!form.maintenanceType) {
+      toast.error("Maintenance type is required");
       return;
     }
 
@@ -118,8 +164,9 @@ export default function NewWorkOrderPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vehicleId: form.vehicleId,
-          scheduleId: form.scheduleId || undefined,
+          vehicleId: form.assetKind === "VEHICLE" ? form.vehicleId : undefined,
+          plantAssetId: form.assetKind === "PLANT" ? form.plantAssetId : undefined,
+          scheduleId: form.assetKind === "VEHICLE" ? form.scheduleId || undefined : undefined,
           maintenanceType: form.maintenanceType,
           description: form.description || undefined,
           priority: form.priority,
@@ -128,7 +175,10 @@ export default function NewWorkOrderPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) { toast.error(json.error ?? "Failed to create work order"); return; }
+      if (!res.ok) {
+        toast.error(json.error ?? "Failed to create work order");
+        return;
+      }
       toast.success("Work order created successfully");
       router.push(`/maintenance/work-orders/${json.data?.id ?? ""}`);
     } catch {
@@ -138,11 +188,17 @@ export default function NewWorkOrderPage() {
     }
   }
 
+  const maintenanceTypes =
+    form.assetKind === "VEHICLE" ? VEHICLE_MAINTENANCE_TYPES : PLANT_MAINTENANCE_TYPES;
+  const vehicleSchedules = schedules.filter(
+    (s) => !form.vehicleId || s.vehicleId === form.vehicleId || s.vehicle?.plateNumber
+  );
+
   return (
     <div>
       <PageHeader
         title="New Work Order"
-        description="Create a maintenance work order"
+        description="Create a maintenance work order for a vehicle or plant asset"
         actions={
           <Button variant="outline" asChild>
             <Link href="/maintenance/work-orders">
@@ -160,59 +216,125 @@ export default function NewWorkOrderPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <Label>Vehicle <span className="text-destructive">*</span></Label>
+              <Label>
+                Asset Kind <span className="text-destructive">*</span>
+              </Label>
               <Select
-                value={form.vehicleId || "__none"}
-                onValueChange={(v) => setForm((p) => ({ ...p, vehicleId: v === "__none" ? "" : v }))}
+                value={form.assetKind}
+                onValueChange={(v) => setAssetKind(v as AssetKind)}
                 disabled={submitting}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select vehicle" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none">Select a vehicle...</SelectItem>
-                  {vehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.plateNumber}{v.make ? ` — ${v.make} ${v.model ?? ""}`.trim() : ""}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="VEHICLE">Vehicle</SelectItem>
+                  <SelectItem value="PLANT">Plant equipment</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-1">
-              <Label>Schedule (optional)</Label>
-              <Select
-                value={form.scheduleId || "__none"}
-                onValueChange={(v) => setForm((p) => ({ ...p, scheduleId: v === "__none" ? "" : v }))}
-                disabled={submitting}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Link to schedule" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">No schedule</SelectItem>
-                  {schedules.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.maintenanceType.replace(/_/g, " ")}
-                      {s.vehicle ? ` — ${s.vehicle.plateNumber}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {form.assetKind === "VEHICLE" ? (
+              <div className="space-y-1">
+                <Label>
+                  Vehicle <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={form.vehicleId || "__none"}
+                  onValueChange={(v) =>
+                    setForm((p) => ({
+                      ...p,
+                      vehicleId: v === "__none" ? "" : v,
+                      scheduleId: "",
+                    }))
+                  }
+                  disabled={submitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vehicle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Select a vehicle...</SelectItem>
+                    {vehicles.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.plateNumber}
+                        {v.make ? ` — ${v.make} ${v.model ?? ""}`.trim() : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label>
+                  Plant Asset <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={form.plantAssetId || "__none"}
+                  onValueChange={(v) =>
+                    setForm((p) => ({ ...p, plantAssetId: v === "__none" ? "" : v }))
+                  }
+                  disabled={submitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select plant asset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Select plant equipment...</SelectItem>
+                    {plantAssets.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.code} — {a.name} ({a.category})
+                        {a.location ? ` @ ${a.location}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {form.assetKind === "VEHICLE" && (
+              <div className="space-y-1">
+                <Label>Schedule (optional)</Label>
+                <Select
+                  value={form.scheduleId || "__none"}
+                  onValueChange={(v) =>
+                    setForm((p) => ({ ...p, scheduleId: v === "__none" ? "" : v }))
+                  }
+                  disabled={submitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Link to schedule" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">No schedule</SelectItem>
+                    {vehicleSchedules.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.maintenanceType.replace(/_/g, " ")}
+                        {s.vehicle ? ` — ${s.vehicle.plateNumber}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-1">
-              <Label>Maintenance Type <span className="text-destructive">*</span></Label>
+              <Label>
+                Maintenance Type <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={form.maintenanceType}
                 onValueChange={(v) => setForm((p) => ({ ...p, maintenanceType: v }))}
                 disabled={submitting}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {MAINTENANCE_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  {maintenanceTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -240,10 +362,14 @@ export default function NewWorkOrderPage() {
                   onValueChange={(v) => setForm((p) => ({ ...p, priority: v }))}
                   disabled={submitting}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {PRIORITIES.map((p) => (
-                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -268,7 +394,9 @@ export default function NewWorkOrderPage() {
               <Label>Assigned To (optional)</Label>
               <Select
                 value={form.assignedToId || "__none"}
-                onValueChange={(v) => setForm((p) => ({ ...p, assignedToId: v === "__none" ? "" : v }))}
+                onValueChange={(v) =>
+                  setForm((p) => ({ ...p, assignedToId: v === "__none" ? "" : v }))
+                }
                 disabled={submitting}
               >
                 <SelectTrigger>

@@ -48,6 +48,7 @@ const COMMANDS: CommandItem[] = [
 
   // Maintenance
   { label: "Work Orders", href: "/maintenance/work-orders", icon: <Wrench className="h-4 w-4" />, group: "Operations", permission: "maintenance:workorder:read" },
+  { label: "Plant Assets", href: "/maintenance/plant-assets", icon: <Wrench className="h-4 w-4" />, group: "Operations", permission: "maintenance:workorder:read" },
   { label: "Spare Parts", href: "/maintenance/parts", icon: <Wrench className="h-4 w-4" />, group: "Operations", permission: "maintenance:part:read" },
   { label: "Maintenance Schedules", href: "/maintenance/schedules", icon: <Wrench className="h-4 w-4" />, group: "Operations", permission: "maintenance:schedule:read" },
 

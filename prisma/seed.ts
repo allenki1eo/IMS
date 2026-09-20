@@ -1234,6 +1234,41 @@ async function main() {
   console.log(`   Brewery QC: ${BREWERY_STANDARD_TEMPLATES.length} templates (BREWING)`);
   console.log(`   Spirits QC: ${SPIRITS_STANDARD_TEMPLATES.map((t) => t.code).join(", ")} (SPIRITS)`);
 
+
+  // ── Plant maintenance assets (demo) ──────────────────────
+  console.log("  → Seeding plant assets...");
+  const plantAssets = [
+    { code: "STILL-01", name: "Pot Still 1", category: "STILL", location: "Distillery floor" },
+    { code: "ST-01", name: "Spirit Tank ST-01", category: "TANK", location: "Spirit store" },
+    { code: "FILL-01", name: "Bottling Filler", category: "FILLER", location: "Packaging hall" },
+    { code: "BOIL-01", name: "Steam Boiler 1", category: "BOILER", location: "Utilities" },
+    { code: "TANK-02", name: "Blend Tank BT-02", category: "TANK", location: "Blending" },
+  ] as const;
+
+  for (const asset of plantAssets) {
+    await db.plantAsset.upsert({
+      where: { companyId_code: { companyId: company.id, code: asset.code } },
+      update: {
+        name: asset.name,
+        category: asset.category,
+        location: asset.location,
+        status: "ACTIVE",
+        isActive: true,
+      },
+      create: {
+        companyId: company.id,
+        code: asset.code,
+        name: asset.name,
+        category: asset.category,
+        location: asset.location,
+        status: "ACTIVE",
+        isActive: true,
+        createdById: "system",
+      },
+    });
+  }
+  console.log(`   Plant assets: ${plantAssets.map((a) => a.code).join(", ")}`);
+
   console.log("");
   console.log("✅ Seed complete!");
   console.log("");
