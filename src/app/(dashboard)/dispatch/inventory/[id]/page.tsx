@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
@@ -20,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatDate } from "@/lib/utils";
 
 interface DispatchLine {
   id: string;
@@ -170,9 +170,9 @@ export default function FgLotDetailPage() {
               </Link>
             </Button>
             {lot.qaStatus !== "RELEASED" && (
-              <Button onClick={handleReleaseQa} disabled={releasing}>
+              <Button onClick={handleReleaseQa} disabled={releasing} title="Sets qaStatus to RELEASED so this lot can be picked on dispatch orders">
                 {releasing && <LoadingSpinner className="mr-2" />}
-                Release QA
+                Release QA for Dispatch
               </Button>
             )}
             {lot.product && (
@@ -361,12 +361,12 @@ export default function FgLotDetailPage() {
               <div>
                 <p className="text-muted-foreground">Best Before</p>
                 <p className="mt-1">
-                  {lot.bestBefore ? format(new Date(lot.bestBefore), "dd MMM yyyy") : "—"}
+                  {lot.bestBefore ? formatDate(lot.bestBefore) : "—"}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Received At</p>
-                <p className="mt-1">{format(new Date(lot.createdAt), "dd MMM yyyy")}</p>
+                <p className="mt-1">{formatDate(lot.createdAt)}</p>
               </div>
               {lot.notes && (
                 <div className="col-span-2 md:col-span-3">

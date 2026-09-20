@@ -25,6 +25,19 @@ Additive Prisma fields (safe for Turso `db push`). New columns have defaults whe
 - `fgLotId` String? (required by API on create)
 - `dispatchOrderId` String? (optional)
 
+## PRODUCTION REQUIRED (P0)
+
+Live Turso is **not** updated by this PR alone. After deploy (or before exercising FG/TRA/dispatch),
+an operator with Turso credentials must run:
+
+```bash
+npx prisma generate
+DATABASE_URL="libsql://YOUR-DB.turso.io" DATABASE_AUTH_TOKEN="..." npx prisma db push
+```
+
+Without this push, queries fail with errors such as `no such column: main.lineFamily`
+(API now surfaces the column as `lineFamily`). Do **not** invent credentials in CI/agents.
+
 ## Deploy (Turso / local)
 
 ```bash

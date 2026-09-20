@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { ArrowLeft, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/shared/LoadingState";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate } from "@/lib/utils";
 
 interface LotRow {
   id: string;
@@ -277,7 +277,7 @@ export default function FgProductDetailPage() {
               </div>
               <div>
                 <p className="text-muted-foreground">Created</p>
-                <p className="mt-1">{format(new Date(product.createdAt), "dd MMM yyyy")}</p>
+                <p className="mt-1">{formatDate(product.createdAt)}</p>
               </div>
               {product.description && (
                 <div className="col-span-2 md:col-span-3">
@@ -293,7 +293,12 @@ export default function FgProductDetailPage() {
       {/* Lots Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Stock Lots ({lots.length})</CardTitle>
+          <div>
+            <CardTitle className="text-base">Stock Lots ({lots.length})</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              QA status lives on each lot (PENDING / RELEASED / HOLD). Dispatch requires RELEASED — open a lot to release.
+            </p>
+          </div>
           <Button size="sm" asChild>
             <Link href={`/dispatch/inventory/new?productId=${product.id}`}>
               <Plus className="h-4 w-4 mr-1" />
@@ -312,7 +317,7 @@ export default function FgProductDetailPage() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Available</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Best Before</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">QA</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">QA Status</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Warehouse</th>
                 </tr>
               </thead>
@@ -335,7 +340,7 @@ export default function FgProductDetailPage() {
                       <td className="px-4 py-3">{lot.quantityOut.toLocaleString()}</td>
                       <td className="px-4 py-3 font-medium">{(lot.availableQty ?? (lot.quantityIn - lot.quantityOut)).toLocaleString()}</td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                        {lot.bestBefore ? format(new Date(lot.bestBefore), "dd MMM yyyy") : "—"}
+                        {lot.bestBefore ? formatDate(lot.bestBefore) : "—"}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={lot.status} />

@@ -1,6 +1,10 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { formatDateInAppTz, formatDateTimeInAppTz } from "@/lib/timezone";
+import {
+  formatDateInAppTz,
+  formatDateTimeInAppTz,
+  todayCalendarDate,
+} from "@/lib/timezone";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -14,6 +18,11 @@ export function formatDate(date: Date | string | null | undefined): string {
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "—";
   return formatDateTimeInAppTz(date);
+}
+
+/** Today's calendar date (YYYY-MM-DD) in Africa/Dar_es_Salaam — for date inputs. */
+export function todayDateInputValue(): string {
+  return todayCalendarDate();
 }
 
 export function getInitials(name: string): string {

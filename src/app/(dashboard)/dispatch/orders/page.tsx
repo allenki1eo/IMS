@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { Plus, Trash2 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
+import { formatDate } from "@/lib/utils";
 
 interface OrderRow {
   id: string;
@@ -93,7 +93,7 @@ export default function DispatchOrdersPage() {
       header: "Scheduled Date",
       cell: (row: OrderRow) => (
         <span className="text-muted-foreground whitespace-nowrap">
-          {row.scheduledDate ? format(new Date(row.scheduledDate), "dd MMM yyyy") : "—"}
+          {row.scheduledDate ? formatDate(row.scheduledDate) : "—"}
         </span>
       ),
     },

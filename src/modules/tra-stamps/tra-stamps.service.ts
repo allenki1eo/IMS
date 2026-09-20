@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
-import { generateDatedRef } from "@/lib/timezone";
+import { generateDatedRef, parseAppDate } from "@/lib/timezone";
 
 function generateRef(): string {
   return generateDatedRef("TRA");
@@ -82,9 +82,11 @@ function positiveInteger(value: unknown, label: string): number {
 
 function optionalDate(value: unknown, label: string): Date | null {
   if (!value) return null;
-  const date = new Date(value as string);
-  if (Number.isNaN(date.getTime())) throw new Error(`${label} is invalid`);
-  return date;
+  try {
+    return parseAppDate(value as string | Date);
+  } catch {
+    throw new Error(`${label} is invalid`);
+  }
 }
 
 function assertBatchCanActivate(batch: StampBatch, qty: number, now = new Date()) {
