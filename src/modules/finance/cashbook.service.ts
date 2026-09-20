@@ -153,8 +153,9 @@ export async function createCashbookEntry(params: {
   });
 
   // Deposit SMS: cashbook RECEIPT is the primary "money in" event (see docs/FINANCE_SMS.md).
+  // Await so serverless does not freeze after the first recipient (fan-out must finish).
   if (data.type === "RECEIPT") {
-    void notifyDepositPosted({
+    await notifyDepositPosted({
       companyId: data.companyId,
       sourceType: FINANCE_SMS_SOURCE.CASHBOOK_RECEIPT,
       sourceId: entry.id,

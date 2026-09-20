@@ -249,8 +249,9 @@ export async function createBankTransaction(
   });
 
   // Deposit SMS: bank DEPOSIT also triggers (alongside cashbook RECEIPT).
+  // Await so serverless does not freeze after the first recipient (fan-out must finish).
   if (data.type === "DEPOSIT") {
-    void notifyDepositPosted({
+    await notifyDepositPosted({
       companyId,
       sourceType: FINANCE_SMS_SOURCE.BANK_DEPOSIT,
       sourceId: tx.id,
