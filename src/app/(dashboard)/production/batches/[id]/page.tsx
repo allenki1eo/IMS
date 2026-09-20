@@ -26,6 +26,7 @@ interface MaterialStockStatus {
   availableStock: number;
   shortfall: number;
   status: "OK" | "SHORTAGE" | "UNKNOWN";
+  warehouseLabel?: string | null;
 }
 
 interface Batch {
@@ -45,21 +46,35 @@ interface Batch {
   notes?: string | null;
   line?: { id: string; code: string; name: string } | null;
   recipe?: { id: string; code: string; name: string } | null;
-  materials: Array<{ id: string; itemCode?: string | null; description: string; plannedQty: number; issuedQty: number; uom: string }>;
+  materials: Array<{
+    id: string;
+    itemId?: string | null;
+    itemCode?: string | null;
+    description: string;
+    plannedQty: number;
+    issuedQty: number;
+    uom: string;
+  }>;
   materialStock?: MaterialStockStatus[];
   stockGate?: {
     canStart: boolean;
     shortages: MaterialStockStatus[];
+    overrideAllowed?: boolean;
   };
+}
+
+function materialLabel(s: Pick<MaterialStockStatus, "itemCode" | "description">): string {
+  return s.itemCode ? `${s.itemCode} — ${s.description}` : s.description;
 }
 
 function formatShortageList(shortages: MaterialStockStatus[]): string {
   return shortages
     .map((s) => {
+      const label = materialLabel(s);
       if (s.status === "UNKNOWN") {
-        return `${s.description}: cannot resolve stock (need ${qty(s.requiredQty, s.uom)})`;
+        return `${label}: item not linked (need ${qty(s.requiredQty, s.uom)})`;
       }
-      return `${s.description}: ${qty(s.availableStock, s.uom)} / ${qty(s.requiredQty, s.uom)}`;
+      return `${label}: need ${qty(s.requiredQty, s.uom)}, available ${qty(s.availableStock, s.uom)}`;
     })
     .join("; ");
 }
@@ -73,6 +88,7 @@ export default function ProductionBatchDetailPage() {
   const [showComplete, setShowComplete] = useState(false);
   const [actualQty, setActualQty] = useState("");
   const [startError, setStartError] = useState<string | null>(null);
+  const [startShortages, setStartShortages] = useState<MaterialStockStatus[]>([]);
 
   const loadBatch = useCallback(() => {
     setLoading(true);
@@ -82,7 +98,7 @@ export default function ProductionBatchDetailPage() {
         const data = d.data ?? null;
         setBatch(data);
         if (data) setActualQty(String(data.actualQty ?? data.plannedQty ?? ""));
-        setStartError(null);
+        // Keep startError/startShortages if present — cleared only when starting a new action
       })
       .catch(() => toast.error("Failed to load batch"))
       .finally(() => setLoading(false));
@@ -93,16 +109,29 @@ export default function ProductionBatchDetailPage() {
   async function runAction(action: "start" | "cancel") {
     setActionLoading(true);
     setStartError(null);
+    setStartShortages([]);
     try {
       const res = await fetch(`/api/production/batches/${id}/${action}`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
         const message = json.error ?? `Failed to ${action} batch`;
         if (action === "start") {
-          setStartError(message);
-          toast.error(message);
+          const apiShortages = Array.isArray(json.data?.shortages)
+            ? (json.data.shortages as MaterialStockStatus[])
+            : [];
+          setStartShortages(apiShortages);
+          setStartError(
+            json.code === "INSUFFICIENT_STOCK"
+              ? "Not enough stock to start"
+              : message
+          );
+          toast.error(
+            json.code === "INSUFFICIENT_STOCK"
+              ? "Not enough stock to start — batch was not started or cancelled"
+              : message
+          );
           setConfirmAction(null);
-          // Refresh so Available column and gate match server truth
+          // Refresh so Available column and gate match server truth; status stays PLANNED
           loadBatch();
           return;
         }
@@ -184,7 +213,7 @@ export default function ProductionBatchDetailPage() {
                   className="w-full"
                   disabled={!canStart || actionLoading}
                   onClick={() => setConfirmAction("start")}
-                  title={stockBlocked ? "Insufficient stock to start this batch" : undefined}
+                  title={stockBlocked ? "Not enough stock to start — see shortage list" : undefined}
                 >
                   Start Batch
                 </Button>
@@ -207,33 +236,40 @@ export default function ProductionBatchDetailPage() {
         </Card>
       </div>
 
-      {stockBlocked && (
+      {(stockBlocked || startShortages.length > 0 || startError) && (
         <div className="flex items-start gap-3 p-4 rounded-lg border border-red-200 bg-red-50 text-red-800 mb-4">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold">Cannot start — insufficient stock</p>
+          <div className="space-y-2 flex-1">
+            <p className="text-sm font-semibold">Not enough stock to start</p>
             <p className="text-xs opacity-90">
-              Start is blocked until short materials are available. Privileged override is deferred (v1 hard-block).
+              Start is hard-blocked until short materials are received. The batch stays PLANNED
+              (never silently cancelled). Permissioned override with reason + audit is a follow-up.
             </p>
-            <ul className="text-xs mt-2 space-y-1 list-disc pl-4">
-              {shortages.map((s, i) => (
+            <ul className="text-xs mt-1 space-y-1.5 list-disc pl-4">
+              {(startShortages.length > 0 ? startShortages : shortages).map((s, i) => (
                 <li key={s.materialId ?? `${s.description}-${i}`}>
-                  {s.status === "UNKNOWN"
-                    ? `${s.description}: stock unknown / item not linked (need ${qty(s.requiredQty, s.uom)})`
-                    : `${s.description}: ${qty(s.availableStock, s.uom)} available / ${qty(s.requiredQty, s.uom)} required (short ${qty(s.shortfall, s.uom)})`}
+                  <span className="font-medium">{materialLabel(s)}</span>
+                  {s.status === "UNKNOWN" ? (
+                    <> — item not linked; need {qty(s.requiredQty, s.uom)}</>
+                  ) : (
+                    <>
+                      {" "}
+                      — required {qty(s.requiredQty, s.uom)}, available {qty(s.availableStock, s.uom)}
+                      {s.shortfall > 0 ? ` (short ${qty(s.shortfall, s.uom)})` : ""}
+                      {s.warehouseLabel ? ` · ${s.warehouseLabel}` : ""}
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
-      )}
-
-      {startError && !stockBlocked && (
-        <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 mb-4">
-          <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold">Start failed</p>
-            <p className="text-xs mt-0.5">{startError}</p>
+            {startError && startShortages.length === 0 && !stockBlocked && (
+              <p className="text-xs mt-1">{startError}</p>
+            )}
+            <div className="pt-1">
+              <Button asChild size="sm" variant="outline" className="bg-white/70">
+                <Link href="/warehouse/grn">Fix stock / receive goods</Link>
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -275,7 +311,15 @@ export default function ProductionBatchDetailPage() {
           return (
             <tr key={line.id} className="border-t hover:bg-muted/30">
               <td className="px-4 py-3">{line.description}</td>
-              <td className="px-4 py-3">{line.itemCode ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{line.itemCode}</code> : "-"}</td>
+              <td className="px-4 py-3">
+                {line.itemCode ? (
+                  <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{line.itemCode}</code>
+                ) : line.itemId ? (
+                  <span className="text-xs text-muted-foreground" title="Item linked but code missing">Linked</span>
+                ) : (
+                  <span className="text-xs text-amber-700" title="Link this material to a warehouse item">Not linked</span>
+                )}
+              </td>
               <td className="px-4 py-3">{qty(line.plannedQty, line.uom)}</td>
               <td className="px-4 py-3">{qty(line.issuedQty, line.uom)}</td>
               {batch.status === "PLANNED" && (
@@ -298,9 +342,9 @@ export default function ProductionBatchDetailPage() {
         description={
           confirmAction === "start"
             ? stockBlocked
-              ? `Blocked: ${formatShortageList(shortages)}`
-              : "This will start the production batch. Stock will be re-checked on the server."
-            : "This will update the production batch status."
+              ? `Not enough stock to start: ${formatShortageList(shortages)}`
+              : "This will start the production batch. Stock will be re-checked on the server. On shortage the batch stays PLANNED (not cancelled)."
+            : "This will cancel the production batch. This is separate from the stock gate — stock shortages block Start, they do not cancel."
         }
         confirmLabel={confirmAction === "start" ? "Start" : "Cancel Batch"}
         variant={confirmAction === "cancel" ? "destructive" : "default"}
