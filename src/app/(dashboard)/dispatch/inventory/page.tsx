@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { Plus, Trash2 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounceSearch } from "@/hooks/useDebounceSearch";
 import { usePagedData } from "@/hooks/usePagedData";
+import { formatDate } from "@/lib/utils";
 
 interface LotRow {
   id: string;
@@ -42,17 +42,27 @@ const STATUS_FILTERS = [
   { label: "Recalled", value: "RECALLED" },
 ];
 
+const QA_FILTERS = [
+  { label: "All QA", value: "ALL" },
+  { label: "Pending", value: "PENDING" },
+  { label: "Released", value: "RELEASED" },
+  { label: "Hold", value: "HOLD" },
+];
+
 const PAGE_SIZE = 20;
 
 export default function FgInventoryPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("ALL");
+  const [qaStatus, setQaStatus] = useState("ALL");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [releasingId, setReleasingId] = useState<string | null>(null);
   const { value: search, setValue: setSearch, debounced } = useDebounceSearch();
 
   const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (debounced) params.set("search", debounced);
   if (status !== "ALL") params.set("status", status);
+  if (qaStatus !== "ALL") params.set("qaStatus", qaStatus);
   const { data: lots, total, loading, mutate } = usePagedData<LotRow>(`/api/dispatch/inventory?${params}`);
 
   async function handleDelete() {
@@ -64,7 +74,29 @@ export default function FgInventoryPage() {
       mutate();
     } else {
       const d = await res.json().catch(() => ({}));
-      toast.error(d.message ?? "Failed to delete lot");
+      toast.error(d.error ?? d.message ?? "Failed to delete lot");
+    }
+  }
+
+  async function handleReleaseQa(lotId: string) {
+    setReleasingId(lotId);
+    try {
+      const res = await fetch(`/api/dispatch/inventory/${lotId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qaStatus: "RELEASED" }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json.error ?? "Failed to release lot");
+        return;
+      }
+      toast.success("Lot QA released — eligible for dispatch");
+      mutate();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setReleasingId(null);
     }
   }
 
@@ -105,7 +137,7 @@ export default function FgInventoryPage() {
       header: "Best Before",
       cell: (row: LotRow) => (
         <span className="text-muted-foreground whitespace-nowrap">
-          {row.bestBefore ? format(new Date(row.bestBefore), "dd MMM yyyy") : "—"}
+          {row.bestBefore ? formatDate(row.bestBefore) : "—"}
         </span>
       ),
     },
@@ -118,27 +150,42 @@ export default function FgInventoryPage() {
     },
     {
       key: "status",
-      header: "Status",
+      header: "Stock",
       cell: (row: LotRow) => <StatusBadge status={row.status} />,
     },
     {
       key: "qaStatus",
-      header: "QA",
+      header: "QA Status",
       cell: (row: LotRow) => <StatusBadge status={row.qaStatus ?? "PENDING"} />,
     },
     {
       key: "actions",
       header: "Actions",
-      cell: (row: LotRow) => (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/dispatch/inventory/${row.id}`}>View</Link>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
+      cell: (row: LotRow) => {
+        const qa = row.qaStatus ?? "PENDING";
+        const canRelease = qa !== "RELEASED";
+        return (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/dispatch/inventory/${row.id}`}>View</Link>
+            </Button>
+            {canRelease && (
+              <Button
+                size="sm"
+                variant="default"
+                disabled={releasingId === row.id}
+                onClick={() => handleReleaseQa(row.id)}
+                title="Set qaStatus to RELEASED (required for dispatch)"
+              >
+                {releasingId === row.id ? "…" : "Release QA"}
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -146,7 +193,7 @@ export default function FgInventoryPage() {
     <div>
       <PageHeader
         title="FG Inventory"
-        description="Manage finished goods lots and stock levels"
+        description="Lots carry QA status (PENDING / RELEASED / HOLD). Only RELEASED lots can be picked on dispatch orders."
         actions={
           <PermissionGuard require="dispatch:lot:create">
             <Button asChild>
@@ -159,7 +206,7 @@ export default function FgInventoryPage() {
         }
       />
 
-      <div className="flex flex-wrap gap-2 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 mb-4">
         <SearchInput
           value={search}
           onChange={(v) => { setSearch(v); setPage(1); }}
@@ -176,6 +223,16 @@ export default function FgInventoryPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={qaStatus} onValueChange={(v) => { setQaStatus(v); setPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectValue placeholder="QA status" />
+          </SelectTrigger>
+          <SelectContent>
+            {QA_FILTERS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <DataTable
@@ -187,7 +244,7 @@ export default function FgInventoryPage() {
         total={total}
         onPageChange={setPage}
         emptyTitle="No FG lots found"
-        emptyDescription="Receive finished goods stock to get started."
+        emptyDescription="Receive finished goods stock to get started. New lots start as QA PENDING until released."
       />
       <ConfirmDeleteDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} />
     </div>

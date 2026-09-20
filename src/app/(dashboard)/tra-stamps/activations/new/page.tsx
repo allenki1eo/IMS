@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { todayDateInputValue } from "@/lib/utils";
 
 interface BatchOption {
   id: string;
@@ -48,7 +49,7 @@ interface OrderOption {
 }
 
 function today() {
-  return new Date().toISOString().split("T")[0];
+  return todayDateInputValue();
 }
 
 export default function NewActivationPage() {

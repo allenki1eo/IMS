@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PrintButton } from "@/components/shared/PrintButton";
@@ -22,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatDate } from "@/lib/utils";
 
 interface DispatchLine {
   id: string;
@@ -255,7 +255,7 @@ export default function DispatchOrderDetailPage() {
           {order.scheduledDate && (
             <div>
               <p className="text-muted-foreground">Scheduled Date</p>
-              <p className="mt-1">{format(new Date(order.scheduledDate), "dd MMM yyyy")}</p>
+              <p className="mt-1">{formatDate(order.scheduledDate)}</p>
             </div>
           )}
           {order.vehicle && (
@@ -276,7 +276,7 @@ export default function DispatchOrderDetailPage() {
           )}
           <div>
             <p className="text-muted-foreground">Created</p>
-            <p className="mt-1">{format(new Date(order.createdAt), "dd MMM yyyy")}</p>
+            <p className="mt-1">{formatDate(order.createdAt)}</p>
           </div>
           {order.deliveryAddress && (
             <div className="col-span-2 md:col-span-3">

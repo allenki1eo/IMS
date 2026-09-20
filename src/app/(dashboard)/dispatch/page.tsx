@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { Package, CheckCircle, Truck, Archive } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate } from "@/lib/utils";
 
 interface OrderRow {
   id: string;
@@ -165,7 +165,7 @@ export default function DispatchOverviewPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                           {order.scheduledDate
-                            ? format(new Date(order.scheduledDate), "dd MMM yyyy")
+                            ? formatDate(order.scheduledDate)
                             : "—"}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
@@ -219,7 +219,7 @@ export default function DispatchOverviewPage() {
                         <td className="px-4 py-3">{lot.availableQty.toLocaleString()}</td>
                         <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                           {lot.bestBefore
-                            ? format(new Date(lot.bestBefore), "dd MMM yyyy")
+                            ? formatDate(lot.bestBefore)
                             : "—"}
                         </td>
                         <td className="px-4 py-3">

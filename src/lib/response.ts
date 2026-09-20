@@ -116,8 +116,9 @@ export function handleError(err: unknown): NextResponse<ApiResponse> {
       );
     }
 
+    // SQLite/Turso: "no such column: main.lineFamily" — capture lineFamily, not "main"
     const noColumn = msg.match(/table \w+ has no column named (\w+)/i) ||
-                     msg.match(/no such column[:\s]+(\w+)/i);
+                     msg.match(/no such column[:\s]+(?:main\.)?(\w+)/i);
     if (noColumn) {
       return NextResponse.json(
         { success: false, error: `Database column "${noColumn[1]}" is missing. Run \`prisma db push\` against the database.`, code: "SERVER_ERROR" },

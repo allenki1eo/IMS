@@ -73,6 +73,11 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   AVAILABLE: { label: "Available", variant: "success" },
   RESERVED: { label: "Reserved", variant: "info" },
   DAMAGED: { label: "Damaged", variant: "destructive" },
+  DEPLETED: { label: "Depleted", variant: "secondary" },
+  RECALLED: { label: "Recalled", variant: "destructive" },
+  // FG lot QA (qaStatus on FGLot — not FGProduct)
+  RELEASED: { label: "QA Released", variant: "success" },
+  HOLD: { label: "QA Hold", variant: "destructive" },
   // Generic workflow
   ENABLED: { label: "Enabled", variant: "success" },
   DISABLED: { label: "Disabled", variant: "secondary" },

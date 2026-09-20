@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { parseAppDate } from "@/lib/timezone";
 
 const QA_STATUSES = new Set(["PENDING", "RELEASED", "HOLD"]);
 
@@ -131,8 +132,11 @@ export async function receiveLot(
     throw new Error("Unit cost cannot be negative");
   }
   if (data.bestBefore) {
-    const bestBefore = new Date(data.bestBefore);
-    if (Number.isNaN(bestBefore.getTime())) throw new Error("Best before date is invalid");
+    try {
+      parseAppDate(data.bestBefore);
+    } catch {
+      throw new Error("Best before date is invalid");
+    }
   }
 
   if (data.productionBatchId) {
@@ -153,7 +157,7 @@ export async function receiveLot(
       quantityIn: data.quantityIn,
       quantityOut: 0,
       unitCost: data.unitCost ?? null,
-      bestBefore: data.bestBefore ? new Date(data.bestBefore) : null,
+      bestBefore: data.bestBefore ? parseAppDate(data.bestBefore) : null,
       warehouseId: data.warehouseId,
       productionBatchId: data.productionBatchId ?? null,
       abvPct: abvPct ?? null,
@@ -222,8 +226,11 @@ export async function updateLot(
     throw new Error("Unit cost cannot be negative");
   }
   if (data.bestBefore) {
-    const bestBefore = new Date(data.bestBefore);
-    if (Number.isNaN(bestBefore.getTime())) throw new Error("Best before date is invalid");
+    try {
+      parseAppDate(data.bestBefore);
+    } catch {
+      throw new Error("Best before date is invalid");
+    }
   }
   if (data.status === "AVAILABLE" && existing.quantityOut >= existing.quantityIn) {
     throw new Error("Depleted lots cannot be marked available");
@@ -247,7 +254,7 @@ export async function updateLot(
   }
   if (data.unitCost !== undefined) updateData.unitCost = data.unitCost;
   if (data.bestBefore !== undefined)
-    updateData.bestBefore = data.bestBefore ? new Date(data.bestBefore) : null;
+    updateData.bestBefore = data.bestBefore ? parseAppDate(data.bestBefore) : null;
   if (data.warehouseId !== undefined) updateData.warehouseId = data.warehouseId;
   if (data.status !== undefined) updateData.status = data.status;
   if (data.abvPct !== undefined) updateData.abvPct = data.abvPct;

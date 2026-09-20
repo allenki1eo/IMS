@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
-import { generateDatedRef } from "@/lib/timezone";
+import { generateDatedRef, parseAppDate } from "@/lib/timezone";
 
 type DispatchOrderListRow = {
   _count: { lines: number };
@@ -159,7 +159,7 @@ export async function createOrder(
         customerName: data.customerName.trim(),
         customerContact: data.customerContact ?? null,
         deliveryAddress: data.deliveryAddress ?? null,
-        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
+        scheduledDate: data.scheduledDate ? parseAppDate(data.scheduledDate) : null,
         vehicleId: data.vehicleId ?? null,
         driverId: data.driverId ?? null,
         notes: data.notes ?? null,
@@ -228,7 +228,7 @@ export async function updateOrder(
   if (data.customerContact !== undefined) updateData.customerContact = data.customerContact;
   if (data.deliveryAddress !== undefined) updateData.deliveryAddress = data.deliveryAddress;
   if (data.scheduledDate !== undefined)
-    updateData.scheduledDate = data.scheduledDate ? new Date(data.scheduledDate) : null;
+    updateData.scheduledDate = data.scheduledDate ? parseAppDate(data.scheduledDate) : null;
   if (data.vehicleId !== undefined) updateData.vehicleId = data.vehicleId;
   if (data.driverId !== undefined) updateData.driverId = data.driverId;
   if (data.notes !== undefined) updateData.notes = data.notes;
