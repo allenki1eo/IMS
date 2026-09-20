@@ -68,6 +68,15 @@ export async function getOrCreateSetting(scopeKey: string, alertType: string) {
   });
 }
 
+
+/** Load ALL active recipients for a setting — never take:1 / first-only. */
+export async function listActiveRecipients(settingId: string) {
+  return db.financeSmsRecipient.findMany({
+    where: { settingId, isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+}
+
 export async function getFinanceSmsSettings(companyId: string) {
   const [deposit, eod] = await Promise.all([
     getOrCreateSetting(companyId, FINANCE_SMS_ALERT.DEPOSIT),
@@ -236,7 +245,8 @@ export async function notifyDepositPosted(params: {
     const setting = await getOrCreateSetting(params.companyId, FINANCE_SMS_ALERT.DEPOSIT);
     if (!setting.enabled) return;
 
-    const recipients = setting.recipients.filter((r) => r.isActive);
+    // Explicit findMany — do not rely on include alone or take the first element.
+    const recipients = await listActiveRecipients(setting.id);
     if (!recipients.length) return;
 
     const accountLabel = params.accountCode
@@ -252,47 +262,57 @@ export async function notifyDepositPosted(params: {
       `${when} EAT\n` +
       `Ref: ${ref}`;
 
+    // Fan out to EVERY active recipient — one SMS attempt + finance_sms_logs row each.
+    // Per-recipient try/catch so one failure never aborts the rest (no early return).
     for (const recipient of recipients) {
-      const phone = normalizePhoneE164(recipient.phone) ?? recipient.phone;
-      const idempotencyKey = `deposit:${params.sourceType}:${params.sourceId}:${phone}`;
-      if (await alreadySent(idempotencyKey)) continue;
+      try {
+        const phone = normalizePhoneE164(recipient.phone) ?? recipient.phone;
+        const idempotencyKey = `deposit:${params.sourceType}:${params.sourceId}:${phone}`;
+        if (await alreadySent(idempotencyKey)) continue;
 
-      const result = await sendSwalaSms({
-        to: phone,
-        body,
-        idempotencyKey,
-      });
+        const result = await sendSwalaSms({
+          to: phone,
+          body,
+          idempotencyKey,
+        });
 
-      await recordLog({
-        alertType: FINANCE_SMS_ALERT.DEPOSIT,
-        sourceType: params.sourceType,
-        sourceId: params.sourceId,
-        companyId: params.companyId,
-        phone,
-        body,
-        status: result.ok ? "SENT" : "FAILED",
-        providerMsgId: result.ok ? result.providerMsgId : null,
-        errorMessage: result.ok ? null : result.error,
-        idempotencyKey,
-      });
-
-      await createAuditLog({
-        userName: "system",
-        action: result.ok ? "FINANCE_SMS_SENT" : "FINANCE_SMS_FAILED",
-        module: "finance",
-        resource: "finance_sms",
-        recordId: params.sourceId,
-        newValue: {
+        await recordLog({
           alertType: FINANCE_SMS_ALERT.DEPOSIT,
+          sourceType: params.sourceType,
+          sourceId: params.sourceId,
+          companyId: params.companyId,
           phone,
-          providerMsgId: result.ok ? result.providerMsgId : undefined,
-          error: result.ok ? undefined : result.error,
-        },
-        description: result.ok
-          ? `Deposit SMS sent to ${phone}`
-          : `Deposit SMS failed for ${phone}: ${result.error}`,
-        companyId: params.companyId,
-      });
+          body,
+          status: result.ok ? "SENT" : "FAILED",
+          providerMsgId: result.ok ? result.providerMsgId : null,
+          errorMessage: result.ok ? null : result.error,
+          idempotencyKey,
+        });
+
+        await createAuditLog({
+          userName: "system",
+          action: result.ok ? "FINANCE_SMS_SENT" : "FINANCE_SMS_FAILED",
+          module: "finance",
+          resource: "finance_sms",
+          recordId: params.sourceId,
+          newValue: {
+            alertType: FINANCE_SMS_ALERT.DEPOSIT,
+            phone,
+            providerMsgId: result.ok ? result.providerMsgId : undefined,
+            error: result.ok ? undefined : result.error,
+          },
+          description: result.ok
+            ? `Deposit SMS sent to ${phone}`
+            : `Deposit SMS failed for ${phone}: ${result.error}`,
+          companyId: params.companyId,
+        });
+      } catch (err) {
+        console.error(
+          "[finance-sms] notifyDepositPosted recipient error",
+          recipient.phone,
+          err
+        );
+      }
     }
   } catch (err) {
     console.error("[finance-sms] notifyDepositPosted error", err);
@@ -400,7 +420,8 @@ export async function runEodSpendSms(options?: {
     return { calendarDate, skipped: true, reason: "zero spend", grandTotal, sent: 0, failed: 0 };
   }
 
-  const recipients = setting.recipients.filter((r) => r.isActive);
+  // Explicit findMany — fan out to ALL active EOD recipients.
+  const recipients = await listActiveRecipients(setting.id);
   if (!recipients.length) {
     return { calendarDate, skipped: true, reason: "no recipients", grandTotal, sent: 0, failed: 0 };
   }
@@ -410,43 +431,48 @@ export async function runEodSpendSms(options?: {
   let failed = 0;
 
   for (const recipient of recipients) {
-    const phone = normalizePhoneE164(recipient.phone) ?? recipient.phone;
-    const idempotencyKey = `eod:${calendarDate}:${phone}`;
-    if (await alreadySent(idempotencyKey)) continue;
+    try {
+      const phone = normalizePhoneE164(recipient.phone) ?? recipient.phone;
+      const idempotencyKey = `eod:${calendarDate}:${phone}`;
+      if (await alreadySent(idempotencyKey)) continue;
 
-    const result = await sendSwalaSms({ to: phone, body, idempotencyKey });
-    await recordLog({
-      alertType: FINANCE_SMS_ALERT.EOD_SPEND,
-      sourceType: FINANCE_SMS_SOURCE.EOD_SPEND,
-      sourceId: calendarDate,
-      phone,
-      body,
-      status: result.ok ? "SENT" : "FAILED",
-      providerMsgId: result.ok ? result.providerMsgId : null,
-      errorMessage: result.ok ? null : result.error,
-      idempotencyKey,
-    });
-
-    await createAuditLog({
-      userName: "system",
-      action: result.ok ? "FINANCE_SMS_SENT" : "FINANCE_SMS_FAILED",
-      module: "finance",
-      resource: "finance_sms",
-      recordId: calendarDate,
-      newValue: {
+      const result = await sendSwalaSms({ to: phone, body, idempotencyKey });
+      await recordLog({
         alertType: FINANCE_SMS_ALERT.EOD_SPEND,
+        sourceType: FINANCE_SMS_SOURCE.EOD_SPEND,
+        sourceId: calendarDate,
         phone,
-        grandTotal,
-        providerMsgId: result.ok ? result.providerMsgId : undefined,
-        error: result.ok ? undefined : result.error,
-      },
-      description: result.ok
-        ? `EOD spend SMS sent to ${phone} (TZS ${formatTzs(grandTotal)})`
-        : `EOD spend SMS failed for ${phone}: ${result.error}`,
-    });
+        body,
+        status: result.ok ? "SENT" : "FAILED",
+        providerMsgId: result.ok ? result.providerMsgId : null,
+        errorMessage: result.ok ? null : result.error,
+        idempotencyKey,
+      });
 
-    if (result.ok) sent += 1;
-    else failed += 1;
+      await createAuditLog({
+        userName: "system",
+        action: result.ok ? "FINANCE_SMS_SENT" : "FINANCE_SMS_FAILED",
+        module: "finance",
+        resource: "finance_sms",
+        recordId: calendarDate,
+        newValue: {
+          alertType: FINANCE_SMS_ALERT.EOD_SPEND,
+          phone,
+          grandTotal,
+          providerMsgId: result.ok ? result.providerMsgId : undefined,
+          error: result.ok ? undefined : result.error,
+        },
+        description: result.ok
+          ? `EOD spend SMS sent to ${phone} (TZS ${formatTzs(grandTotal)})`
+          : `EOD spend SMS failed for ${phone}: ${result.error}`,
+      });
+
+      if (result.ok) sent += 1;
+      else failed += 1;
+    } catch (err) {
+      failed += 1;
+      console.error("[finance-sms] runEodSpendSms recipient error", recipient.phone, err);
+    }
   }
 
   return { calendarDate, skipped: false, grandTotal, sent, failed };

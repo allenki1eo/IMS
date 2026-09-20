@@ -14,7 +14,7 @@ Primary path: **Cashbook `RECEIPT`** (`createCashbookEntry`).
 
 Also: **Bank transaction `DEPOSIT`** (`createBankTransaction`).
 
-Both call `notifyDepositPosted` with an idempotency key per `sourceType:sourceId:phone` so refresh/retry does not spam. Re-alert on amount edit is deferred.
+Both **await** `notifyDepositPosted`, which fans out to **every** active DEPOSIT recipient (one Swala attempt + `finance_sms_logs` row per phone). Idempotency key is per `sourceType:sourceId:phone` so refresh/retry does not spam. Re-alert on amount edit is deferred.
 
 ## EOD spend definition (MVP)
 
