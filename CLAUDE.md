@@ -300,6 +300,11 @@ Status: Planned
 
 Status: Planned
 
+### Phase 12b - Finance SMS alerts
+- Deposit SMS on cashbook RECEIPT / bank DEPOSIT (SwalaSMS)
+- EOD spend rollup SMS (all companies, one message) via cron
+- Settings → Finance SMS; see `docs/FINANCE_SMS.md`
+
 ### Phase 12 - Finance Operations
 
 Status: Complete

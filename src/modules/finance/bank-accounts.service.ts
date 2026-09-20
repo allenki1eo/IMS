@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
+import { notifyDepositPosted, FINANCE_SMS_SOURCE } from "@/modules/finance/finance-sms.service";
 
 type TxClient = any;
 
@@ -246,6 +247,19 @@ export async function createBankTransaction(
     description: `${data.type} of ${data.amount} on ${bankAccount.name}`,
     ipAddress,
   });
+
+  // Deposit SMS: bank DEPOSIT also triggers (alongside cashbook RECEIPT).
+  if (data.type === "DEPOSIT") {
+    void notifyDepositPosted({
+      companyId,
+      sourceType: FINANCE_SMS_SOURCE.BANK_DEPOSIT,
+      sourceId: tx.id,
+      amount: data.amount,
+      accountName: bankAccount.name,
+      reference: data.reference ?? null,
+      occurredAt: transactionDate,
+    });
+  }
 
   return tx;
 }

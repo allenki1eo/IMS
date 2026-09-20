@@ -2639,3 +2639,65 @@ model ProductSpecParameter {
   @@index([specId])
   @@map("product_spec_parameters")
 }
+
+// ─────────────────────────────────────────────
+// FINANCE SMS ALERTS
+// ─────────────────────────────────────────────
+
+/// Per-company deposit alerts or global EOD spend rollup settings.
+/// scopeKey = companyId for DEPOSIT; "global" for EOD_SPEND.
+model FinanceNotificationSetting {
+  id         String   @id @default(cuid())
+  scopeKey   String
+  alertType  String // DEPOSIT | EOD_SPEND
+  enabled    Boolean  @default(false)
+  /// EOD only: skip SMS when grand total is zero (product default true).
+  skipIfZero Boolean  @default(true)
+  updatedById String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  recipients FinanceSmsRecipient[]
+
+  @@unique([scopeKey, alertType])
+  @@index([alertType])
+  @@map("finance_notification_settings")
+}
+
+model FinanceSmsRecipient {
+  id        String   @id @default(cuid())
+  settingId String
+  phone     String
+  label     String? // Director, Accountant, etc.
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  setting FinanceNotificationSetting @relation(fields: [settingId], references: [id], onDelete: Cascade)
+
+  @@index([settingId])
+  @@map("finance_sms_recipients")
+}
+
+/// Audit + idempotency for finance SMS (deposit + EOD).
+model FinanceSmsLog {
+  id             String   @id @default(cuid())
+  alertType      String // DEPOSIT | EOD_SPEND
+  sourceType     String // CASHBOOK_RECEIPT | BANK_DEPOSIT | EOD_SPEND
+  sourceId       String
+  companyId      String?
+  phone          String
+  body           String
+  status         String // SENT | FAILED | SKIPPED
+  providerMsgId  String?
+  errorMessage   String?
+  idempotencyKey String   @unique
+  createdAt      DateTime @default(now())
+
+  @@index([alertType, createdAt])
+  @@index([sourceType, sourceId])
+  @@index([companyId])
+  @@index([status])
+  @@map("finance_sms_logs")
+}
