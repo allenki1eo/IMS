@@ -18,6 +18,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       DATABASE_AUTH_TOKEN: ${DATABASE_AUTH_TOKEN}
       JWT_SECRET: ${JWT_SECRET}
+      SSO_SHARED_SECRET: ${SSO_SHARED_SECRET}
+      SALES_APP_URL: ${SALES_APP_URL:-https://sales.eastafricanspirit.co.tz}
+      HR_APP_URL: ${HR_APP_URL:-https://atwork.eastafricanspirit.co.tz}
       BASE_URL: ${BASE_URL}
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Company ERP}
       NEXT_PUBLIC_APP_VERSION: ${NEXT_PUBLIC_APP_VERSION:-1.0.0}

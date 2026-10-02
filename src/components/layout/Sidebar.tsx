@@ -29,6 +29,8 @@ interface NavItem {
   label: string;
   href?: string;
   external?: boolean;
+  /** Full navigation in this tab (SSO launch). Skips target=_blank. */
+  sameTab?: boolean;
   exact?: boolean;
   icon: React.ReactNode;
   permission?: string;
@@ -45,7 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Main Menu",
     items: [
       { label: "Dashboard", href: "/", icon: <LayoutDashboard className="h-4 w-4" /> },
-      { label: "HR", href: "https://atwork.eastafricanspirit.co.tz", external: true, icon: <UserCircle className="h-4 w-4" />, permission: "employees:employee:read" },
+      { label: "HR", href: "/api/sso/launch?app=hr", external: true, sameTab: true, icon: <UserCircle className="h-4 w-4" />, permission: "employees:employee:read" },
       { label: "Approvals", href: "/approvals", icon: <CheckCircle className="h-4 w-4" />, permission: "approvals:request:read" },
     ],
   },
@@ -193,7 +195,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Sales",
     items: [
-      { label: "Sales", href: "https://sales.eastafricanspirit.co.tz", external: true, icon: <TrendingUp className="h-4 w-4" /> },
+      { label: "Sales", href: "/api/sso/launch?app=sales", external: true, sameTab: true, icon: <TrendingUp className="h-4 w-4" /> },
     ],
   },
   {
@@ -348,12 +350,14 @@ function NavLink({ item, depth = 0, collapsed }: { item: NavItem; depth?: number
   );
 
   if (item.external) {
+    const linkTarget = item.sameTab ? undefined : "_blank";
+    const linkRel = item.sameTab ? undefined : "noopener noreferrer";
     if (collapsed) {
       return (
         <a
           href={item.href}
-          target="_blank"
-          rel="noopener noreferrer"
+          target={linkTarget}
+          rel={linkRel}
           title={item.label}
           className="flex items-center justify-center p-2 rounded-md transition-colors text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
         >
@@ -364,8 +368,8 @@ function NavLink({ item, depth = 0, collapsed }: { item: NavItem; depth?: number
     return (
       <a
         href={item.href}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={linkTarget}
+        rel={linkRel}
         className={cn(
           "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
           depth > 0 && "pl-2",
