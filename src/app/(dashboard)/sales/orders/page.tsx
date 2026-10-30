@@ -113,8 +113,8 @@ export default function SalesOrdersPage() {
       header: "Priority",
       cell: (row: OrderRow) => (
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-          row.priority === "URGENT" ? "bg-red-100 text-red-700"
-          : row.priority === "HIGH" ? "bg-orange-100 text-orange-700"
+          row.priority === "URGENT" ? "bg-destructive/10 text-destructive"
+          : row.priority === "HIGH" ? "bg-warning/10 text-warning"
           : "bg-muted text-muted-foreground"
         }`}>
           {row.priority}

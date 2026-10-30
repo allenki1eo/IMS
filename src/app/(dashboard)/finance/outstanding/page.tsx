@@ -40,7 +40,7 @@ function fmtDate(s: string) {
 function ageBadge(days: number) {
   if (days === 0) return <Badge variant="outline">Current</Badge>;
   if (days <= 30) return <Badge variant="secondary">{days}d overdue</Badge>;
-  if (days <= 60) return <Badge className="bg-amber-100 text-amber-800 border-amber-300">{days}d overdue</Badge>;
+  if (days <= 60) return <Badge className="bg-warning/10 text-warning border-warning/30">{days}d overdue</Badge>;
   return <Badge variant="destructive">{days}d overdue</Badge>;
 }
 
@@ -107,19 +107,19 @@ export default function OutstandingPage() {
         <>
           {/* Summary */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <Card className={`border-l-4 ${isPayable ? "border-l-red-500" : "border-l-emerald-500"}`}>
+            <Card className={`border-l-4 ${isPayable ? "border-l-destructive" : "border-l-success"}`}>
               <CardHeader className="pb-1">
                 <CardTitle className="text-xs text-muted-foreground">
                   Total {isPayable ? "Payable" : "Receivable"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold tabular-nums ${isPayable ? "text-red-700" : "text-emerald-700"}`}>
+                <div className={`text-2xl font-bold tabular-nums ${isPayable ? "text-destructive" : "text-success"}`}>
                   {fmt(data.totalOutstanding)}
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-blue-500">
+            <Card className="border-l-4 border-l-info">
               <CardHeader className="pb-1">
                 <CardTitle className="text-xs text-muted-foreground">Pending Items</CardTitle>
               </CardHeader>
@@ -127,12 +127,12 @@ export default function OutstandingPage() {
                 <div className="text-2xl font-bold">{data.count}</div>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-amber-500">
+            <Card className="border-l-4 border-l-warning">
               <CardHeader className="pb-1">
                 <CardTitle className="text-xs text-muted-foreground">Overdue Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-amber-700">{data.overdueCount}</div>
+                <div className="text-2xl font-bold text-warning">{data.overdueCount}</div>
               </CardContent>
             </Card>
           </div>
@@ -166,8 +166,8 @@ export default function OutstandingPage() {
                         <tr
                           key={p.id}
                           className={`border-b transition-colors hover:bg-muted/30 ${
-                            p.daysOverdue > 60 ? "bg-red-50/30 dark:bg-red-950/10" :
-                            p.daysOverdue > 30 ? "bg-amber-50/30 dark:bg-amber-950/10" : ""
+                            p.daysOverdue > 60 ? "bg-destructive/5" :
+                            p.daysOverdue > 30 ? "bg-warning/5" : ""
                           }`}
                         >
                           <td className="px-4 py-3 font-mono text-xs font-medium">
@@ -178,7 +178,7 @@ export default function OutstandingPage() {
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">{fmtDate(p.paymentDate)}</td>
                           <td className="px-4 py-3">{ageBadge(p.daysOverdue)}</td>
-                          <td className={`px-4 py-3 text-right tabular-nums font-semibold ${isPayable ? "text-red-700" : "text-emerald-700"}`}>
+                          <td className={`px-4 py-3 text-right tabular-nums font-semibold ${isPayable ? "text-destructive" : "text-success"}`}>
                             <span className="text-xs font-normal text-muted-foreground mr-1">{p.currency}</span>
                             {fmt(p.amount)}
                           </td>
@@ -202,7 +202,7 @@ export default function OutstandingPage() {
                     <tfoot className="border-t bg-muted/30">
                       <tr>
                         <td colSpan={4} className="px-4 py-3 text-right font-bold">Total Pending</td>
-                        <td className={`px-4 py-3 text-right tabular-nums font-bold ${isPayable ? "text-red-700" : "text-emerald-700"}`}>
+                        <td className={`px-4 py-3 text-right tabular-nums font-bold ${isPayable ? "text-destructive" : "text-success"}`}>
                           {fmt(data.totalOutstanding)}
                         </td>
                         <td />

@@ -148,8 +148,8 @@ export default function SalesOrderDetailPage() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Priority</span>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                order.priority === "URGENT" ? "bg-red-100 text-red-700"
-                : order.priority === "HIGH" ? "bg-orange-100 text-orange-700"
+                order.priority === "URGENT" ? "bg-destructive/10 text-destructive"
+                : order.priority === "HIGH" ? "bg-warning/10 text-warning"
                 : "bg-muted text-muted-foreground"
               }`}>
                 {order.priority}

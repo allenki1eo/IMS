@@ -53,7 +53,7 @@ export default function BBTAnalysisDetailPage({ params }: { params: Promise<{ id
   }, [id]);
 
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;
-  if (!analysis) return <div className="p-8 text-red-500">Analysis not found</div>;
+  if (!analysis) return <div className="p-8 text-destructive">Analysis not found</div>;
 
   return (
     <div className="space-y-6 max-w-2xl">

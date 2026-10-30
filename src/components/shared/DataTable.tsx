@@ -44,28 +44,63 @@ async function exportExcel<T extends object>(columns: { key: string; header: str
 }
 
 async function exportPdf<T extends object>(columns: { key: string; header: string; exportValue?: (row: T) => string | number }[], data: T[], filename: string) {
-  const jsPDF = (await import("jspdf")).default;
-  const autoTable = (await import("jspdf-autotable")).default;
+  const [{ default: jsPDF }, { default: autoTable }, company] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+    // Letterhead is best-effort: export still works if the profile can't load.
+    fetch("/api/company").then((r) => (r.ok ? r.json() : null)).then((j) => j?.data ?? null).catch(() => null),
+  ]);
   const doc = new jsPDF({ orientation: "landscape" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 14;
   const title = filename.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  const date = new Date().toLocaleDateString("en-GB");
+  const now = new Date();
+  const generated = `${now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}, ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+  const companyName: string = company?.legalName || company?.name || "";
 
-  doc.setFontSize(14);
-  doc.text(title, 14, 15);
-  doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text(`Generated: ${date}`, 14, 21);
+  // Letterhead
+  let y = 15;
+  if (companyName) {
+    doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(20);
+    doc.text(companyName.toUpperCase(), margin, y);
+    const details = [
+      [company?.address, company?.city, company?.country].filter(Boolean).join(", "),
+      [company?.taxNumber && `TIN ${company.taxNumber}`, company?.phone, company?.email].filter(Boolean).join("  ·  "),
+    ].filter(Boolean);
+    doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(100);
+    details.forEach((line) => { y += 4.5; doc.text(line, margin, y); });
+    y += 3;
+    doc.setDrawColor(20).setLineWidth(0.6).line(margin, y, pageW - margin, y);
+    doc.setLineWidth(0.2).line(margin, y + 1, pageW - margin, y + 1);
+    y += 8;
+  }
 
-  const head = [columns.map((c) => c.header)];
-  const body = data.map((row) => columns.map((c) => getCellValue(c, row)));
+  // Document heading
+  doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(20);
+  doc.text(title.toUpperCase(), margin, y);
+  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(100);
+  doc.text(`Generated ${generated}  ·  ${data.length} record${data.length === 1 ? "" : "s"}`, margin, y + 5);
 
   autoTable(doc, {
-    head,
-    body,
-    startY: 26,
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [40, 40, 40] },
+    head: [["#", ...columns.map((c) => c.header)]],
+    body: data.map((row, i) => [i + 1, ...columns.map((c) => getCellValue(c, row))]),
+    startY: y + 9,
+    margin: { left: margin, right: margin, bottom: 16 },
+    theme: "plain",
+    styles: { fontSize: 8, cellPadding: 1.6, textColor: 30, lineColor: 200, lineWidth: { bottom: 0.1 } },
+    headStyles: { fontStyle: "bold", textColor: 20, lineColor: 20, lineWidth: { top: 0.4, bottom: 0.4 } },
+    columnStyles: { 0: { textColor: 120, cellWidth: 8 } },
   });
+
+  // Footer on every page, once the page count is known.
+  const pages = doc.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(120);
+    doc.text([companyName, title].filter(Boolean).join(" — "), margin, pageH - 8);
+    doc.text(`Page ${i} of ${pages}`, pageW - margin, pageH - 8, { align: "right" });
+  }
 
   doc.save(`${filename}.pdf`);
 }

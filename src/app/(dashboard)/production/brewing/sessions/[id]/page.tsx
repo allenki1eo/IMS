@@ -156,7 +156,7 @@ export default function BrewingSessionDetailPage({ params }: { params: Promise<{
                       <td className="border px-2 py-1 text-muted-foreground">{a.startTime ?? ""}</td>
                       <td className="border px-2 py-1 text-muted-foreground">{a.endTime ?? ""}</td>
                       <td className="border px-2 py-1 font-semibold">{a.actual ?? ""}</td>
-                      <td className="border px-2 py-1 text-red-600 text-xs">{a.reasonOutSpec ?? ""}</td>
+                      <td className="border px-2 py-1 text-destructive text-xs">{a.reasonOutSpec ?? ""}</td>
                     </tr>
                   ))}
                 </tbody>

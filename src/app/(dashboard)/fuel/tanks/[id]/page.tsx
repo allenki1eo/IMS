@@ -221,7 +221,7 @@ export default function TankDetailPage() {
                   {tank.currentLevel.toLocaleString()} / {tank.capacity.toLocaleString()} L
                 </p>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-4">
+              <div className="w-full bg-muted rounded-full h-4">
                 <div
                   className="h-4 rounded-full transition-all"
                   style={{ width: `${Math.min(fillPct, 100)}%`, backgroundColor: color }}
@@ -232,12 +232,12 @@ export default function TankDetailPage() {
                 <span>Capacity: {tank.capacity.toLocaleString()} L</span>
               </div>
               {isTankBelowMinimum(tank) && (
-                <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-700">
+                <div className="rounded-md bg-warning/5 border border-warning/20 px-3 py-2 text-sm text-warning">
                   Below minimum level
                 </div>
               )}
               {!isTankInService(tank) && tank.currentLevel === 0 && (
-                <div className="rounded-md bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-600">
+                <div className="rounded-md bg-muted/50 border border-border px-3 py-2 text-sm text-muted-foreground">
                   Awaiting first fuel receipt — min-level alerts stay quiet until the tank is filled.
                 </div>
               )}
@@ -359,7 +359,7 @@ export default function TankDetailPage() {
                             {format(new Date(entry.date), "dd MMM yyyy HH:mm")}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex items-center gap-1 text-xs font-semibold ${entry.type === "RECEIPT" ? "text-green-600" : "text-red-600"}`}>
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold ${entry.type === "RECEIPT" ? "text-success" : "text-destructive"}`}>
                               {entry.type === "RECEIPT" ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                               {entry.type}
                             </span>
@@ -368,7 +368,7 @@ export default function TankDetailPage() {
                             <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{entry.reference}</code>
                           </td>
                           <td className="px-4 py-3">
-                            <span className={entry.type === "RECEIPT" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                            <span className={entry.type === "RECEIPT" ? "text-success font-medium" : "text-destructive font-medium"}>
                               {entry.type === "RECEIPT" ? "+" : "-"}{entry.quantityLiters.toLocaleString()}
                             </span>
                           </td>

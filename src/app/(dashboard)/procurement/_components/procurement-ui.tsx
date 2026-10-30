@@ -72,13 +72,13 @@ export function formatStatus(value: string) {
 export function priorityClass(priority: string): string {
   switch (priority) {
     case "URGENT":
-      return "bg-red-100 text-red-700";
+      return "bg-destructive/10 text-destructive";
     case "HIGH":
-      return "bg-orange-100 text-orange-700";
+      return "bg-warning/10 text-warning";
     case "NORMAL":
-      return "bg-blue-100 text-blue-700";
+      return "bg-info/10 text-info";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "bg-muted text-muted-foreground";
   }
 }
 
@@ -96,13 +96,13 @@ export function StatCard({
   highlight?: boolean;
 }) {
   const inner = (
-    <Card className={highlight ? "border-amber-400" : ""}>
+    <Card className={highlight ? "border-warning/50" : ""}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className={`h-4 w-4 ${highlight ? "text-amber-500" : "text-muted-foreground"}`} />
+        <Icon className={`h-4 w-4 ${highlight ? "text-warning" : "text-muted-foreground"}`} />
       </CardHeader>
       <CardContent>
-        <div className={`text-3xl font-bold ${highlight ? "text-amber-600" : ""}`}>{value}</div>
+        <div className={`text-3xl font-bold ${highlight ? "text-warning" : ""}`}>{value}</div>
       </CardContent>
     </Card>
   );

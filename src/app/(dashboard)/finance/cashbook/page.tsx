@@ -54,11 +54,11 @@ function fmtDate(dateStr: string) {
 
 function methodBadgeColor(method: string) {
   switch (method) {
-    case "CHEQUE": return "bg-blue-100 text-blue-700";
-    case "ONLINE": return "bg-purple-100 text-purple-700";
-    case "BANK_TRANSFER": return "bg-indigo-100 text-indigo-700";
-    case "PETTY_CASH": return "bg-yellow-100 text-yellow-700";
-    default: return "bg-gray-100 text-gray-600";
+    case "CHEQUE": return "bg-info/10 text-info";
+    case "ONLINE": return "bg-violet/10 text-violet";
+    case "BANK_TRANSFER": return "bg-violet/10 text-violet";
+    case "PETTY_CASH": return "bg-warning/10 text-warning";
+    default: return "bg-muted text-muted-foreground";
   }
 }
 
@@ -212,10 +212,10 @@ export default function CashbookPage() {
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Receipts</p>
             {totalsByCurrency.length === 0 ? (
-              <p className="text-xl font-bold text-green-600 mt-1">{formatMoney(0)}</p>
+              <p className="text-xl font-bold text-success mt-1">{formatMoney(0)}</p>
             ) : (
               totalsByCurrency.map((t) => (
-                <p key={t.currency} className="text-xl font-bold text-green-600 mt-1">{formatMoney(t.receipts, t.currency)}</p>
+                <p key={t.currency} className="text-xl font-bold text-success mt-1">{formatMoney(t.receipts, t.currency)}</p>
               ))
             )}
           </CardContent>
@@ -224,10 +224,10 @@ export default function CashbookPage() {
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Payments</p>
             {totalsByCurrency.length === 0 ? (
-              <p className="text-xl font-bold text-red-600 mt-1">{formatMoney(0)}</p>
+              <p className="text-xl font-bold text-destructive mt-1">{formatMoney(0)}</p>
             ) : (
               totalsByCurrency.map((t) => (
-                <p key={t.currency} className="text-xl font-bold text-red-600 mt-1">{formatMoney(t.payments, t.currency)}</p>
+                <p key={t.currency} className="text-xl font-bold text-destructive mt-1">{formatMoney(t.payments, t.currency)}</p>
               ))
             )}
           </CardContent>
@@ -236,10 +236,10 @@ export default function CashbookPage() {
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Net Movement</p>
             {totalsByCurrency.length === 0 ? (
-              <p className="text-xl font-bold text-green-600 mt-1">{formatMoney(0)}</p>
+              <p className="text-xl font-bold text-success mt-1">{formatMoney(0)}</p>
             ) : (
               totalsByCurrency.map((t) => (
-                <p key={t.currency} className={`text-xl font-bold mt-1 ${t.net >= 0 ? "text-green-600" : "text-red-600"}`}>
+                <p key={t.currency} className={`text-xl font-bold mt-1 ${t.net >= 0 ? "text-success" : "text-destructive"}`}>
                   {formatMoney(t.net, t.currency)}
                 </p>
               ))
@@ -267,8 +267,8 @@ export default function CashbookPage() {
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Description</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Category</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Method</th>
-                <th className="text-right px-3 py-2 font-medium text-green-700">Receipt</th>
-                <th className="text-right px-3 py-2 font-medium text-red-700">Payment</th>
+                <th className="text-right px-3 py-2 font-medium text-success">Receipt</th>
+                <th className="text-right px-3 py-2 font-medium text-destructive">Payment</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Bank Account</th>
                 {canWrite && <th className="px-3 py-2" />}
               </tr>
@@ -304,14 +304,14 @@ export default function CashbookPage() {
                   </td>
                   <td className="px-3 py-2 text-right">
                     {entry.type === "RECEIPT" ? (
-                      <span className="font-medium text-green-600">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
+                      <span className="font-medium text-success">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
                     ) : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {entry.type === "PAYMENT" ? (
-                      <span className="font-medium text-red-600">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
+                      <span className="font-medium text-destructive">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
                     ) : entry.type === "TRANSFER" ? (
-                      <span className="font-medium text-amber-600">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
+                      <span className="font-medium text-warning">{formatMoney(entry.amount, entry.bankAccount?.currency)}</span>
                     ) : "—"}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">

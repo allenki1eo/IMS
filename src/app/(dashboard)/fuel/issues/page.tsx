@@ -104,7 +104,7 @@ export default function IssuesPage() {
         <div>
           <span className="font-medium">{row.vehicle?.plateNumber ?? "—"}</span>
           {row.vehicle?.usageType === "PRIVATE" && row.vehicle?.nextRefuelAt && (
-            <p className="text-xs text-amber-600">
+            <p className="text-xs text-warning">
               Refill by {format(new Date(row.vehicle.nextRefuelAt), "dd MMM yyyy")}
             </p>
           )}

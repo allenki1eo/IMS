@@ -67,18 +67,18 @@ function timeAgo(date: string | null) {
 }
 
 const ACTION_COLOR: Record<string, string> = {
-  CREATE: "text-emerald-600",
-  UPDATE: "text-blue-600",
-  DELETE: "text-red-600",
-  LOGIN: "text-gray-500",
-  LOGOUT: "text-gray-500",
-  APPROVE: "text-violet-600",
-  REJECT: "text-red-600",
+  CREATE: "text-success",
+  UPDATE: "text-info",
+  DELETE: "text-destructive",
+  LOGIN: "text-muted-foreground",
+  LOGOUT: "text-muted-foreground",
+  APPROVE: "text-violet",
+  REJECT: "text-destructive",
 };
 
 function actionColor(action: string) {
   const key = Object.keys(ACTION_COLOR).find((k) => action.startsWith(k));
-  return key ? ACTION_COLOR[key] : "text-gray-600";
+  return key ? ACTION_COLOR[key] : "text-muted-foreground";
 }
 
 export default function ProfilePage() {

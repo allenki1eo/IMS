@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight, Clock, CornerDownLeft, FileText, Landmark, Loader2, PackageCheck, Plus,
-  Search, SendHorizonal, ShoppingCart, Star, Truck, Wrench, Factory, FileSearch, BookMarked,
+  Search, SendHorizonal, ShoppingCart, Star, Truck, Wrench, Factory, FileSearch, BookMarked, FolderUp,
   type LucideIcon,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +30,7 @@ const CREATE_ACTIONS: CreateAction[] = [
   { label: "New dispatch order", href: "/dispatch/orders/new", icon: SendHorizonal, permission: "dispatch:order:create", keywords: "delivery" },
   { label: "New cashbook entry", href: "/finance/cashbook/new", icon: BookMarked, permission: "finance:cashbook:write", keywords: "expense receipt cash" },
   { label: "New journal entry", href: "/finance/journal-entries/new", icon: Landmark, permission: "finance:journal:create", keywords: "gl posting" },
+  { label: "Upload a file", href: "/data-center?upload=1", icon: FolderUp, permission: "data:upload:create", keywords: "data center budget return licence document" },
 ];
 
 interface Row {

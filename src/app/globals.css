@@ -28,8 +28,14 @@
 
     /* Semantic status hues — used as tinted text/ring over a 10% wash */
     --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
     --warning: 32 95% 38%;
+    --warning-foreground: 0 0% 100%;
     --info: 212 100% 42%;
+    --info-foreground: 0 0% 100%;
+    /* Categorical accent for non-status tags (payment methods, test types…) */
+    --violet: 262 60% 50%;
+    --violet-foreground: 0 0% 100%;
 
     --sidebar-background: 0 0% 99%;
     --sidebar-foreground: 0 0% 25%;
@@ -64,8 +70,13 @@
     --ring: 212 100% 48%;
 
     --success: 142 60% 55%;
+    --success-foreground: 142 60% 8%;
     --warning: 38 92% 60%;
+    --warning-foreground: 38 92% 8%;
     --info: 212 100% 68%;
+    --info-foreground: 212 100% 10%;
+    --violet: 262 80% 74%;
+    --violet-foreground: 262 60% 12%;
 
     --sidebar-background: 0 0% 4%;
     --sidebar-foreground: 0 0% 63%;
@@ -120,6 +131,32 @@
   }
 }
 
+/* ─── Paper documents (reports) ───────────────────────────────────────────
+   Paper is always ink on white, so `.paper` pins the theme tokens to light
+   values; token classes inside it (text-muted-foreground, border-border…)
+   then render as print colours even when the app is in dark mode. */
+.paper {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 36%;
+  --border: 0 0% 84%;
+  --success: 142 72% 29%;
+  --warning: 32 95% 38%;
+  --info: 212 100% 42%;
+  --destructive: 358 75% 45%;
+  background: #fff;
+  color: hsl(var(--foreground));
+  color-scheme: light;
+}
+
+@page report {
+  size: A4;
+  margin: 14mm 12mm 16mm;
+  @bottom-left { content: "Confidential — internal use"; font-size: 7.5pt; color: #666; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 7.5pt; color: #666; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
@@ -169,54 +206,45 @@
   .print-only table th,
   .print-only table td { padding: 2px 4px !important; font-size: 10px !important; }
 
+  /* The app shell is a fixed-height scroller; let it grow so every page prints. */
+  [data-shell], [data-shell] > div, [data-shell] main {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Paper documents: own page box and typography; override the generic
+     black-grid table rules above (higher specificity wins under !important). */
+  /* Put the whole printout on the report page box: a named page only on
+     .paper would force breaks (and blank pages) around sibling elements. */
+  body:has(.paper) { page: report; }
+  .paper {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    font-size: 10pt;
+  }
+  .paper .text-muted-foreground { color: #5c5c5c !important; }
+  .paper .monogram { background-color: #111 !important; color: #fff !important; }
+  .paper .text-destructive { color: #b42318 !important; }
+  .paper th, .paper td {
+    border: 0 !important;
+    border-bottom: 0.5pt solid #c9c9c9 !important;
+    padding: 3pt 4pt !important;
+    font-size: 8.5pt !important;
+  }
+  .paper thead th { border-top: 1pt solid #111 !important; border-bottom: 1pt solid #111 !important; background: #fff !important; }
+  .paper tfoot td { border-top: 1pt solid #111 !important; border-bottom: 0 !important; }
+  .paper tfoot td.border-double { border-bottom: 2.5pt double #111 !important; }
+  .paper thead { display: table-header-group; }
+  .paper h2 { break-after: avoid; }
+  .paper .signatures, .paper .doc-footer { break-inside: avoid; }
+
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
-/* ─── Dark mode: adapt hardcoded light colors used in print-style tables ─── */
-
-/* Table row backgrounds */
-.dark table tr.bg-gray-50 { background-color: hsl(0 0% 12%) !important; }
-.dark table tr.bg-gray-100,
-.dark table thead tr { background-color: hsl(0 0% 16%) !important; }
-.dark table tr.bg-blue-50,
-.dark table tr.bg-blue-100 { background-color: hsl(215 30% 14%) !important; }
-.dark table tr.bg-green-50 { background-color: hsl(142 25% 11%) !important; }
-.dark table tr.bg-yellow-50 { background-color: hsl(45 25% 10%) !important; }
-
-/* border-black → visible in dark mode, black on print */
+/* border-black is used by print-style tables: visible in dark mode, black on paper. */
 .dark .border-black { border-color: hsl(0 0% 38%) !important; }
-
-/* Colored text: lighten in dark mode for contrast */
-.dark .text-green-700 { color: hsl(142 60% 52%) !important; }
-.dark .text-green-600 { color: hsl(142 55% 50%) !important; }
-.dark .text-red-700   { color: hsl(0 68% 62%) !important; }
-.dark .text-red-600   { color: hsl(0 65% 60%) !important; }
-.dark .text-amber-700 { color: hsl(32 90% 60%) !important; }
-.dark .text-blue-700  { color: hsl(214 75% 68%) !important; }
-.dark .text-blue-600  { color: hsl(214 72% 65%) !important; }
-
-/* Colored badge backgrounds in dark mode */
-.dark .bg-green-100 { background-color: hsl(142 30% 14%) !important; }
-.dark .bg-red-100   { background-color: hsl(0 30% 16%) !important; }
-.dark .bg-amber-100 { background-color: hsl(32 30% 14%) !important; }
-.dark .bg-blue-100  { background-color: hsl(215 30% 16%) !important; }
-.dark .bg-blue-50   { background-color: hsl(215 25% 13%) !important; }
-.dark .bg-green-50  { background-color: hsl(142 20% 11%) !important; }
-.dark .bg-yellow-50 { background-color: hsl(45 20% 10%) !important; }
-.dark .bg-purple-100  { background-color: hsl(270 30% 16%) !important; }
-.dark .bg-indigo-100  { background-color: hsl(235 30% 16%) !important; }
-.dark .bg-yellow-100  { background-color: hsl(45 25% 12%) !important; }
-.dark .bg-gray-100    { background-color: hsl(0 0% 16%) !important; }
-.dark .bg-gray-50     { background-color: hsl(0 0% 12%) !important; }
-
-.dark .text-purple-700 { color: hsl(270 65% 72%) !important; }
-.dark .text-indigo-700 { color: hsl(235 65% 72%) !important; }
-.dark .text-yellow-700 { color: hsl(45 85% 62%) !important; }
-.dark .text-gray-600   { color: hsl(0 0% 70%) !important; }
-
-/* Badge border colors in dark mode */
-.dark .border-green-300 { border-color: hsl(142 40% 30%) !important; }
-.dark .border-red-300   { border-color: hsl(0 40% 35%) !important; }
-.dark .border-amber-300 { border-color: hsl(32 50% 35%) !important; }
-.dark .border-blue-300  { border-color: hsl(214 50% 38%) !important; }

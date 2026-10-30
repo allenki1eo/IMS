@@ -5,10 +5,15 @@ import { toast } from "sonner";
 import { FileBarChart, TrendingUp, Scale } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { ReportDocument } from "@/components/reports/paper/ReportDocument";
+import {
+  formatPaperDate, formatPeriod, table,
+  type ReportBlock, type ReportMeta,
+} from "@/components/reports/paper/types";
+import { useCurrency } from "@/hooks/useCurrency";
 
 type ReportType = "trial" | "income" | "balance";
 
@@ -20,7 +25,89 @@ function firstOfYear() {
   return `${new Date().getFullYear()}-01-01`;
 }
 
+interface Built {
+  meta: Omit<ReportMeta, "currency">;
+  blocks: ReportBlock[];
+}
+
+function buildTrialBalance(data: any): Built {
+  return {
+    meta: { title: "Trial Balance", code: "TB", period: `As at ${formatPaperDate(new Date())}`, subtitle: "Current balances of all active accounts" },
+    blocks: [
+      {
+        kind: "note",
+        title: "Status",
+        tone: data.isBalanced ? "success" : "destructive",
+        text: data.isBalanced
+          ? "The trial balance is in balance: total debits equal total credits."
+          : `The trial balance is OUT OF BALANCE by ${Math.abs(data.totalDebit - data.totalCredit).toLocaleString()}. Investigate before relying on these figures.`,
+      },
+      table<any>({
+        title: "Account Balances",
+        rows: data.data,
+        emptyText: "No account activity.",
+        columns: [
+          { header: "Code", value: (r) => r.code, format: "code", width: "12%" },
+          { header: "Account", value: (r) => r.name },
+          { header: "Type", value: (r) => r.accountType },
+          { header: "Debit", value: (r) => r.totalDebit || null, format: "money", total: true },
+          { header: "Credit", value: (r) => r.totalCredit || null, format: "money", total: true },
+          { header: "Net balance", value: (r) => r.netBalance, format: "money" },
+        ],
+      }),
+    ],
+  };
+}
+
+function buildIncomeStatement(data: any): Built {
+  const lines = (items: any[]) => items.map((r) => ({ code: r.code, label: r.name, amount: r.amount }));
+  return {
+    meta: { title: "Income Statement", code: "PL", period: formatPeriod(data.fromDate, data.toDate), subtitle: "Statement of profit or loss" },
+    blocks: [{
+      kind: "statement",
+      title: "Profit and Loss",
+      groups: [
+        { heading: "Revenue", lines: lines(data.revenue), totalLabel: "Total revenue", total: data.totalRevenue, emptyText: "No revenue recorded in this period." },
+        { heading: "Expenses", lines: lines(data.expenses), totalLabel: "Total expenses", total: data.totalExpenses, emptyText: "No expenses recorded in this period." },
+      ],
+      result: {
+        label: data.netIncome >= 0 ? "Net profit for the period" : "Net loss for the period",
+        amount: Math.abs(data.netIncome),
+        tone: data.netIncome >= 0 ? "positive" : "negative",
+      },
+    }],
+  };
+}
+
+function buildBalanceSheet(data: any): Built {
+  const lines = (items: any[]) => items.map((r) => ({ code: r.code, label: r.name, amount: r.balance }));
+  const blocks: ReportBlock[] = [];
+  if (!data.isBalanced) {
+    blocks.push({
+      kind: "note",
+      title: "Status",
+      tone: "destructive",
+      text: "Assets do not equal liabilities plus equity. Review unposted entries before relying on this statement.",
+    });
+  }
+  blocks.push({
+    kind: "statement",
+    title: "Statement of Financial Position",
+    groups: [
+      { heading: "Assets", lines: lines(data.assets), totalLabel: "Total assets", total: data.totalAssets },
+      { heading: "Liabilities", lines: lines(data.liabilities), totalLabel: "Total liabilities", total: data.totalLiabilities },
+      { heading: "Equity", lines: lines(data.equity), totalLabel: "Total equity", total: data.totalEquity },
+    ],
+    result: { label: "Total liabilities and equity", amount: data.totalLiabilitiesAndEquity },
+  });
+  return {
+    meta: { title: "Balance Sheet", code: "BS", period: `As at ${formatPaperDate(data.asOfDate)}` },
+    blocks,
+  };
+}
+
 export default function FinancialReportsPage() {
+  const currency = useCurrency();
   const [reportType, setReportType] = useState<ReportType>("trial");
   // Dates are kept as shared state so they survive tab switches
   const [fromDate, setFromDate] = useState(firstOfYear());
@@ -36,6 +123,7 @@ export default function FinancialReportsPage() {
 
   async function fetchReport() {
     setLoading(true);
+    setData(null); // remount the document so it is stamped for this run
     try {
       let url = "";
       if (reportType === "trial") {
@@ -76,7 +164,8 @@ export default function FinancialReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Financial Reports" description="Trial balance, income statement, and balance sheet" />
+      <div className="no-print space-y-6">
+      <PageHeader title="Financial Reports" description="Trial balance, income statement, and balance sheet — formatted for print and PDF" />
 
       {/* Tab strip */}
       <div className="flex gap-2 border-b pb-0">
@@ -123,167 +212,17 @@ export default function FinancialReportsPage() {
           {loading ? "Generating…" : "Generate Report"}
         </Button>
       </div>
+      </div>
 
       {loading && <LoadingState text="Generating report…" />}
 
-      {/* Trial Balance */}
-      {data && reportType === "trial" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Trial Balance</CardTitle>
-            <p className={`text-sm font-medium ${data.isBalanced ? "text-emerald-600" : "text-red-600"}`}>
-              {data.isBalanced ? "Balanced ✓" : "Unbalanced ✗"} &nbsp;·&nbsp; Total Debit:{" "}
-              {data.totalDebit.toLocaleString()} &nbsp;·&nbsp; Total Credit: {data.totalCredit.toLocaleString()}
-            </p>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-y bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Code</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Debit</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Credit</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Net Balance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.data.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
-                        No account activity in this period
-                      </td>
-                    </tr>
-                  )}
-                  {data.data.map((row: any) => (
-                    <tr key={row.id} className="border-b hover:bg-muted/30">
-                      <td className="px-4 py-2 font-mono text-xs">{row.code}</td>
-                      <td className="px-4 py-2">{row.name}</td>
-                      <td className="px-4 py-2">
-                        <span className="rounded bg-muted px-2 py-0.5 text-xs">{row.accountType}</span>
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums">
-                        {row.totalDebit > 0 ? row.totalDebit.toLocaleString() : "—"}
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums">
-                        {row.totalCredit > 0 ? row.totalCredit.toLocaleString() : "—"}
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums font-medium">
-                        {row.netBalance.toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Income Statement */}
-      {data && reportType === "income" && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Income Statement</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {data.fromDate} to {data.toDate}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <section>
-                <h3 className="mb-2 font-semibold text-emerald-700">Revenue</h3>
-                {data.revenue.length === 0 && (
-                  <p className="py-2 text-sm text-muted-foreground">No revenue recorded in this period</p>
-                )}
-                {data.revenue.map((r: any) => (
-                  <div key={r.code} className="flex justify-between border-b py-1.5 text-sm">
-                    <span className="text-muted-foreground">
-                      {r.code} — {r.name}
-                    </span>
-                    <span className="tabular-nums">{r.amount.toLocaleString()}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between pt-2 font-bold">
-                  <span>Total Revenue</span>
-                  <span className="tabular-nums text-emerald-700">{data.totalRevenue.toLocaleString()}</span>
-                </div>
-              </section>
-
-              <section>
-                <h3 className="mb-2 font-semibold text-red-700">Expenses</h3>
-                {data.expenses.length === 0 && (
-                  <p className="py-2 text-sm text-muted-foreground">No expenses recorded in this period</p>
-                )}
-                {data.expenses.map((r: any) => (
-                  <div key={r.code} className="flex justify-between border-b py-1.5 text-sm">
-                    <span className="text-muted-foreground">
-                      {r.code} — {r.name}
-                    </span>
-                    <span className="tabular-nums">{r.amount.toLocaleString()}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between pt-2 font-bold">
-                  <span>Total Expenses</span>
-                  <span className="tabular-nums text-red-700">{data.totalExpenses.toLocaleString()}</span>
-                </div>
-              </section>
-
-              <div
-                className={`flex justify-between rounded-lg border p-4 text-lg font-bold ${
-                  data.netIncome >= 0 ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
-                }`}
-              >
-                <span>Net {data.netIncome >= 0 ? "Profit" : "Loss"}</span>
-                <span className="tabular-nums">{Math.abs(data.netIncome).toLocaleString()}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Balance Sheet */}
-      {data && reportType === "balance" && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Balance Sheet</CardTitle>
-              <p className={`text-sm font-medium ${data.isBalanced ? "text-emerald-600" : "text-red-600"}`}>
-                {data.isBalanced ? "Balanced ✓" : "Unbalanced ✗"} &nbsp;·&nbsp; As of {data.asOfDate}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {[
-                { label: "Assets", items: data.assets, total: data.totalAssets, color: "text-blue-700" },
-                { label: "Liabilities", items: data.liabilities, total: data.totalLiabilities, color: "text-red-700" },
-                { label: "Equity", items: data.equity, total: data.totalEquity, color: "text-purple-700" },
-              ].map(({ label, items, total, color }) => (
-                <section key={label}>
-                  <h3 className={`mb-2 font-semibold ${color}`}>{label}</h3>
-                  {items.map((r: any) => (
-                    <div key={r.id} className="flex justify-between border-b py-1.5 text-sm">
-                      <span className="text-muted-foreground">
-                        {r.code} — {r.name}
-                      </span>
-                      <span className="tabular-nums">{r.balance.toLocaleString()}</span>
-                    </div>
-                  ))}
-                  <div className={`flex justify-between pt-2 font-bold ${color}`}>
-                    <span>Total {label}</span>
-                    <span className="tabular-nums">{total.toLocaleString()}</span>
-                  </div>
-                </section>
-              ))}
-              <div className="flex justify-between rounded-lg border bg-muted/40 p-4 text-base font-bold">
-                <span>Total Liabilities + Equity</span>
-                <span className="tabular-nums">{data.totalLiabilitiesAndEquity.toLocaleString()}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {data && !loading && (() => {
+        const built =
+          reportType === "trial" ? buildTrialBalance(data)
+          : reportType === "income" ? buildIncomeStatement(data)
+          : buildBalanceSheet(data);
+        return <ReportDocument meta={{ ...built.meta, currency }} blocks={built.blocks} />;
+      })()}
     </div>
   );
 }

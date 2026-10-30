@@ -77,15 +77,15 @@ export function NotificationBell() {
   const totalCount = alerts.reduce((s, a) => s + a.count, 0);
 
   const variantClass = {
-    warning: "bg-amber-100 text-amber-700 border-amber-200",
-    error: "bg-red-100 text-red-700 border-red-200",
-    info: "bg-blue-100 text-blue-700 border-blue-200",
+    warning: "bg-warning/10 text-warning border-warning/20",
+    error: "bg-destructive/10 text-destructive border-destructive/20",
+    info: "bg-info/10 text-info border-info/20",
   };
 
   const dotClass = {
-    warning: "bg-amber-500",
-    error: "bg-red-500",
-    info: "bg-blue-500",
+    warning: "bg-warning",
+    error: "bg-destructive",
+    info: "bg-info",
   };
 
   return (

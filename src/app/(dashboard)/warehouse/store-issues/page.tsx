@@ -20,11 +20,11 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  ISSUE_TO_PRODUCTION: "text-blue-600",
-  RETURN_FROM_PRODUCTION: "text-green-600",
-  RETURN_TO_SUPPLIER: "text-amber-600",
-  OTHER_ADDITION: "text-green-600",
-  OTHER_DEDUCTION: "text-red-600",
+  ISSUE_TO_PRODUCTION: "text-info",
+  RETURN_FROM_PRODUCTION: "text-success",
+  RETURN_TO_SUPPLIER: "text-warning",
+  OTHER_ADDITION: "text-success",
+  OTHER_DEDUCTION: "text-destructive",
 };
 
 interface IssueRow {

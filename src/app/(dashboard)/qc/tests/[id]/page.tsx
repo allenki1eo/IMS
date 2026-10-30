@@ -77,20 +77,20 @@ interface LabTest {
 
 function testTypeBadge(type: string) {
   const colors: Record<string, string> = {
-    RAW_MATERIAL: "bg-amber-100 text-amber-700",
-    WATER: "bg-sky-100 text-sky-700",
-    WORT: "bg-orange-100 text-orange-700",
-    FERMENTATION: "bg-purple-100 text-purple-700",
-    BRIGHT_BEER: "bg-green-100 text-green-700",
-    PACKAGING: "bg-blue-100 text-blue-700",
-    MICROBIOLOGY: "bg-red-100 text-red-700",
-    SENSORY: "bg-pink-100 text-pink-700",
-    RETAIN_SAMPLE: "bg-slate-100 text-slate-700",
-    CALIBRATION: "bg-gray-100 text-gray-600",
+    RAW_MATERIAL: "bg-warning/10 text-warning",
+    WATER: "bg-info/10 text-info",
+    WORT: "bg-warning/10 text-warning",
+    FERMENTATION: "bg-violet/10 text-violet",
+    BRIGHT_BEER: "bg-success/10 text-success",
+    PACKAGING: "bg-info/10 text-info",
+    MICROBIOLOGY: "bg-destructive/10 text-destructive",
+    SENSORY: "bg-violet/10 text-violet",
+    RETAIN_SAMPLE: "bg-muted text-foreground",
+    CALIBRATION: "bg-muted text-muted-foreground",
   };
   const label = labelFor(QC_TEST_TYPES, type);
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-muted text-muted-foreground"}`}>
       {label}
     </span>
   );
@@ -98,12 +98,12 @@ function testTypeBadge(type: string) {
 
 function severityBadge(severity: string) {
   const colors: Record<string, string> = {
-    CRITICAL: "bg-red-100 text-red-700",
-    MAJOR: "bg-orange-100 text-orange-700",
-    MINOR: "bg-yellow-100 text-yellow-700",
+    CRITICAL: "bg-destructive/10 text-destructive",
+    MAJOR: "bg-warning/10 text-warning",
+    MINOR: "bg-warning/10 text-warning",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[severity] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[severity] ?? "bg-muted text-muted-foreground"}`}>
       {severity}
     </span>
   );
@@ -112,9 +112,9 @@ function severityBadge(severity: string) {
 function passFailBadge(passed: boolean | null | undefined) {
   if (passed === null || passed === undefined) return <span className="text-muted-foreground text-xs">-</span>;
   return passed ? (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">Pass</span>
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-success/10 text-success">Pass</span>
   ) : (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">Fail</span>
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-destructive/10 text-destructive">Fail</span>
   );
 }
 
@@ -126,14 +126,14 @@ function labelFor(options: readonly { value: string; label: string }[], value: s
 function releaseBadge(decision: string | null | undefined) {
   if (!decision) return <span className="text-muted-foreground">-</span>;
   const colors: Record<string, string> = {
-    HOLD: "bg-amber-100 text-amber-700",
-    RELEASED: "bg-green-100 text-green-700",
-    CONDITIONAL_RELEASE: "bg-blue-100 text-blue-700",
-    REJECTED: "bg-red-100 text-red-700",
+    HOLD: "bg-warning/10 text-warning",
+    RELEASED: "bg-success/10 text-success",
+    CONDITIONAL_RELEASE: "bg-info/10 text-info",
+    REJECTED: "bg-destructive/10 text-destructive",
   };
   const label = RELEASE_DECISIONS.find((item) => item.value === decision)?.label ?? decision.replace(/_/g, " ");
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[decision] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[decision] ?? "bg-muted text-muted-foreground"}`}>
       {label}
     </span>
   );
@@ -461,10 +461,10 @@ export default function QcTestDetailPage() {
             <span className="text-sm font-medium text-muted-foreground">Overall Result:</span>
             <span className={`inline-flex items-center rounded-full px-4 py-1.5 text-sm font-bold ${
               overallResult === "PASS"
-                ? "bg-green-100 text-green-700"
+                ? "bg-success/10 text-success"
                 : overallResult === "FAIL"
-                ? "bg-red-100 text-red-700"
-                : "bg-amber-100 text-amber-700"
+                ? "bg-destructive/10 text-destructive"
+                : "bg-warning/10 text-warning"
             }`}>
               {overallResult}
             </span>

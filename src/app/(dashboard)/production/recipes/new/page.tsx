@@ -530,12 +530,12 @@ export default function NewProductionRecipePage() {
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Package className="h-3 w-3" />
                         Current stock:{" "}
-                        <span className={stock <= 0 ? "text-red-500 font-medium" : "text-green-600 font-medium"}>
+                        <span className={stock <= 0 ? "text-destructive font-medium" : "text-success font-medium"}>
                           {stock.toLocaleString()}
                         </span>
                       </span>
                     ) : (
-                      <span className="text-xs text-amber-600">
+                      <span className="text-xs text-warning">
                         Link a warehouse item for stock availability checks
                       </span>
                     )}

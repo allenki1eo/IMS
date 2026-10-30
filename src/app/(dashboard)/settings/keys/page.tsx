@@ -81,12 +81,12 @@ function truncate(str: string, n: number) {
 
 function categoryColor(cat: string): string {
   switch (cat) {
-    case "general": return "bg-blue-100 text-blue-700 border-blue-200";
-    case "finance": return "bg-green-100 text-green-700 border-green-200";
-    case "operations": return "bg-orange-100 text-orange-700 border-orange-200";
-    case "notifications": return "bg-purple-100 text-purple-700 border-purple-200";
-    case "security": return "bg-red-100 text-red-700 border-red-200";
-    default: return "bg-gray-100 text-gray-700 border-gray-200";
+    case "general": return "bg-info/10 text-info border-info/20";
+    case "finance": return "bg-success/10 text-success border-success/20";
+    case "operations": return "bg-warning/10 text-warning border-warning/20";
+    case "notifications": return "bg-violet/10 text-violet border-violet/20";
+    case "security": return "bg-destructive/10 text-destructive border-destructive/20";
+    default: return "bg-muted text-foreground border-border";
   }
 }
 
@@ -561,7 +561,7 @@ export default function SettingsKeysPage() {
                     </td>
                     <td className="px-4 py-3">
                       {s.isPublic ? (
-                        <Badge variant="outline" className="text-xs border-green-300 text-green-700">
+                        <Badge variant="outline" className="text-xs border-success/30 text-success">
                           Public
                         </Badge>
                       ) : (

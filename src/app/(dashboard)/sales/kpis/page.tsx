@@ -198,7 +198,7 @@ export default function SalesKpisPage() {
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden mb-1">
                       <div
-                        className={`h-full rounded-full transition-all ${progress >= 100 ? "bg-green-500" : progress >= 70 ? "bg-blue-500" : "bg-orange-400"}`}
+                        className={`h-full rounded-full transition-all ${progress >= 100 ? "bg-success" : progress >= 70 ? "bg-info" : "bg-warning/60"}`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>

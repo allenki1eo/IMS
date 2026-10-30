@@ -118,7 +118,7 @@ export default function RecipeDetailPage() {
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Max Units</span>
-                <span className={`text-lg font-bold ${capacity.maxUnits === 0 ? "text-destructive" : "text-green-600"}`}>
+                <span className={`text-lg font-bold ${capacity.maxUnits === 0 ? "text-destructive" : "text-success"}`}>
                   {capacity.maxUnits.toLocaleString()}
                 </span>
               </div>
@@ -132,8 +132,8 @@ export default function RecipeDetailPage() {
                     (m) => m.description === capacity.limitingMaterial?.description
                   )?.status ?? "SHORTAGE";
                 return (
-                <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-2.5">
-                  <p className="text-amber-700 dark:text-amber-400 font-medium text-xs mb-0.5">Limiting Material</p>
+                <div className="rounded-md bg-warning/5 border border-warning/20 p-2.5">
+                  <p className="text-warning font-medium text-xs mb-0.5">Limiting Material</p>
                   <p className="text-foreground">{capacity.limitingMaterial.description}</p>
                   <p className="text-muted-foreground text-xs">
                     Needs {qty(capacity.limitingMaterial.requiredPerBatch, "")} per batch ·{" "}

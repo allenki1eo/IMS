@@ -74,25 +74,25 @@ const STATUS_FILTERS = [
 
 function testTypeBadge(type: string) {
   const colors: Record<string, string> = {
-    RAW_MATERIAL: "bg-amber-100 text-amber-700",
-    WATER: "bg-sky-100 text-sky-700",
-    WORT: "bg-orange-100 text-orange-700",
-    FERMENTATION: "bg-purple-100 text-purple-700",
-    BRIGHT_BEER: "bg-green-100 text-green-700",
-    PACKAGING: "bg-blue-100 text-blue-700",
-    MICROBIOLOGY: "bg-red-100 text-red-700",
-    SENSORY: "bg-pink-100 text-pink-700",
-    RETAIN_SAMPLE: "bg-slate-100 text-slate-700",
-    CALIBRATION: "bg-gray-100 text-gray-600",
-    INCOMING_SPIRIT: "bg-amber-100 text-amber-800",
-    NEW_MAKE: "bg-violet-100 text-violet-700",
-    BLEND_PROOF: "bg-indigo-100 text-indigo-700",
-    PRE_BOTTLE: "bg-teal-100 text-teal-700",
-    PACKAGING_SPIRITS: "bg-cyan-100 text-cyan-700",
+    RAW_MATERIAL: "bg-warning/10 text-warning",
+    WATER: "bg-info/10 text-info",
+    WORT: "bg-warning/10 text-warning",
+    FERMENTATION: "bg-violet/10 text-violet",
+    BRIGHT_BEER: "bg-success/10 text-success",
+    PACKAGING: "bg-info/10 text-info",
+    MICROBIOLOGY: "bg-destructive/10 text-destructive",
+    SENSORY: "bg-violet/10 text-violet",
+    RETAIN_SAMPLE: "bg-muted text-foreground",
+    CALIBRATION: "bg-muted text-muted-foreground",
+    INCOMING_SPIRIT: "bg-warning/10 text-warning",
+    NEW_MAKE: "bg-violet/10 text-violet",
+    BLEND_PROOF: "bg-violet/10 text-violet",
+    PRE_BOTTLE: "bg-success/10 text-success",
+    PACKAGING_SPIRITS: "bg-info/10 text-info",
   };
   const label = QC_TEST_TYPES.find((item) => item.value === type)?.label ?? type.replace(/_/g, " ");
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-muted text-muted-foreground"}`}>
       {label}
     </span>
   );
@@ -101,12 +101,12 @@ function testTypeBadge(type: string) {
 function resultBadge(result: string | null | undefined) {
   if (!result) return <span className="text-muted-foreground text-xs">-</span>;
   const colors: Record<string, string> = {
-    PASS: "bg-green-100 text-green-700",
-    FAIL: "bg-red-100 text-red-700",
-    CONDITIONAL: "bg-amber-100 text-amber-700",
+    PASS: "bg-success/10 text-success",
+    FAIL: "bg-destructive/10 text-destructive",
+    CONDITIONAL: "bg-warning/10 text-warning",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[result] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[result] ?? "bg-muted text-muted-foreground"}`}>
       {result}
     </span>
   );
@@ -120,14 +120,14 @@ function labelFor(options: readonly { value: string; label: string }[], value: s
 function releaseBadge(decision: string | null | undefined) {
   if (!decision) return <span className="text-muted-foreground text-xs">-</span>;
   const colors: Record<string, string> = {
-    HOLD: "bg-amber-100 text-amber-700",
-    RELEASED: "bg-green-100 text-green-700",
-    CONDITIONAL_RELEASE: "bg-blue-100 text-blue-700",
-    REJECTED: "bg-red-100 text-red-700",
+    HOLD: "bg-warning/10 text-warning",
+    RELEASED: "bg-success/10 text-success",
+    CONDITIONAL_RELEASE: "bg-info/10 text-info",
+    REJECTED: "bg-destructive/10 text-destructive",
   };
   const label = RELEASE_DECISIONS.find((item) => item.value === decision)?.label ?? decision.replace(/_/g, " ");
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[decision] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[decision] ?? "bg-muted text-muted-foreground"}`}>
       {label}
     </span>
   );

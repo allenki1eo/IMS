@@ -37,12 +37,12 @@ interface NCR {
 
 function severityBadge(severity: string) {
   const colors: Record<string, string> = {
-    CRITICAL: "bg-red-100 text-red-700",
-    MAJOR: "bg-orange-100 text-orange-700",
-    MINOR: "bg-yellow-100 text-yellow-700",
+    CRITICAL: "bg-destructive/10 text-destructive",
+    MAJOR: "bg-warning/10 text-warning",
+    MINOR: "bg-warning/10 text-warning",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[severity] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[severity] ?? "bg-muted text-muted-foreground"}`}>
       {severity}
     </span>
   );

@@ -105,7 +105,7 @@ export default function DaystorePage() {
           </Badge>
         )}
         {shortageCount === 0 && unknownCount === 0 && plan && plan.materials.length > 0 && (
-          <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+          <Badge variant="default" className="gap-1 bg-success text-success-foreground hover:bg-success/90">
             <CheckCircle className="h-3 w-3" />
             All materials available
           </Badge>
@@ -233,12 +233,12 @@ export default function DaystorePage() {
                         {mat.shortfall > 0 ? (
                           <span className="text-destructive font-medium">{qty(mat.shortfall, mat.uom)}</span>
                         ) : (
-                          <span className="text-green-600">—</span>
+                          <span className="text-success">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         {mat.status === "OK" && (
-                          <Badge variant="default" className="bg-green-600 hover:bg-green-700 gap-1">
+                          <Badge variant="default" className="bg-success text-success-foreground hover:bg-success/90 gap-1">
                             <CheckCircle className="h-3 w-3" /> OK
                           </Badge>
                         )}

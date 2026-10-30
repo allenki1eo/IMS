@@ -490,7 +490,7 @@ export default function ItemDetailPage() {
                       <td className="px-4 py-3">
                         <Badge variant="secondary">{l.transactionType}</Badge>
                       </td>
-                      <td className={`px-4 py-3 font-semibold ${l.quantity >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      <td className={`px-4 py-3 font-semibold ${l.quantity >= 0 ? "text-success" : "text-destructive"}`}>
                         {l.quantity >= 0 ? "+" : ""}{l.quantity}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{l.warehouse?.name ?? "—"}</td>

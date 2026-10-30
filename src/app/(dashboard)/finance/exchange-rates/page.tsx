@@ -51,16 +51,16 @@ const CURRENCIES = ["TZS", "USD", "EUR", "GBP", "KES", "UGX", "RWF", "ZAR", "CNY
 const ALL = "ALL";
 
 const CURRENCY_COLORS: Record<string, string> = {
-  TZS: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-  USD: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  EUR: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-  GBP: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  KES: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-  UGX: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-  RWF: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
-  ZAR: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  CNY: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
-  INR: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300",
+  TZS: "bg-success/10 text-success",
+  USD: "bg-info/10 text-info",
+  EUR: "bg-violet/10 text-violet",
+  GBP: "bg-violet/10 text-violet",
+  KES: "bg-destructive/10 text-destructive",
+  UGX: "bg-warning/10 text-warning",
+  RWF: "bg-success/10 text-success",
+  ZAR: "bg-warning/10 text-warning",
+  CNY: "bg-destructive/10 text-destructive",
+  INR: "bg-violet/10 text-violet",
 };
 
 function CurrencyChip({ code }: { code: string }) {
@@ -318,20 +318,20 @@ export default function ExchangeRatesPage() {
             <p className="mt-1 text-xs text-muted-foreground">Total records in this company</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-info">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Currency Pairs</CardTitle>
-            <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+            <ArrowRightLeft className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{uniquePairs}</div>
             <p className="mt-1 text-xs text-muted-foreground">Distinct conversion pairs</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-success">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Market Sources</CardTitle>
-            <TrendingDown className="h-4 w-4 text-emerald-600" />
+            <TrendingDown className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{marketRateCount}</div>
@@ -533,7 +533,7 @@ export default function ExchangeRatesPage() {
                         key={rate.id}
                         className={`border-b transition-colors duration-300 ${
                           newlyAddedId === rate.id
-                            ? "bg-emerald-50 dark:bg-emerald-950/20"
+                            ? "bg-success/5"
                             : "hover:bg-muted/30"
                         }`}
                       >

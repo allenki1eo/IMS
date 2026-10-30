@@ -272,7 +272,7 @@ export function OcrImportModal({
 
           {/* OCR confidence warnings */}
           {lowConfidence.length > 0 && (
-            <div className="rounded border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+            <div className="rounded border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
               <p className="font-medium mb-1">Low-confidence words — review extracted numbers carefully:</p>
               <p className="text-xs">{lowConfidence.map((w) => `"${w.text}" (${w.confidence}%)`).join(", ")}</p>
             </div>

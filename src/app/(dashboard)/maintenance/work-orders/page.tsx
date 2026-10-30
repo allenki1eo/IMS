@@ -58,17 +58,17 @@ const PRIORITY_FILTERS = [
 ];
 
 const KANBAN_COLUMNS = [
-  { id: "PENDING", label: "Pending", color: "#94a3b8", headerClass: "bg-slate-100 dark:bg-slate-900" },
-  { id: "IN_PROGRESS", label: "In Progress", color: "#3b82f6", headerClass: "bg-blue-50 dark:bg-blue-950" },
-  { id: "COMPLETED", label: "Completed", color: "#22c55e", headerClass: "bg-emerald-50 dark:bg-emerald-950" },
-  { id: "CANCELLED", label: "Cancelled", color: "#ef4444", headerClass: "bg-red-50 dark:bg-red-950" },
+  { id: "PENDING", label: "Pending", color: "#94a3b8", headerClass: "bg-muted" },
+  { id: "IN_PROGRESS", label: "In Progress", color: "#3b82f6", headerClass: "bg-info/5" },
+  { id: "COMPLETED", label: "Completed", color: "#22c55e", headerClass: "bg-success/5" },
+  { id: "CANCELLED", label: "Cancelled", color: "#ef4444", headerClass: "bg-destructive/5" },
 ];
 
 const PRIORITY_COLOR: Record<string, string> = {
-  CRITICAL: "bg-red-100 text-red-700",
-  HIGH: "bg-orange-100 text-orange-700",
-  MEDIUM: "bg-yellow-100 text-yellow-700",
-  LOW: "bg-gray-100 text-gray-600",
+  CRITICAL: "bg-destructive/10 text-destructive",
+  HIGH: "bg-warning/10 text-warning",
+  MEDIUM: "bg-warning/10 text-warning",
+  LOW: "bg-muted text-muted-foreground",
 };
 
 export default function WorkOrdersPage() {
@@ -147,7 +147,7 @@ export default function WorkOrdersPage() {
       key: "priority",
       header: "Priority",
       cell: (row: WorkOrderRow) => (
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${PRIORITY_COLOR[row.priority] ?? "bg-gray-100 text-gray-600"}`}>
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${PRIORITY_COLOR[row.priority] ?? "bg-muted text-muted-foreground"}`}>
           {row.priority}
         </span>
       ),
@@ -212,7 +212,7 @@ export default function WorkOrdersPage() {
     subtitle: wo.maintenanceType.replace(/_/g, " "),
     href: `/maintenance/work-orders/${wo.id}`,
     badge: (
-      <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full ${PRIORITY_COLOR[wo.priority] ?? "bg-gray-100 text-gray-600"}`}>
+      <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full ${PRIORITY_COLOR[wo.priority] ?? "bg-muted text-muted-foreground"}`}>
         {wo.priority}
       </span>
     ),

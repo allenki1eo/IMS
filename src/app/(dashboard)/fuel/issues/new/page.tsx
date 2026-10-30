@@ -376,21 +376,21 @@ export default function NewIssuePage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Issuing</span>
-                  <span className="text-red-600">-{qty > 0 ? qty.toLocaleString() : 0} L</span>
+                  <span className="text-destructive">-{qty > 0 ? qty.toLocaleString() : 0} L</span>
                 </div>
                 {qty > 0 && levelAfterIssue !== null && (
                   <>
-                    <div className={`flex justify-between font-semibold border-t pt-3 ${belowMin ? "text-amber-600" : ""}`}>
+                    <div className={`flex justify-between font-semibold border-t pt-3 ${belowMin ? "text-warning" : ""}`}>
                       <span>Level After</span>
                       <span>{Math.max(levelAfterIssue, 0).toLocaleString()} L</span>
                     </div>
                     {belowMin && (
-                      <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+                      <div className="rounded-md bg-warning/5 border border-warning/20 px-3 py-2 text-xs text-warning">
                         Warning: This will take the tank below the minimum level ({selectedTank.minLevel.toLocaleString()} L)
                       </div>
                     )}
                     {levelAfterIssue < 0 && (
-                      <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                      <div className="rounded-md bg-destructive/5 border border-destructive/20 px-3 py-2 text-xs text-destructive">
                         Error: Quantity exceeds available fuel
                       </div>
                     )}

@@ -212,10 +212,10 @@ export default function ItemLedgerReportPage() {
                         <span className="text-muted-foreground text-xs block">{entry.notes}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right text-green-600 font-semibold">
+                    <td className="px-4 py-3 text-right text-success font-semibold">
                       {inQty > 0 ? `+${inQty.toLocaleString()}` : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right text-red-600 font-semibold">
+                    <td className="px-4 py-3 text-right text-destructive font-semibold">
                       {outQty > 0 ? `-${outQty.toLocaleString()}` : "—"}
                     </td>
                     <td className="px-4 py-3 text-right font-bold">
@@ -258,13 +258,13 @@ export default function ItemLedgerReportPage() {
                   <td className="px-4 py-3 text-right text-muted-foreground">
                     {day.openingBalance.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right text-green-600 font-semibold">
+                  <td className="px-4 py-3 text-right text-success font-semibold">
                     {day.inQty > 0 ? `+${day.inQty.toLocaleString()}` : "—"}
                   </td>
-                  <td className="px-4 py-3 text-right text-red-600 font-semibold">
+                  <td className="px-4 py-3 text-right text-destructive font-semibold">
                     {day.outQty > 0 ? `-${day.outQty.toLocaleString()}` : "—"}
                   </td>
-                  <td className={`px-4 py-3 text-right font-semibold ${day.netMovement >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  <td className={`px-4 py-3 text-right font-semibold ${day.netMovement >= 0 ? "text-success" : "text-destructive"}`}>
                     {day.netMovement >= 0 ? "+" : ""}{day.netMovement.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right font-bold">

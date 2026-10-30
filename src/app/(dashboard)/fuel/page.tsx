@@ -224,8 +224,8 @@ export default function FuelOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <Fuel className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center flex-shrink-0">
+              <Fuel className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.totalTanks ?? 0}</p>
@@ -236,11 +236,11 @@ export default function FuelOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-              <TrendingDown className="h-5 w-5 text-red-600" />
+            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
+              <TrendingDown className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-red-600">{stats?.lowTanks ?? 0}</p>
+              <p className="text-2xl font-bold text-destructive">{stats?.lowTanks ?? 0}</p>
               <p className="text-sm text-muted-foreground">Low Tanks (&lt;25%)</p>
             </div>
           </CardContent>
@@ -248,8 +248,8 @@ export default function FuelOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-              <Droplets className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+              <Droplets className="h-5 w-5 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">{(stats?.totalIssuedThisMonth ?? 0).toLocaleString()} L</p>
@@ -260,8 +260,8 @@ export default function FuelOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-              <DollarSign className="h-5 w-5 text-amber-600" />
+            <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="h-5 w-5 text-warning" />
             </div>
             <div>
               <p className="text-2xl font-bold">{currency} {(stats?.totalCostThisMonth ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -323,7 +323,7 @@ export default function FuelOverviewPage() {
                           <td className="px-4 py-3">{tank.currentLevel.toLocaleString()} / {tank.capacity.toLocaleString()} L</td>
                           <td className="px-4 py-3 w-32">
                             <div className="space-y-1">
-                              <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="w-full bg-muted rounded-full h-2">
                                 <div
                                   className="h-2 rounded-full transition-all"
                                   style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: barColor }}

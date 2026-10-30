@@ -120,7 +120,7 @@ export default function OpsHomePage() {
                       </td>
                       <td className="px-4 py-2">
                         {row.status === "NOT_LINKED" ? (
-                          <span className="text-amber-700">{row.availableLabel}</span>
+                          <span className="text-warning">{row.availableLabel}</span>
                         ) : (
                           <>
                             {row.availableQty} {row.uom}

@@ -6,9 +6,9 @@ export function SyncStatusIndicator() {
   const status = useOnlineStatus();
 
   const config = {
-    online: { dot: "bg-green-500", label: "Online", className: "text-green-700" },
-    offline: { dot: "bg-gray-400", label: "Offline", className: "text-gray-500" },
-    checking: { dot: "bg-yellow-500 animate-pulse", label: "Checking", className: "text-yellow-700" },
+    online: { dot: "bg-success", label: "Online", className: "text-success" },
+    offline: { dot: "bg-muted-foreground/50", label: "Offline", className: "text-muted-foreground" },
+    checking: { dot: "bg-warning animate-pulse", label: "Checking", className: "text-warning" },
   }[status];
 
   return (

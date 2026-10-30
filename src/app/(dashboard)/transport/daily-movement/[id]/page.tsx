@@ -41,11 +41,11 @@ const FUEL_LEVELS = [
 
 function statusColor(status: string) {
   switch (status) {
-    case "ON_TRIP": return "bg-blue-100 text-blue-700";
-    case "PRESENT": return "bg-emerald-100 text-emerald-700";
-    case "MAINTENANCE": return "bg-orange-100 text-orange-700";
-    case "OFFSITE": return "bg-purple-100 text-purple-700";
-    default: return "bg-gray-100 text-gray-600";
+    case "ON_TRIP": return "bg-info/10 text-info";
+    case "PRESENT": return "bg-success/10 text-success";
+    case "MAINTENANCE": return "bg-warning/10 text-warning";
+    case "OFFSITE": return "bg-violet/10 text-violet";
+    default: return "bg-muted text-muted-foreground";
   }
 }
 
@@ -330,18 +330,18 @@ export default function DailyMovementDetailPage() {
         <table className="w-full border-collapse text-[10px]" style={{ fontFamily: "monospace" }}>
           <thead>
             <tr style={{ backgroundColor: "#b0b0b0" }}>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">No.</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">TRUCK</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">TRAILER</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold" style={{ minWidth: 110 }}>DRIVER</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">PHONE</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">LICENCE</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">START TRIP</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">FROM</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold" style={{ minWidth: 80 }}>TO</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">GOODS</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">TODAY</th>
-              <th className="border border-gray-700 px-1 py-1 text-center font-bold">REMARK</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">No.</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">TRUCK</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">TRAILER</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold" style={{ minWidth: 110 }}>DRIVER</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">PHONE</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">LICENCE</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">START TRIP</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">FROM</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold" style={{ minWidth: 80 }}>TO</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">GOODS</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">TODAY</th>
+              <th className="border border-muted-foreground/40 px-1 py-1 text-center font-bold">REMARK</th>
             </tr>
           </thead>
           <tbody>
@@ -355,20 +355,20 @@ export default function DailyMovementDetailPage() {
 
               return (
                 <tr key={entry.id}>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center">{idx + 1}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center font-semibold tracking-wide">{entry.vehicle.plateNumber}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center">{trip?.trailer?.plateNumber ?? ""}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 uppercase">{driverName}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center">{entry.driver?.phone ?? ""}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center">{entry.driver?.licenseNumber ?? ""}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center">
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center">{idx + 1}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center font-semibold tracking-wide">{entry.vehicle.plateNumber}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center">{trip?.trailer?.plateNumber ?? ""}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 uppercase">{driverName}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center">{entry.driver?.phone ?? ""}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center">{entry.driver?.licenseNumber ?? ""}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center">
                     {startTrip ? format(new Date(startTrip), "d-MMM") : ""}
                   </td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center uppercase">{trip?.origin ?? ""}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center uppercase">{trip?.destination ?? entry.destination ?? ""}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center uppercase">{goods}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center font-medium uppercase">{todayLocation}</td>
-                  <td className="border border-gray-500 px-1 py-0.5 text-center"></td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center uppercase">{trip?.origin ?? ""}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center uppercase">{trip?.destination ?? entry.destination ?? ""}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center uppercase">{goods}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center font-medium uppercase">{todayLocation}</td>
+                  <td className="border border-muted-foreground/40 px-1 py-0.5 text-center"></td>
                 </tr>
               );
             })}
@@ -378,25 +378,25 @@ export default function DailyMovementDetailPage() {
 
       {/* Summary bar */}
       <div className="no-print flex flex-wrap gap-3 mb-6">
-        <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-          <span className="text-xs text-blue-500 font-medium uppercase tracking-wide">On Trip</span>
-          <span className="text-2xl font-bold text-blue-600">{counts.onTrip}</span>
+        <div className="flex items-center gap-2 bg-info/5 border border-info/20 rounded-lg px-4 py-2">
+          <span className="text-xs text-info font-medium uppercase tracking-wide">On Trip</span>
+          <span className="text-2xl font-bold text-info">{counts.onTrip}</span>
         </div>
-        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
-          <span className="text-xs text-emerald-500 font-medium uppercase tracking-wide">Present</span>
-          <span className="text-2xl font-bold text-emerald-600">{counts.present}</span>
+        <div className="flex items-center gap-2 bg-success/5 border border-success/20 rounded-lg px-4 py-2">
+          <span className="text-xs text-success font-medium uppercase tracking-wide">Present</span>
+          <span className="text-2xl font-bold text-success">{counts.present}</span>
         </div>
-        <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-4 py-2">
-          <span className="text-xs text-orange-500 font-medium uppercase tracking-wide">Maintenance</span>
-          <span className="text-2xl font-bold text-orange-500">{counts.maintenance}</span>
+        <div className="flex items-center gap-2 bg-warning/5 border border-warning/20 rounded-lg px-4 py-2">
+          <span className="text-xs text-warning font-medium uppercase tracking-wide">Maintenance</span>
+          <span className="text-2xl font-bold text-warning">{counts.maintenance}</span>
         </div>
-        <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-4 py-2">
-          <span className="text-xs text-purple-500 font-medium uppercase tracking-wide">Offsite</span>
-          <span className="text-2xl font-bold text-purple-600">{counts.offsite}</span>
+        <div className="flex items-center gap-2 bg-violet/5 border border-violet/20 rounded-lg px-4 py-2">
+          <span className="text-xs text-violet font-medium uppercase tracking-wide">Offsite</span>
+          <span className="text-2xl font-bold text-violet">{counts.offsite}</span>
         </div>
-        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
-          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Other</span>
-          <span className="text-2xl font-bold text-gray-600">{counts.other}</span>
+        <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-4 py-2">
+          <span className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wide">Other</span>
+          <span className="text-2xl font-bold text-muted-foreground">{counts.other}</span>
         </div>
         <div className="flex items-center gap-2 bg-muted rounded-lg px-4 py-2 ml-auto">
           <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total</span>
@@ -404,9 +404,9 @@ export default function DailyMovementDetailPage() {
         </div>
         <div className="flex items-center gap-2 rounded-lg px-4 py-2">
           {report.status === "SUBMITTED" ? (
-            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Submitted</Badge>
+            <Badge className="bg-success/10 text-success hover:bg-success/10">Submitted</Badge>
           ) : (
-            <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">Draft</Badge>
+            <Badge className="bg-warning/10 text-warning hover:bg-warning/10">Draft</Badge>
           )}
         </div>
       </div>

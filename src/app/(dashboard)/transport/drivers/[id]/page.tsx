@@ -65,7 +65,7 @@ function ExpiryDate({ date }: { date: string | null }) {
   const formatted = format(new Date(date), "dd MMM yyyy");
   if (days <= 30) {
     return (
-      <span className={`font-medium ${days < 0 ? "text-red-600" : "text-amber-600"}`}>
+      <span className={`font-medium ${days < 0 ? "text-destructive" : "text-warning"}`}>
         {formatted} {days < 0 ? "(Expired)" : `(${days}d left)`}
       </span>
     );
@@ -283,9 +283,9 @@ export default function DriverDetailPage() {
           const currentAssignment = driver.assignments?.find((a) => a.status === "ACTIVE");
           if (!currentAssignment) return null;
           return (
-            <Card className="border-blue-200 bg-blue-50/50">
+            <Card className="border-info/20 bg-info/5">
               <CardHeader>
-                <CardTitle className="text-base text-blue-700">Current Assignment</CardTitle>
+                <CardTitle className="text-base text-info">Current Assignment</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between items-center">

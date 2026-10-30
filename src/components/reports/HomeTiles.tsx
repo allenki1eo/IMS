@@ -13,9 +13,9 @@ function toneClass(tone?: HomeTile["tone"]) {
     case "danger":
       return "border-destructive/40";
     case "warning":
-      return "border-amber-500/40";
+      return "border-warning";
     case "ok":
-      return "border-emerald-500/30";
+      return "border-success";
     default:
       return "";
   }

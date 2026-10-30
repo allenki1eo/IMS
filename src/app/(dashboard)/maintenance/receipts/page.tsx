@@ -84,7 +84,7 @@ export default function PartsReceiptsPage() {
       key: "quantity",
       header: "Quantity",
       cell: (row: ReceiptRow) => (
-        <span className="font-medium text-green-600">+{row.quantity.toLocaleString()}</span>
+        <span className="font-medium text-success">+{row.quantity.toLocaleString()}</span>
       ),
     },
     {

@@ -242,7 +242,7 @@ export default function QcStandardDetailPage() {
                   {togglingActive ? "Updating..." : standard.isActive ? "Deactivate" : "Activate"}
                 </Button>
                 {!standard.isActive && standard.parameters.length < 1 && (
-                  <p className="text-xs text-amber-700 max-w-[14rem] text-right">
+                  <p className="text-xs text-warning max-w-[14rem] text-right">
                     Activate disabled — add ≥1 parameter first
                   </p>
                 )}
@@ -279,7 +279,7 @@ export default function QcStandardDetailPage() {
               <p className="text-muted-foreground">Status</p>
               <p className="mt-1 text-sm font-medium">{standard.isActive ? "Active" : "Inactive"}</p>
               {standard.parameters.length < 1 && (
-                <p className={`mt-1 text-xs ${standard.isActive ? "text-destructive" : "text-amber-700"}`}>
+                <p className={`mt-1 text-xs ${standard.isActive ? "text-destructive" : "text-warning"}`}>
                   {standard.isActive
                     ? "Invalid: Active with 0 parameters — deactivate or add a parameter."
                     : "Active requires at least one parameter."}
@@ -532,7 +532,7 @@ export default function QcStandardDetailPage() {
                         <td className="px-4 py-3 text-muted-foreground">{param.maxValue ?? "—"}</td>
                         <td className="px-4 py-3">
                           {param.isRequired ? (
-                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">Yes</span>
+                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-info/10 text-info">Yes</span>
                           ) : (
                             <span className="text-muted-foreground text-xs">No</span>
                           )}

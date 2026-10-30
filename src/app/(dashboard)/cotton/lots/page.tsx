@@ -99,11 +99,11 @@ export default function LotsPage() {
   }
 
   const statusColors: Record<string, string> = {
-    OPEN: "bg-blue-100 text-blue-800",
-    ASSIGNED: "bg-yellow-100 text-yellow-800",
-    INVOICED: "bg-orange-100 text-orange-800",
-    DELIVERED: "bg-green-100 text-green-800",
-    CANCELLED: "bg-gray-100 text-gray-500",
+    OPEN: "bg-info/10 text-info",
+    ASSIGNED: "bg-warning/10 text-warning",
+    INVOICED: "bg-warning/10 text-warning",
+    DELIVERED: "bg-success/10 text-success",
+    CANCELLED: "bg-muted text-muted-foreground",
   };
 
   const columns = [
@@ -127,7 +127,7 @@ export default function LotsPage() {
       key: "status",
       header: "Status",
       cell: (row: LotRow) => (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusColors[row.status] ?? "bg-gray-100 text-gray-600"}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusColors[row.status] ?? "bg-muted text-muted-foreground"}`}>
           {row.status}
         </span>
       ),

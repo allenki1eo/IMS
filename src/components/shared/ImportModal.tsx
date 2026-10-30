@@ -270,11 +270,11 @@ export function ImportModal({
           {/* Done */}
           {state === "done" && result && (
             <div className="space-y-3">
-              <div className="flex items-start gap-3 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 p-4">
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+              <div className="flex items-start gap-3 rounded-md bg-success/5 border border-success/20 p-4">
+                <CheckCircle2 className="h-5 w-5 text-success mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-green-800 dark:text-green-400">Import Complete</p>
-                  <p className="text-sm text-green-700 dark:text-green-500 mt-0.5">
+                  <p className="text-sm font-semibold text-success">Import Complete</p>
+                  <p className="text-sm text-success mt-0.5">
                     {result.imported} record{result.imported !== 1 ? "s" : ""} imported
                     {result.skipped > 0 && `, ${result.skipped} skipped`}
                   </p>
@@ -282,11 +282,11 @@ export function ImportModal({
               </div>
 
               {result.errors && result.errors.length > 0 && (
-                <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 p-3">
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-400 mb-1">
+                <div className="rounded-md bg-warning/5 border border-warning/20 p-3">
+                  <p className="text-sm font-medium text-warning mb-1">
                     {result.errors.length} error{result.errors.length !== 1 ? "s" : ""}:
                   </p>
-                  <ul className="text-xs text-amber-700 dark:text-amber-500 space-y-0.5 list-disc list-inside max-h-32 overflow-y-auto">
+                  <ul className="text-xs text-warning space-y-0.5 list-disc list-inside max-h-32 overflow-y-auto">
                     {result.errors.map((err, i) => (
                       <li key={i}>{err}</li>
                     ))}

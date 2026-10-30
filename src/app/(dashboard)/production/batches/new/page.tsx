@@ -182,7 +182,7 @@ export default function NewProductionBatchPage() {
                   {capacityLoading && <LoadingSpinner className="h-4 w-4" />}
                 </div>
                 {capacity.maxUnits > 0 && Number(form.plannedQty) > capacity.maxUnits && (
-                  <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-2 text-sm text-amber-700 dark:text-amber-400">
+                  <div className="rounded-md bg-warning/5 border border-warning/20 p-2 text-sm text-warning">
                     <span className="font-medium">Warning:</span> Insufficient materials. Maximum producible: <span className="font-bold">{capacity.maxUnits.toLocaleString()}</span> units.
                     {capacity.limitingMaterial && (
                       <span> Limiting: {capacity.limitingMaterial.description} ({qty(capacity.limitingMaterial.availableStock, "")} in stock).</span>
@@ -198,7 +198,7 @@ export default function NewProductionBatchPage() {
                   {capacity.materials.map((mat, i) => (
                     <div key={i} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{mat.description}</span>
-                      <span className={mat.status === "SHORTAGE" ? "text-destructive" : mat.status === "OK" ? "text-green-600" : "text-amber-700"}>
+                      <span className={mat.status === "SHORTAGE" ? "text-destructive" : mat.status === "OK" ? "text-success" : "text-warning"}>
                         {mat.status === "UNKNOWN"
                           ? formatAvailableStock(mat.status, mat.availableStock)
                           : `${qty(mat.availableStock, "")} / ${qty(mat.requiredPerBatch, "")} per batch`}

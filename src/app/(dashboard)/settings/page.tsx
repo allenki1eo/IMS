@@ -573,7 +573,7 @@ function SettingsPageInner() {
                   </CardDescription>
                 </div>
                 {hasUnsaved && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-md">
+                  <div className="flex items-center gap-1.5 text-xs text-warning bg-warning/5 border border-warning/20 px-2.5 py-1.5 rounded-md">
                     <AlertCircle className="h-3.5 w-3.5" />
                     Unsaved changes
                   </div>
