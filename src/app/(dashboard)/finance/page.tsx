@@ -125,7 +125,7 @@ export default function FinancePage() {
       icon: Landmark,
       href: "/finance/bank-accounts",
       sub: `${stats?.bankAccounts.length ?? 0} active accounts`,
-      accent: "text-blue-600",
+      accent: "text-info",
     },
     {
       label: "Pending Payments",
@@ -133,7 +133,7 @@ export default function FinancePage() {
       icon: stats?.pendingPayments ? AlertTriangle : Wallet,
       href: "/finance/payments?status=PENDING",
       sub: "Awaiting processing",
-      accent: stats?.pendingPayments ? "text-amber-600" : "text-muted-foreground",
+      accent: stats?.pendingPayments ? "text-warning" : "text-muted-foreground",
     },
     {
       label: "Net Movement (MTD)",
@@ -141,7 +141,7 @@ export default function FinancePage() {
       icon: netPositive ? TrendingUp : TrendingDown,
       href: "/finance/cashbook",
       sub: `${fmt(thisMonth.receipts, currency)} in · ${fmt(thisMonth.payments, currency)} out`,
-      accent: netPositive ? "text-green-600" : "text-red-600",
+      accent: netPositive ? "text-success" : "text-destructive",
     },
     {
       label: "Chart of Accounts",
@@ -157,7 +157,7 @@ export default function FinancePage() {
       icon: FileText,
       href: "/finance/journal-entries?status=POSTED",
       sub: "Finalised entries",
-      accent: "text-green-600",
+      accent: "text-success",
     },
     {
       label: "Completed Payments",

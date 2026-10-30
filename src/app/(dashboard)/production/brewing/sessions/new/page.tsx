@@ -239,7 +239,7 @@ export default function NewBrewingSessionPage() {
                           <Input
                             value={a.reasonOutSpec}
                             onChange={(e) => updateActivity(i, "reasonOutSpec", e.target.value)}
-                            className="h-8 text-red-600"
+                            className="h-8 text-destructive"
                             placeholder="If out of spec..."
                           />
                         </td>

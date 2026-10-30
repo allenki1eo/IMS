@@ -57,11 +57,11 @@ interface Contract {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  CONFIRMED: "bg-blue-100 text-blue-800",
-  INVOICED: "bg-orange-100 text-orange-800",
-  DELIVERED: "bg-green-100 text-green-800",
-  CANCELLED: "bg-red-100 text-red-700",
+  DRAFT: "bg-muted text-foreground",
+  CONFIRMED: "bg-info/10 text-info",
+  INVOICED: "bg-warning/10 text-warning",
+  DELIVERED: "bg-success/10 text-success",
+  CANCELLED: "bg-destructive/10 text-destructive",
 };
 
 export default function ContractDetailPage() {

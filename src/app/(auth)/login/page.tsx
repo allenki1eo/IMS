@@ -87,7 +87,7 @@ function LoginForm() {
               {...register("username")}
             />
             {errors.username && (
-              <p className="text-xs text-red-400">{errors.username.message}</p>
+              <p className="text-xs text-destructive">{errors.username.message}</p>
             )}
           </div>
 
@@ -111,7 +111,7 @@ function LoginForm() {
               </button>
             </div>
             {errors.password && (
-              <p className="text-xs text-red-400">{errors.password.message}</p>
+              <p className="text-xs text-destructive">{errors.password.message}</p>
             )}
           </div>
 

@@ -75,8 +75,8 @@ export default function DispatchOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <Package className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center flex-shrink-0">
+              <Package className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.totalOrders ?? 0}</p>
@@ -87,11 +87,11 @@ export default function DispatchOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-600">{stats?.confirmed ?? 0}</p>
+              <p className="text-2xl font-bold text-success">{stats?.confirmed ?? 0}</p>
               <p className="text-sm text-muted-foreground">Confirmed (Ready to Ship)</p>
             </div>
           </CardContent>
@@ -99,11 +99,11 @@ export default function DispatchOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-              <Truck className="h-5 w-5 text-orange-600" />
+            <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <Truck className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-orange-600">{stats?.dispatched ?? 0}</p>
+              <p className="text-2xl font-bold text-warning">{stats?.dispatched ?? 0}</p>
               <p className="text-sm text-muted-foreground">In Transit (Dispatched)</p>
             </div>
           </CardContent>
@@ -111,11 +111,11 @@ export default function DispatchOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-              <Archive className="h-5 w-5 text-purple-600" />
+            <div className="h-10 w-10 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0">
+              <Archive className="h-5 w-5 text-violet" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-purple-600">{stats?.fgLots ?? 0}</p>
+              <p className="text-2xl font-bold text-violet">{stats?.fgLots ?? 0}</p>
               <p className="text-sm text-muted-foreground">FG Lots in Stock</p>
             </div>
           </CardContent>

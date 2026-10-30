@@ -47,8 +47,8 @@ function num(v: number) {
 
 function depletionClass(weeks: number | null, leadTime: number | null) {
   if (weeks == null) return "";
-  if (leadTime != null && weeks <= leadTime) return "text-red-600 font-bold";
-  if (leadTime != null && weeks <= leadTime * 2) return "text-amber-600 font-semibold";
+  if (leadTime != null && weeks <= leadTime) return "text-destructive font-bold";
+  if (leadTime != null && weeks <= leadTime * 2) return "text-warning font-semibold";
   return "";
 }
 
@@ -176,7 +176,7 @@ export default function DailyStoreReportPage() {
                         <td className="border px-2 py-1 text-right">{num(row.otherMovement)}</td>
                         <td className="border px-2 py-1 text-right font-semibold">{num(row.closing)}</td>
                         <td className="border px-2 py-1 text-right">{row.stockTakeQty != null ? num(row.stockTakeQty) : ""}</td>
-                        <td className="border px-2 py-1 text-amber-700 font-medium">{row.confirmation ?? ""}</td>
+                        <td className="border px-2 py-1 text-warning font-medium">{row.confirmation ?? ""}</td>
                         <td className="border px-2 py-1 text-right">{row.projectedWeeklyUsage != null ? num(row.projectedWeeklyUsage) : ""}</td>
                         <td className="border px-2 py-1 text-muted-foreground">{row.uomSymbol}</td>
                         <td className="border px-2 py-1 text-right">{row.leadTimeWeeks ?? ""}</td>

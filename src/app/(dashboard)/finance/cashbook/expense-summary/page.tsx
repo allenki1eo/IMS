@@ -122,7 +122,7 @@ export default function ExpenseSummaryPage() {
             {/* Summary Table */}
             <table className="w-full border-collapse border border-black text-sm">
               <thead>
-                <tr className="bg-gray-100">
+                <tr className="bg-muted">
                   <th className="border border-black px-3 py-2 text-left font-bold w-12">S/N</th>
                   <th className="border border-black px-3 py-2 text-left font-bold">PARTICULAR</th>
                   <th className="border border-black px-3 py-2 text-left font-bold w-40">PV</th>
@@ -148,7 +148,7 @@ export default function ExpenseSummaryPage() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="font-bold bg-gray-50">
+                <tr className="font-bold bg-muted/50">
                   <td colSpan={3} className="border border-black px-3 py-2 text-right uppercase">
                     TOTAL
                   </td>
@@ -164,7 +164,7 @@ export default function ExpenseSummaryPage() {
               {["Prepared By", "Approved By", "Checked By", "Authorized By"].map((label) => (
                 <div key={label}>
                   <p className="text-sm font-medium mb-6">{label}:</p>
-                  <div className="border-b border-gray-400 w-full" style={{ borderBottomStyle: "dotted", borderBottomWidth: "2px" }} />
+                  <div className="border-b border-muted-foreground/40 w-full" style={{ borderBottomStyle: "dotted", borderBottomWidth: "2px" }} />
                   <p className="text-xs text-muted-foreground mt-1">Signature &amp; Date</p>
                 </div>
               ))}

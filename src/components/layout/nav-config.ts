@@ -12,7 +12,7 @@ import {
   Factory, FlaskConical, FileSearch, XCircle, SendHorizonal, Boxes, Landmark,
   BookOpen, ArrowRightLeft, CreditCard, TrendingUp, FileText, Key, Tag, MessageSquare,
   Leaf, BookMarked, LineChart, ListPlus, Droplets, TestTube, Beaker, Microscope,
-  Wand2, Wallet,
+  Wand2, Wallet, FolderUp,
   type LucideIcon,
 } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
@@ -228,6 +228,7 @@ export const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { label: "Reports", href: "/reports", icon: ScrollText, permission: "reports:report:read" },
+      { label: "Data Center", href: "/data-center", icon: FolderUp, permission: "data:upload:read", keywords: "upload files budget statutory returns licences documents" },
     ],
   },
   {

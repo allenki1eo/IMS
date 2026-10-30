@@ -77,8 +77,8 @@ export default function CompaniesPage() {
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                     company.isActive
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-700"
+                      ? "bg-success/10 text-success"
+                      : "bg-muted text-foreground"
                   }`}
                 >
                   {company.isActive ? "Active" : "Inactive"}

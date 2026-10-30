@@ -268,7 +268,7 @@ export default function NewPurchaseOrderPage() {
             </div>
 
             {form.currency !== "TZS" && (
-              <div className="flex items-center gap-3 rounded-md bg-blue-50 border border-blue-200 px-4 py-2 text-sm text-blue-800">
+              <div className="flex items-center gap-3 rounded-md bg-info/5 border border-info/20 px-4 py-2 text-sm text-info">
                 <span className="font-medium">Exchange Rate:</span>
                 {rateLoading ? (
                   <span className="text-muted-foreground">Loading…</span>
@@ -282,7 +282,7 @@ export default function NewPurchaseOrderPage() {
                     )}
                   </>
                 ) : (
-                  <span className="text-amber-700">No exchange rate found — add one in Finance › Exchange Rates</span>
+                  <span className="text-warning">No exchange rate found — add one in Finance › Exchange Rates</span>
                 )}
               </div>
             )}

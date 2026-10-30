@@ -29,14 +29,14 @@ interface DayBookEntry {
 }
 
 const VOUCHER_COLORS: Record<string, string> = {
-  JOURNAL: "bg-blue-100 text-blue-800",
-  PAYMENT: "bg-red-100 text-red-800",
-  RECEIPT: "bg-emerald-100 text-emerald-800",
-  CONTRA: "bg-purple-100 text-purple-800",
-  SALES: "bg-amber-100 text-amber-800",
-  PURCHASE: "bg-orange-100 text-orange-800",
-  DEBIT_NOTE: "bg-rose-100 text-rose-800",
-  CREDIT_NOTE: "bg-teal-100 text-teal-800",
+  JOURNAL: "bg-info/10 text-info",
+  PAYMENT: "bg-destructive/10 text-destructive",
+  RECEIPT: "bg-success/10 text-success",
+  CONTRA: "bg-violet/10 text-violet",
+  SALES: "bg-warning/10 text-warning",
+  PURCHASE: "bg-warning/10 text-warning",
+  DEBIT_NOTE: "bg-destructive/10 text-destructive",
+  CREDIT_NOTE: "bg-success/10 text-success",
 };
 
 function today() { return new Date().toISOString().split("T")[0]; }
@@ -150,11 +150,11 @@ export default function DayBookPage() {
               <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">Vouchers</CardTitle></CardHeader>
               <CardContent><div className="text-2xl font-bold">{data.count}</div></CardContent>
             </Card>
-            <Card className="border-l-4 border-l-blue-500">
+            <Card className="border-l-4 border-l-info">
               <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">Total Debit</CardTitle></CardHeader>
               <CardContent><div className="text-2xl font-bold tabular-nums">{fmt(data.totalDebit)}</div></CardContent>
             </Card>
-            <Card className="border-l-4 border-l-emerald-500">
+            <Card className="border-l-4 border-l-success">
               <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">Total Credit</CardTitle></CardHeader>
               <CardContent><div className="text-2xl font-bold tabular-nums">{fmt(data.totalCredit)}</div></CardContent>
             </Card>
@@ -218,10 +218,10 @@ export default function DayBookPage() {
                                     {line.account.name}
                                     {line.description ? ` (${line.description})` : ""}
                                   </td>
-                                  <td className="py-1.5 pr-4 text-right tabular-nums text-blue-700 w-28">
+                                  <td className="py-1.5 pr-4 text-right tabular-nums text-info w-28">
                                     {line.debit > 0 ? fmt(line.debit) : ""}
                                   </td>
-                                  <td className="py-1.5 pr-4 text-right tabular-nums text-emerald-700 w-28">
+                                  <td className="py-1.5 pr-4 text-right tabular-nums text-success w-28">
                                     {line.credit > 0 ? fmt(line.credit) : ""}
                                   </td>
                                 </tr>
@@ -239,8 +239,8 @@ export default function DayBookPage() {
               <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-6 py-4 font-bold">
                 <span>Grand Total</span>
                 <div className="flex gap-8">
-                  <span className="tabular-nums text-blue-700">Dr {fmt(data.totalDebit)}</span>
-                  <span className="tabular-nums text-emerald-700">Cr {fmt(data.totalCredit)}</span>
+                  <span className="tabular-nums text-info">Dr {fmt(data.totalDebit)}</span>
+                  <span className="tabular-nums text-success">Cr {fmt(data.totalCredit)}</span>
                 </div>
               </div>
             </div>

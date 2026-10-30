@@ -218,8 +218,8 @@ export default function AdjustmentDetailPage() {
                         diff === 0
                           ? "text-muted-foreground"
                           : diff > 0
-                          ? "text-green-600"
-                          : "text-red-600"
+                          ? "text-success"
+                          : "text-destructive"
                       }`}
                     >
                       {diff > 0 ? "+" : ""}{diff}
@@ -237,10 +237,10 @@ export default function AdjustmentDetailPage() {
         <>
           <Separator className="my-6" />
           <PermissionGuard require="warehouse:adjustment:submit">
-            <div className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center gap-4 p-4 bg-warning/5 border border-warning/20 rounded-lg">
               <div className="flex-1">
-                <p className="text-sm font-medium text-amber-800">Ready to submit?</p>
-                <p className="text-xs text-amber-700">
+                <p className="text-sm font-medium text-warning">Ready to submit?</p>
+                <p className="text-xs text-warning">
                   Submitting will send this adjustment for management approval.
                 </p>
               </div>
@@ -257,10 +257,10 @@ export default function AdjustmentDetailPage() {
         <>
           <Separator className="my-6" />
           <PermissionGuard require="warehouse:adjustment:approve">
-            <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-4 p-4 bg-success/5 border border-success/20 rounded-lg">
               <div className="flex-1">
-                <p className="text-sm font-medium text-green-800">Approve and apply?</p>
-                <p className="text-xs text-green-700">
+                <p className="text-sm font-medium text-success">Approve and apply?</p>
+                <p className="text-xs text-success">
                   Applying this adjustment will update actual stock levels and cannot be undone.
                 </p>
               </div>

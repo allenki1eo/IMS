@@ -228,18 +228,18 @@ export default function GRNDetailPage() {
         <>
           <Separator className="my-6" />
           {missingLocation && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm font-medium text-red-800">Storage location required</p>
-              <p className="text-xs text-red-700">
+            <div className="mb-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+              <p className="text-sm font-medium text-destructive">Storage location required</p>
+              <p className="text-xs text-destructive">
                 One or more lines are missing a storage location. Create a new GRN with locations set on every line before confirming — stock cannot be posted without a location.
               </p>
             </div>
           )}
           <PermissionGuard require="warehouse:grn:confirm">
-            <div className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center gap-4 p-4 bg-warning/5 border border-warning/20 rounded-lg">
               <div className="flex-1">
-                <p className="text-sm font-medium text-amber-800">Ready to confirm?</p>
-                <p className="text-xs text-amber-700">
+                <p className="text-sm font-medium text-warning">Ready to confirm?</p>
+                <p className="text-xs text-warning">
                   {canConfirm
                     ? "Confirming will update stock levels and cannot be undone."
                     : "Confirm is blocked until every line has a storage location."}

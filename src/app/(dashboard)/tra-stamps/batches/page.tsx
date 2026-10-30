@@ -69,7 +69,7 @@ export default function StampBatchesPage() {
       cell: (row: BatchRow) => {
         const balance = row.quantity - row.used;
         return (
-          <span className={`font-semibold ${balance > 0 ? "text-green-600" : "text-red-600"}`}>
+          <span className={`font-semibold ${balance > 0 ? "text-success" : "text-destructive"}`}>
             {balance.toLocaleString()}
           </span>
         );

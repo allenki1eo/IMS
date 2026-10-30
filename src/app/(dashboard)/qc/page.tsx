@@ -40,12 +40,12 @@ interface Stats {
 function resultBadge(result: string | null | undefined) {
   if (!result) return null;
   const colors: Record<string, string> = {
-    PASS: "bg-green-100 text-green-700",
-    FAIL: "bg-red-100 text-red-700",
-    CONDITIONAL: "bg-amber-100 text-amber-700",
+    PASS: "bg-success/10 text-success",
+    FAIL: "bg-destructive/10 text-destructive",
+    CONDITIONAL: "bg-warning/10 text-warning",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[result] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[result] ?? "bg-muted text-muted-foreground"}`}>
       {result}
     </span>
   );
@@ -53,19 +53,19 @@ function resultBadge(result: string | null | undefined) {
 
 function testTypeBadge(type: string) {
   const colors: Record<string, string> = {
-    RAW_MATERIAL: "bg-amber-100 text-amber-700",
-    WATER: "bg-sky-100 text-sky-700",
-    WORT: "bg-orange-100 text-orange-700",
-    FERMENTATION: "bg-purple-100 text-purple-700",
-    BRIGHT_BEER: "bg-green-100 text-green-700",
-    PACKAGING: "bg-blue-100 text-blue-700",
-    MICROBIOLOGY: "bg-red-100 text-red-700",
-    SENSORY: "bg-pink-100 text-pink-700",
-    RETAIN_SAMPLE: "bg-slate-100 text-slate-700",
-    CALIBRATION: "bg-gray-100 text-gray-600",
+    RAW_MATERIAL: "bg-warning/10 text-warning",
+    WATER: "bg-info/10 text-info",
+    WORT: "bg-warning/10 text-warning",
+    FERMENTATION: "bg-violet/10 text-violet",
+    BRIGHT_BEER: "bg-success/10 text-success",
+    PACKAGING: "bg-info/10 text-info",
+    MICROBIOLOGY: "bg-destructive/10 text-destructive",
+    SENSORY: "bg-violet/10 text-violet",
+    RETAIN_SAMPLE: "bg-muted text-foreground",
+    CALIBRATION: "bg-muted text-muted-foreground",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-muted text-muted-foreground"}`}>
       {type.replace(/_/g, " ")}
     </span>
   );
@@ -73,12 +73,12 @@ function testTypeBadge(type: string) {
 
 function severityBadge(severity: string) {
   const colors: Record<string, string> = {
-    CRITICAL: "bg-red-100 text-red-700",
-    MAJOR: "bg-orange-100 text-orange-700",
-    MINOR: "bg-yellow-100 text-yellow-700",
+    CRITICAL: "bg-destructive/10 text-destructive",
+    MAJOR: "bg-warning/10 text-warning",
+    MINOR: "bg-warning/10 text-warning",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[severity] ?? "bg-gray-100 text-gray-600"}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[severity] ?? "bg-muted text-muted-foreground"}`}>
       {severity}
     </span>
   );
@@ -127,8 +127,8 @@ export default function QcOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <FlaskConical className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center flex-shrink-0">
+              <FlaskConical className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.totalTests ?? 0}</p>
@@ -139,11 +139,11 @@ export default function QcOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-              <ClipboardCheck className="h-5 w-5 text-orange-600" />
+            <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <ClipboardCheck className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-orange-600">{stats?.pendingActive ?? 0}</p>
+              <p className="text-2xl font-bold text-warning">{stats?.pendingActive ?? 0}</p>
               <p className="text-sm text-muted-foreground">Pending / Active</p>
             </div>
           </CardContent>
@@ -151,11 +151,11 @@ export default function QcOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-amber-600">{stats?.openNcrs ?? 0}</p>
+              <p className="text-2xl font-bold text-warning">{stats?.openNcrs ?? 0}</p>
               <p className="text-sm text-muted-foreground">Open NCRs</p>
             </div>
           </CardContent>
@@ -163,11 +163,11 @@ export default function QcOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-              <ShieldAlert className="h-5 w-5 text-red-600" />
+            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
+              <ShieldAlert className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-red-600">{stats?.criticalNcrs ?? 0}</p>
+              <p className="text-2xl font-bold text-destructive">{stats?.criticalNcrs ?? 0}</p>
               <p className="text-sm text-muted-foreground">Critical NCRs</p>
             </div>
           </CardContent>

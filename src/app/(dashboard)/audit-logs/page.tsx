@@ -104,16 +104,16 @@ export default function AuditLogsPage() {
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               {row.oldValue && (
                 <div>
-                  <div className="font-semibold text-red-600 mb-1">Before</div>
-                  <pre className="bg-red-50 p-2 rounded overflow-auto max-h-32 text-red-800">
+                  <div className="font-semibold text-destructive mb-1">Before</div>
+                  <pre className="bg-destructive/5 p-2 rounded overflow-auto max-h-32 text-destructive">
                     {JSON.stringify(parseJsonSafe(row.oldValue), null, 2)}
                   </pre>
                 </div>
               )}
               {row.newValue && (
                 <div>
-                  <div className="font-semibold text-green-600 mb-1">After</div>
-                  <pre className="bg-green-50 p-2 rounded overflow-auto max-h-32 text-green-800">
+                  <div className="font-semibold text-success mb-1">After</div>
+                  <pre className="bg-success/5 p-2 rounded overflow-auto max-h-32 text-success">
                     {JSON.stringify(parseJsonSafe(row.newValue), null, 2)}
                   </pre>
                 </div>

@@ -63,7 +63,7 @@ export default function ProductSpecDetailPage({ params }: { params: Promise<{ id
   }
 
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;
-  if (!spec) return <div className="p-8 text-red-500">Spec not found</div>;
+  if (!spec) return <div className="p-8 text-destructive">Spec not found</div>;
 
   const sorted = [...spec.parameters].sort((a, b) => a.sortOrder - b.sortOrder);
 

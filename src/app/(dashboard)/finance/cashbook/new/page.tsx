@@ -137,10 +137,10 @@ export default function NewCashbookEntryPage() {
                   className={`py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
                     type === t
                       ? t === "RECEIPT"
-                        ? "border-green-500 bg-green-50 text-green-700"
+                        ? "border-success bg-success/5 text-success"
                         : t === "PAYMENT"
-                        ? "border-red-500 bg-red-50 text-red-700"
-                        : "border-amber-500 bg-amber-50 text-amber-700"
+                        ? "border-destructive bg-destructive/5 text-destructive"
+                        : "border-warning bg-warning/5 text-warning"
                       : "border-border bg-background text-muted-foreground hover:border-muted-foreground"
                   }`}
                 >

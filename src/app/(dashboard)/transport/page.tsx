@@ -72,13 +72,13 @@ function StatCard({
   highlight?: boolean;
 }) {
   const inner = (
-    <Card className={highlight ? "border-amber-400" : ""}>
+    <Card className={highlight ? "border-warning/50" : ""}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className={`h-4 w-4 ${highlight ? "text-amber-500" : "text-muted-foreground"}`} />
+        <Icon className={`h-4 w-4 ${highlight ? "text-warning" : "text-muted-foreground"}`} />
       </CardHeader>
       <CardContent>
-        <div className={`text-3xl font-bold ${highlight ? "text-amber-600" : ""}`}>{value}</div>
+        <div className={`text-3xl font-bold ${highlight ? "text-warning" : ""}`}>{value}</div>
       </CardContent>
     </Card>
   );

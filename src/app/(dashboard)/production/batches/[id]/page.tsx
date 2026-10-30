@@ -237,7 +237,7 @@ export default function ProductionBatchDetailPage() {
       </div>
 
       {(stockBlocked || startShortages.length > 0 || startError) && (
-        <div className="flex items-start gap-3 p-4 rounded-lg border border-red-200 bg-red-50 text-red-800 mb-4">
+        <div className="flex items-start gap-3 p-4 rounded-lg border border-destructive/20 bg-destructive/5 text-destructive mb-4">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="space-y-2 flex-1">
             <p className="text-sm font-semibold">Not enough stock to start</p>
@@ -290,7 +290,7 @@ export default function ProductionBatchDetailPage() {
         const variance = ((batch.actualQty - batch.plannedQty) / batch.plannedQty) * 100;
         if (Math.abs(variance) < 5) return null;
         return (
-          <div className={`flex items-start gap-3 p-4 rounded-lg border mb-4 ${variance < 0 ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+          <div className={`flex items-start gap-3 p-4 rounded-lg border mb-4 ${variance < 0 ? "border-destructive/20 bg-destructive/5 text-destructive" : "border-warning/20 bg-warning/5 text-warning"}`}>
             <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold">
@@ -317,7 +317,7 @@ export default function ProductionBatchDetailPage() {
                 ) : line.itemId ? (
                   <span className="text-xs text-muted-foreground" title="Item linked but code missing">Linked</span>
                 ) : (
-                  <span className="text-xs text-amber-700" title="Link this material to a warehouse item">Not linked</span>
+                  <span className="text-xs text-warning" title="Link this material to a warehouse item">Not linked</span>
                 )}
               </td>
               <td className="px-4 py-3">{qty(line.plannedQty, line.uom)}</td>

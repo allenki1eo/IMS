@@ -8,20 +8,20 @@ import {
   Warehouse, Truck, Fuel, Wrench, ShoppingCart,
   Factory, FlaskConical, SendHorizonal, Landmark,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/shared/DataTable";
 import { useCurrency } from "@/hooks/useCurrency";
 import {
   LineFamilyFilter,
   type LineFamilyValue,
 } from "@/components/reports/LineFamilyFilter";
+import { ReportDocument } from "@/components/reports/paper/ReportDocument";
+import { formatPeriod, table, type ReportBlock } from "@/components/reports/paper/types";
 
 // Lazy-load recharts so the ~100kB library stays out of the initial bundle
 const ReportBarChart = dynamic(
@@ -30,20 +30,228 @@ const ReportBarChart = dynamic(
 );
 
 const PRIMARY_MODULES = [
-  { key: "warehouse", label: "Stock", icon: Warehouse },
-  { key: "production", label: "Production", icon: Factory },
-  { key: "dispatch", label: "Dispatch", icon: SendHorizonal },
-  { key: "finance", label: "Finance spend", icon: Landmark },
+  { key: "warehouse", label: "Stock", icon: Warehouse, title: "Stock & Goods Receipt Report", code: "WH" },
+  { key: "production", label: "Production", icon: Factory, title: "Production Report", code: "PRD" },
+  { key: "dispatch", label: "Dispatch", icon: SendHorizonal, title: "Dispatch Report", code: "DSP" },
+  { key: "finance", label: "Finance spend", icon: Landmark, title: "Finance Activity Report", code: "FIN" },
 ];
 
 /** Thin / orphan stubs kept behind "More" — not on the default decision surface. */
 const SECONDARY_MODULES = [
-  { key: "qc", label: "Quality Control", icon: FlaskConical },
-  { key: "transport", label: "Transport", icon: Truck },
-  { key: "fuel", label: "Fuel", icon: Fuel },
-  { key: "maintenance", label: "Maintenance", icon: Wrench },
-  { key: "procurement", label: "Procurement", icon: ShoppingCart },
+  { key: "qc", label: "Quality Control", icon: FlaskConical, title: "Quality Control Report", code: "QC" },
+  { key: "transport", label: "Transport", icon: Truck, title: "Transport Report", code: "TRN" },
+  { key: "fuel", label: "Fuel", icon: Fuel, title: "Fuel Receipts & Issues Report", code: "FUEL" },
+  { key: "maintenance", label: "Maintenance", icon: Wrench, title: "Maintenance Report", code: "MNT" },
+  { key: "procurement", label: "Procurement", icon: ShoppingCart, title: "Procurement Report", code: "PRC" },
 ];
+
+const LINE_FAMILY_LABEL: Record<LineFamilyValue, string> = { ALL: "All lines", BREWING: "Brewing", SPIRITS: "Spirits" };
+
+const ACRONYMS = new Set(["grn", "grns", "po", "pos", "ncr", "ncrs", "qc", "do", "wo"]);
+
+/** totalGRNs → Total GRNs, grnTotalValue → GRN total value */
+function labelFromKey(key: string) {
+  const words = key
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z]{2,})/g, "$1 $2")
+    .split(/[\s_]+/)
+    .map((w) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase().replace(/S$/, "s") : w.toLowerCase()));
+  const text = words.join(" ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** PARTIALLY_RECEIVED → Partially received */
+function humanize(v: unknown) {
+  if (typeof v !== "string" || !v) return v == null ? "" : String(v);
+  const s = v.replace(/_/g, " ").toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+const MONEY_KEYS = ["value", "cost", "amount", "debit", "credit", "spend"];
+
+/** Turn an API report payload into document sections for the given module. */
+function buildBlocks(module: string, report: any): ReportBlock[] {
+  const summary = Object.entries(report.summary || {}).map(([key, value]) => ({
+    label: labelFromKey(key),
+    value: value as number | string,
+    format: (typeof value === "number"
+      ? MONEY_KEYS.some((p) => key.toLowerCase().includes(p)) ? "money" : "number"
+      : "text") as "money" | "number" | "text",
+  }));
+  const blocks: ReportBlock[] = summary.length ? [{ kind: "keyFigures", title: "Summary", items: summary }] : [];
+  const chart = (title: string, data: object[], xKey: string, dataKey: string, caption: string): ReportBlock => ({
+    kind: "figure",
+    title,
+    caption,
+    node: <ReportBarChart data={data} xKey={xKey} dataKey={dataKey} fill="hsl(var(--foreground) / 0.75)" />,
+  });
+
+  switch (module) {
+    case "warehouse":
+      blocks.push(table<any>({
+        title: "Goods Received Notes",
+        rows: report.grns || [],
+        emptyText: "No goods were received in this period.",
+        columns: [
+          { header: "GRN no.", value: (r) => r.reference, format: "code" },
+          { header: "Date", value: (r) => r.createdAt, format: "date" },
+          { header: "Status", value: (r) => humanize(r.status) },
+          { header: "Total", value: (r) => r.totalAmount, format: "money", total: true },
+        ],
+      }));
+      break;
+    case "transport":
+      if (report.fuelConsumption?.length) {
+        blocks.push(chart("Fuel Consumption by Vehicle", report.fuelConsumption, "vehicle", "quantity", "Litres issued per vehicle in the period"));
+        blocks.push(table<any>({
+          title: "Fuel Consumption Detail",
+          rows: report.fuelConsumption,
+          columns: [
+            { header: "Vehicle", value: (r) => r.vehicle },
+            { header: "Quantity (L)", value: (r) => r.quantity, format: "number", total: true },
+          ],
+        }));
+      }
+      break;
+    case "fuel":
+      blocks.push(table<any>({
+        title: "Fuel Receipts",
+        rows: report.receipts || [],
+        emptyText: "No fuel was received in this period.",
+        columns: [
+          { header: "Date", value: (r) => r.createdAt, format: "date" },
+          { header: "Tank", value: (r) => r.tank?.name },
+          { header: "Quantity (L)", value: (r) => r.quantityLiters, format: "number", total: true },
+          { header: "Cost", value: (r) => r.totalCost, format: "money", total: true },
+        ],
+      }));
+      blocks.push(table<any>({
+        title: "Fuel Issues",
+        rows: report.issues || [],
+        emptyText: "No fuel was issued in this period.",
+        columns: [
+          { header: "Date", value: (r) => r.createdAt, format: "date" },
+          { header: "Vehicle", value: (r) => r.vehicle?.plateNumber, format: "code" },
+          { header: "Quantity (L)", value: (r) => r.quantityLiters, format: "number", total: true },
+          { header: "Cost", value: (r) => r.totalCost, format: "money", total: true },
+        ],
+      }));
+      break;
+    case "maintenance":
+      blocks.push(table<any>({
+        title: "Work Orders",
+        rows: report.workOrders || [],
+        emptyText: "No work orders in this period.",
+        columns: [
+          { header: "Ref", value: (r) => r.reference, format: "code" },
+          { header: "Date", value: (r) => r.createdAt, format: "date" },
+          { header: "Vehicle", value: (r) => r.vehicle?.plateNumber },
+          { header: "Status", value: (r) => humanize(r.status) },
+          { header: "Cost", value: (r) => r.actualCost, format: "money", total: true },
+        ],
+      }));
+      break;
+    case "procurement":
+      if (report.topSuppliers?.length) {
+        blocks.push(chart("Top Suppliers by Spend", report.topSuppliers, "supplier", "totalAmount", "Purchase order value by supplier"));
+      }
+      blocks.push(table<any>({
+        title: "Purchase Orders",
+        rows: report.orders || [],
+        emptyText: "No purchase orders in this period.",
+        columns: [
+          { header: "PO no.", value: (r) => r.reference, format: "code" },
+          { header: "Date", value: (r) => r.createdAt, format: "date" },
+          { header: "Supplier", value: (r) => r.supplier?.name },
+          { header: "Status", value: (r) => humanize(r.status) },
+          { header: "Total", value: (r) => r.totalAmount, format: "money", total: true },
+        ],
+      }));
+      break;
+    case "production":
+      blocks.push(table<any>({
+        title: "Production Batches",
+        rows: report.batches || [],
+        emptyText: "No production batches in this period.",
+        columns: [
+          { header: "Batch no.", value: (r) => r.reference, format: "code" },
+          { header: "Line", value: (r) => r.line?.name },
+          { header: "Recipe", value: (r) => r.recipe?.name },
+          { header: "Status", value: (r) => humanize(r.status) },
+          { header: "Planned", value: (r) => r.plannedQty, format: "number", total: true },
+          { header: "Actual", value: (r) => r.actualQty, format: "number", total: true },
+        ],
+      }));
+      break;
+    case "qc":
+      blocks.push(table<any>({
+        title: "Quality Tests",
+        rows: report.tests || [],
+        emptyText: "No quality tests in this period.",
+        columns: [
+          { header: "Ref", value: (r) => r.reference, format: "code" },
+          { header: "Date", value: (r) => r.createdAt, format: "date" },
+          { header: "Standard", value: (r) => r.standard?.name },
+          { header: "Item", value: (r) => r.item?.name },
+          { header: "Result", value: (r) => humanize(r.result) },
+        ],
+      }));
+      blocks.push(table<any>({
+        title: "Non-Conformances",
+        rows: report.ncrs || [],
+        emptyText: "No non-conformances were raised in this period.",
+        columns: [
+          { header: "Ref", value: (r) => r.reference, format: "code" },
+          { header: "Date", value: (r) => r.createdAt, format: "date" },
+          { header: "Severity", value: (r) => humanize(r.severity) },
+          { header: "Status", value: (r) => humanize(r.status) },
+        ],
+      }));
+      break;
+    case "dispatch":
+      blocks.push(table<any>({
+        title: "Dispatch Orders",
+        rows: report.orders || [],
+        emptyText: "No dispatch orders in this period.",
+        columns: [
+          { header: "DO no.", value: (r) => r.reference, format: "code" },
+          { header: "Date", value: (r) => r.createdAt, format: "date" },
+          { header: "Customer", value: (r) => r.customerName },
+          { header: "Status", value: (r) => humanize(r.status) },
+          { header: "Qty", value: (r) => r.totalQuantity, format: "number", total: true },
+          { header: "Total", value: (r) => r.totalAmount, format: "money", total: true },
+        ],
+      }));
+      break;
+    case "finance":
+      blocks.push(table<any>({
+        title: "Journal Entries",
+        rows: report.journalEntries || [],
+        emptyText: "No journal entries in this period.",
+        columns: [
+          { header: "Ref", value: (r) => r.reference, format: "code" },
+          { header: "Date", value: (r) => r.entryDate, format: "date" },
+          { header: "Description", value: (r) => r.description, width: "36%" },
+          { header: "Debit", value: (r) => r.totalDebit, format: "money", total: true },
+          { header: "Credit", value: (r) => r.totalCredit, format: "money", total: true },
+        ],
+      }));
+      blocks.push(table<any>({
+        title: "Payments",
+        rows: report.payments || [],
+        emptyText: "No payments in this period.",
+        columns: [
+          { header: "Number", value: (r) => r.paymentNumber, format: "code" },
+          { header: "Type", value: (r) => humanize(r.type) },
+          { header: "Party", value: (r) => r.partyName },
+          { header: "Status", value: (r) => humanize(r.status) },
+          { header: "Amount", value: (r) => r.amount, format: "money", total: true },
+        ],
+      }));
+      break;
+  }
+  return blocks;
+}
 
 const MODULES = [...PRIMARY_MODULES, ...SECONDARY_MODULES];
 
@@ -109,19 +317,13 @@ export default function ReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch on module / lineFamily change
   }, [activeModule, lineFamily]);
 
-  function formatDate(d: string) {
-    if (!d) return "-";
-    const date = new Date(d);
-    return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
-  }
-
-  function formatCurrency(n: number) {
-    return `${currency} ${(n || 0).toLocaleString()}`;
-  }
+  const moduleMeta = MODULES.find((m) => m.key === activeModule)!;
+  const usesLineFamily = ["production", "warehouse", "dispatch"].includes(activeModule);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Reports" description="Stock, production, dispatch, and finance spend — EAT dates. Thin stubs under More." />
+      <div className="no-print space-y-6">
+      <PageHeader title="Reports" description="Formal reports for stock, production, dispatch, and finance — print or save as PDF with letterhead." />
 
       <Card>
         <CardContent className="pt-6">
@@ -173,9 +375,10 @@ export default function ReportsPage() {
           ))}
       </div>
 
-      {["production", "warehouse", "dispatch"].includes(activeModule) && (
+      {usesLineFamily && (
         <LineFamilyFilter value={lineFamily} onChange={setLineFamily} />
       )}
+      </div>
 
       {loading && <LoadingState text={`Loading ${activeModule} report...`} />}
 
@@ -189,225 +392,16 @@ export default function ReportsPage() {
       )}
 
       {!loading && !loadError && report && reportModule === activeModule && (
-        <div className="space-y-6">
-          {/* Summary Cards */}
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-            {Object.entries(report.summary || {}).map(([key, value]) => (
-              <Card key={key}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-medium capitalize">{key.replace(/([A-Z])/g, " $1").trim()}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl font-bold">
-                    {typeof value === "number" && ["value", "cost", "amount", "debit", "credit"].some((part) => key.toLowerCase().includes(part))
-                      ? formatCurrency(value)
-                      : typeof value === "number"
-                      ? value.toLocaleString()
-                      : String(value)}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Module-specific charts and tables */}
-          {activeModule === "warehouse" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Goods Received Notes</h3>
-              <DataTable
-                columns={[
-                  { key: "reference", header: "GRN #" },
-                  { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
-                  { key: "totalAmount", header: "Total", cell: (r: any) => formatCurrency(r.totalAmount) },
-                  { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
-                ]}
-                data={report.grns || []}
-                emptyTitle="No GRNs in this period"
-              />
-            </div>
-          )}
-
-          {activeModule === "transport" && (
-            <div className="space-y-4">
-              {report.fuelConsumption?.length > 0 && (
-                <Card>
-                  <CardHeader><CardTitle>Fuel Consumption by Vehicle</CardTitle></CardHeader>
-                  <CardContent>
-                    <ReportBarChart data={report.fuelConsumption} xKey="vehicle" dataKey="quantity" fill="#0088FE" />
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-
-          {activeModule === "fuel" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Fuel Receipts</h3>
-              <DataTable
-                columns={[
-                  { key: "tank", header: "Tank", cell: (r: any) => r.tank?.name },
-                  { key: "quantityLiters", header: "Quantity (L)" },
-                  { key: "totalCost", header: "Cost", cell: (r: any) => formatCurrency(r.totalCost) },
-                  { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
-                ]}
-                data={report.receipts || []}
-                emptyTitle="No receipts in this period"
-              />
-              <h3 className="font-semibold">Fuel Issues</h3>
-              <DataTable
-                columns={[
-                  { key: "vehicle", header: "Vehicle", cell: (r: any) => r.vehicle?.plateNumber },
-                  { key: "quantityLiters", header: "Quantity (L)" },
-                  { key: "totalCost", header: "Cost", cell: (r: any) => formatCurrency(r.totalCost) },
-                  { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
-                ]}
-                data={report.issues || []}
-                emptyTitle="No issues in this period"
-              />
-            </div>
-          )}
-
-          {activeModule === "maintenance" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Work Orders</h3>
-              <DataTable
-                columns={[
-                  { key: "reference", header: "Ref" },
-                  { key: "vehicle", header: "Vehicle", cell: (r: any) => r.vehicle?.plateNumber },
-                  { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
-                  { key: "actualCost", header: "Cost", cell: (r: any) => formatCurrency(r.actualCost) },
-                  { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
-                ]}
-                data={report.workOrders || []}
-                emptyTitle="No work orders in this period"
-              />
-            </div>
-          )}
-
-          {activeModule === "procurement" && (
-            <div className="space-y-4">
-              {report.topSuppliers?.length > 0 && (
-                <Card>
-                  <CardHeader><CardTitle>Top Suppliers by Spending</CardTitle></CardHeader>
-                  <CardContent>
-                    <ReportBarChart data={report.topSuppliers} xKey="supplier" dataKey="totalAmount" fill="#00C49F" />
-                  </CardContent>
-                </Card>
-              )}
-              <h3 className="font-semibold">Purchase Orders</h3>
-              <DataTable
-                columns={[
-                  { key: "reference", header: "PO #" },
-                  { key: "supplier", header: "Supplier", cell: (r: any) => r.supplier?.name },
-                  { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
-                  { key: "totalAmount", header: "Total", cell: (r: any) => formatCurrency(r.totalAmount) },
-                  { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
-                ]}
-                data={report.orders || []}
-                emptyTitle="No orders in this period"
-              />
-            </div>
-          )}
-
-          {activeModule === "production" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Production Batches</h3>
-              <DataTable
-                columns={[
-                  { key: "reference", header: "Batch #" },
-                  { key: "line", header: "Line", cell: (r: any) => r.line?.name },
-                  { key: "recipe", header: "Recipe", cell: (r: any) => r.recipe?.name },
-                  { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
-                  { key: "plannedQty", header: "Planned" },
-                  { key: "actualQty", header: "Actual" },
-                ]}
-                data={report.batches || []}
-                emptyTitle="No batches in this period"
-              />
-            </div>
-          )}
-
-          {activeModule === "qc" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Quality Tests</h3>
-              <DataTable
-                columns={[
-                  { key: "reference", header: "Ref" },
-                  { key: "standard", header: "Standard", cell: (r: any) => r.standard?.name },
-                  { key: "item", header: "Item", cell: (r: any) => r.item?.name },
-                  {
-                    key: "result",
-                    header: "Result",
-                    cell: (r: any) => r.result ? (
-                      <Badge variant={r.result === "PASS" ? "default" : "destructive"}>{r.result}</Badge>
-                    ) : "-",
-                  },
-                  { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
-                ]}
-                data={report.tests || []}
-                emptyTitle="No tests in this period"
-              />
-              <h3 className="font-semibold">Non-Conformances</h3>
-              <DataTable
-                columns={[
-                  { key: "reference", header: "Ref" },
-                  { key: "severity", header: "Severity", cell: (r: any) => <Badge variant={r.severity === "HIGH" ? "destructive" : "secondary"}>{r.severity}</Badge> },
-                  { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
-                  { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
-                ]}
-                data={report.ncrs || []}
-                emptyTitle="No NCRs in this period"
-              />
-            </div>
-          )}
-
-          {activeModule === "dispatch" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Dispatch Orders</h3>
-              <DataTable
-                columns={[
-                  { key: "reference", header: "DO #" },
-                  { key: "customerName", header: "Customer" },
-                  { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
-                  { key: "totalQuantity", header: "Qty" },
-                  { key: "totalAmount", header: "Total", cell: (r: any) => formatCurrency(r.totalAmount) },
-                  { key: "createdAt", header: "Date", cell: (r: any) => formatDate(r.createdAt) },
-                ]}
-                data={report.orders || []}
-                emptyTitle="No orders in this period"
-              />
-            </div>
-          )}
-
-          {activeModule === "finance" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Journal Entries</h3>
-              <DataTable
-                columns={[
-                  { key: "reference", header: "Ref" },
-                  { key: "description", header: "Description" },
-                  { key: "totalDebit", header: "Debit", cell: (r: any) => formatCurrency(r.totalDebit) },
-                  { key: "totalCredit", header: "Credit", cell: (r: any) => formatCurrency(r.totalCredit) },
-                  { key: "entryDate", header: "Date", cell: (r: any) => formatDate(r.entryDate) },
-                ]}
-                data={report.journalEntries || []}
-                emptyTitle="No journal entries in this period"
-              />
-              <h3 className="font-semibold">Payments</h3>
-              <DataTable
-                columns={[
-                  { key: "paymentNumber", header: "Number" },
-                  { key: "type", header: "Type" },
-                  { key: "partyName", header: "Party" },
-                  { key: "amount", header: "Amount", cell: (r: any) => formatCurrency(r.amount) },
-                  { key: "status", header: "Status", cell: (r: any) => <Badge>{r.status}</Badge> },
-                ]}
-                data={report.payments || []}
-                emptyTitle="No payments in this period"
-              />
-            </div>
-          )}
-        </div>
+        <ReportDocument
+          meta={{
+            title: moduleMeta.title,
+            code: moduleMeta.code,
+            period: formatPeriod(fromDate, toDate),
+            currency,
+            filters: usesLineFamily && lineFamily !== "ALL" ? [`Line family: ${LINE_FAMILY_LABEL[lineFamily]}`] : undefined,
+          }}
+          blocks={buildBlocks(activeModule, report)}
+        />
       )}
     </div>
   );

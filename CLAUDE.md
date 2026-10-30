@@ -341,6 +341,15 @@ Status: Complete
 - Dashboard UI with KPI cards and interactive charts
 - Operational and financial analytics sub-pages with filterable date ranges
 
+### Data Center (periodic uploads)
+
+Status: Complete — see `docs/SCHEMA_PUSH_DATA_CENTER.md`
+
+- Required submissions per company (annual / quarterly / monthly, with due dates and responsible department)
+- Yearly checklist: Submitted / Due soon / Overdue / Upcoming per period; click a period to upload
+- Versioned uploads (re-upload supersedes; archiving the current file restores the previous version), SHA-256, audit-logged downloads
+- Storage adapter `src/lib/storage.ts`: disk (`UPLOAD_DIR`) when self-hosted, DB blobs on Vercel (4 MB cap)
+
 ### Phase 13b - Reports Module
 
 Status: Complete
@@ -352,6 +361,10 @@ Status: Complete
 - Data tables with charts (GRNs, fuel receipts, work orders, purchase orders, production batches, QC tests, dispatch orders, journal entries, payments)
 - Bar charts for top suppliers and fuel consumption by vehicle
 - Sidebar navigation for Reports
+- Paper documents: `src/components/reports/paper/` — `ReportDocument` renders a declarative report
+  (key figures, tables with totals, financial statements, figures, notes) as an A4 document with
+  company letterhead, document number, period, numbered sections, and a sign-off block; prints with
+  `@page` page numbers and exports the same structure to Excel. Use it for any new formal report.
 
 ## Module Roadmap
 

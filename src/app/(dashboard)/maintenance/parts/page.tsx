@@ -42,12 +42,12 @@ interface SparePartRow {
 
 function stockStatusBadge(part: SparePartRow) {
   if (part.currentStock === 0) {
-    return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">Out</span>;
+    return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-destructive/10 text-destructive">Out</span>;
   }
   if (part.currentStock <= part.minStock) {
-    return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">Low</span>;
+    return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-warning/10 text-warning">Low</span>;
   }
-  return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">OK</span>;
+  return <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-success/10 text-success">OK</span>;
 }
 
 export default function SparePartsPage() {

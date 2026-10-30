@@ -60,8 +60,8 @@ export default function TraStampsOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <Tag className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center flex-shrink-0">
+              <Tag className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Available Balance</p>
@@ -71,8 +71,8 @@ export default function TraStampsOverviewPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-              <Package className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+              <Package className="h-5 w-5 text-success" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Received</p>
@@ -82,8 +82,8 @@ export default function TraStampsOverviewPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-              <CheckCircle className="h-5 w-5 text-orange-600" />
+            <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-5 w-5 text-warning" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Used</p>
@@ -93,8 +93,8 @@ export default function TraStampsOverviewPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-              <Package className="h-5 w-5 text-purple-600" />
+            <div className="h-10 w-10 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0">
+              <Package className="h-5 w-5 text-violet" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Active Batches</p>
@@ -127,7 +127,7 @@ export default function TraStampsOverviewPage() {
                       <td className="py-2 pr-4 font-medium">{type}</td>
                       <td className="py-2 pr-4 text-right">{stats.received.toLocaleString()}</td>
                       <td className="py-2 pr-4 text-right">{stats.used.toLocaleString()}</td>
-                      <td className={`py-2 text-right font-semibold ${stats.balance > 0 ? "text-green-600" : "text-red-600"}`}>
+                      <td className={`py-2 text-right font-semibold ${stats.balance > 0 ? "text-success" : "text-destructive"}`}>
                         {stats.balance.toLocaleString()}
                       </td>
                     </tr>

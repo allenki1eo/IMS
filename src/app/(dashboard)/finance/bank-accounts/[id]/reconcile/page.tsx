@@ -150,7 +150,7 @@ export default function BankReconcilePage() {
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-info">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-medium text-muted-foreground">Book Balance</CardTitle>
           </CardHeader>
@@ -160,32 +160,32 @@ export default function BankReconcilePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-success">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-medium text-muted-foreground">Cleared Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold tabular-nums text-emerald-700">{fmt(clearedBalance)}</div>
+            <div className="text-2xl font-bold tabular-nums text-success">{fmt(clearedBalance)}</div>
             <p className="text-xs text-muted-foreground mt-1">{clearedCount} cleared</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
+        <Card className="border-l-4 border-l-warning">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-medium text-muted-foreground">Uncleared Items</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold tabular-nums text-amber-700">{unclearedCount}</div>
+            <div className="text-2xl font-bold tabular-nums text-warning">{unclearedCount}</div>
             <p className="text-xs text-muted-foreground mt-1">Pending reconciliation</p>
           </CardContent>
         </Card>
 
-        <Card className={`border-l-4 ${isReconciled ? "border-l-emerald-500" : "border-l-red-500"}`}>
+        <Card className={`border-l-4 ${isReconciled ? "border-l-success" : "border-l-destructive"}`}>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-medium text-muted-foreground">Difference</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold tabular-nums ${isReconciled ? "text-emerald-700" : "text-red-700"}`}>
+            <div className={`text-2xl font-bold tabular-nums ${isReconciled ? "text-success" : "text-destructive"}`}>
               {fmt(difference)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -227,12 +227,12 @@ export default function BankReconcilePage() {
                 <span className="text-muted-foreground">Less: Cleared Balance</span>
                 <span className="tabular-nums font-medium">{fmt(clearedBalance)}</span>
               </div>
-              <div className={`flex justify-between gap-8 border-t pt-1 font-bold ${isReconciled ? "text-emerald-700" : "text-red-700"}`}>
+              <div className={`flex justify-between gap-8 border-t pt-1 font-bold ${isReconciled ? "text-success" : "text-destructive"}`}>
                 <span>Difference</span>
                 <span className="tabular-nums">{fmt(difference)}</span>
               </div>
               {isReconciled && statementBalance && (
-                <div className="mt-2 flex items-center gap-1.5 text-emerald-700">
+                <div className="mt-2 flex items-center gap-1.5 text-success">
                   <CheckCircle2 className="h-4 w-4" />
                   <span className="text-sm font-medium">Account reconciled</span>
                 </div>
@@ -291,20 +291,20 @@ export default function BankReconcilePage() {
                     <tr
                       key={tx.id}
                       className={`border-b transition-colors ${
-                        tx.cleared ? "bg-emerald-50/40 dark:bg-emerald-950/10" : "hover:bg-muted/30"
+                        tx.cleared ? "bg-success/5" : "hover:bg-muted/30"
                       }`}
                     >
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => toggleCleared(tx)}
                           disabled={toggling === tx.id}
-                          className="inline-flex items-center justify-center rounded transition-colors hover:text-emerald-600"
+                          className="inline-flex items-center justify-center rounded transition-colors hover:text-success"
                           title={tx.cleared ? "Mark as uncleared" : "Mark as cleared"}
                         >
                           {toggling === tx.id ? (
                             <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
                           ) : tx.cleared ? (
-                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            <CheckCircle2 className="h-5 w-5 text-success" />
                           ) : (
                             <Circle className="h-5 w-5 text-muted-foreground" />
                           )}
@@ -320,10 +320,10 @@ export default function BankReconcilePage() {
                           {tx.type}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
+                      <td className="px-4 py-3 text-right tabular-nums text-success">
                         {tx.type === "DEPOSIT" ? fmt(tx.amount) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-red-700">
+                      <td className="px-4 py-3 text-right tabular-nums text-destructive">
                         {tx.type !== "DEPOSIT" ? fmt(tx.amount) : "—"}
                       </td>
                     </tr>

@@ -53,11 +53,11 @@ interface UnassignedBale {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  OPEN: "bg-blue-100 text-blue-800",
-  ASSIGNED: "bg-yellow-100 text-yellow-800",
-  INVOICED: "bg-orange-100 text-orange-800",
-  DELIVERED: "bg-green-100 text-green-800",
-  CANCELLED: "bg-gray-100 text-gray-500",
+  OPEN: "bg-info/10 text-info",
+  ASSIGNED: "bg-warning/10 text-warning",
+  INVOICED: "bg-warning/10 text-warning",
+  DELIVERED: "bg-success/10 text-success",
+  CANCELLED: "bg-muted text-muted-foreground",
 };
 
 export default function LotDetailPage() {
@@ -172,7 +172,7 @@ export default function LotDetailPage() {
         <Card>
           <CardHeader className="pb-1"><CardTitle className="text-sm">Status</CardTitle></CardHeader>
           <CardContent>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-medium ${STATUS_COLORS[lot.status] ?? "bg-gray-100"}`}>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-medium ${STATUS_COLORS[lot.status] ?? "bg-muted"}`}>
               {lot.status}
             </span>
           </CardContent>

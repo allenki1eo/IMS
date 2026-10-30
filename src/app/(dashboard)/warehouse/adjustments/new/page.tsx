@@ -324,8 +324,8 @@ export default function NewAdjustmentPage() {
                             diff === 0
                               ? "text-muted-foreground"
                               : diff > 0
-                              ? "text-green-600"
-                              : "text-red-600"
+                              ? "text-success"
+                              : "text-destructive"
                           }`}
                         >
                           Difference: {diff > 0 ? "+" : ""}{diff}

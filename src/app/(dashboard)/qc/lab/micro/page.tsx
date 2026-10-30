@@ -27,8 +27,8 @@ export default function MicroReportsPage() {
 
   function getSummary(samples: MicroRow["samples"]) {
     const failed = samples.filter((s) => s.isInSpec === false).length;
-    if (failed > 0) return <span className="text-red-600 font-medium">{failed} OOS</span>;
-    return <span className="text-green-600">All Pass</span>;
+    if (failed > 0) return <span className="text-destructive font-medium">{failed} OOS</span>;
+    return <span className="text-success">All Pass</span>;
   }
 
   const columns = [

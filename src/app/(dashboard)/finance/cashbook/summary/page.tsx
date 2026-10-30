@@ -59,9 +59,9 @@ function chequeOrRef(entry: CashbookEntryRow): string {
 }
 
 function typeBadge(type: string) {
-  if (type === "RECEIPT") return <Badge className="bg-green-100 text-green-700 border-green-300">Receipt</Badge>;
-  if (type === "PAYMENT") return <Badge className="bg-red-100 text-red-700 border-red-300">Payment</Badge>;
-  return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Transfer</Badge>;
+  if (type === "RECEIPT") return <Badge className="bg-success/10 text-success border-success/30">Receipt</Badge>;
+  if (type === "PAYMENT") return <Badge className="bg-destructive/10 text-destructive border-destructive/30">Payment</Badge>;
+  return <Badge className="bg-warning/10 text-warning border-warning/30">Transfer</Badge>;
 }
 
 /* ─── Entry Detail Sheet ─────────────────────────────────────────────────────── */
@@ -149,7 +149,7 @@ function EntryDetailSheet({
 
           <div className="border-t pt-4">
             <p className="text-xs text-muted-foreground mb-1">Amount</p>
-            <p className={`text-2xl font-bold ${entry.type === "RECEIPT" ? "text-green-700" : entry.type === "PAYMENT" ? "text-red-700" : "text-amber-700"}`}>
+            <p className={`text-2xl font-bold ${entry.type === "RECEIPT" ? "text-success" : entry.type === "PAYMENT" ? "text-destructive" : "text-warning"}`}>
               TZS {fmtAmount(entry.amount)}
             </p>
           </div>
@@ -288,7 +288,7 @@ function CashbookSummaryInner() {
             <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-black text-sm">
               <thead>
-                <tr className="bg-gray-100">
+                <tr className="bg-muted">
                   <th className="border border-black px-3 py-2 text-left font-bold">DESCRIPTION</th>
                   <th className="border border-black px-3 py-2 text-left font-bold w-32">CHEQUE NO. / REF</th>
                   <th className="border border-black px-3 py-2 text-right font-bold w-36">PETTY CASH</th>
@@ -297,7 +297,7 @@ function CashbookSummaryInner() {
               </thead>
               <tbody>
                 {/* Opening Balance */}
-                <tr className="font-semibold bg-gray-50">
+                <tr className="font-semibold bg-muted/50">
                   <td className="border border-black px-3 py-2" colSpan={2}>OPENING BALANCE</td>
                   <td className="border border-black px-3 py-2 text-right">{fmtAmount(grandOpeningBalance)}</td>
                   <td className="border border-black px-3 py-2" />
@@ -307,7 +307,7 @@ function CashbookSummaryInner() {
                 {summaries.map((s) => (
                   <Fragment key={s.account.id}>
                     {/* Account section header */}
-                    <tr className="bg-blue-50">
+                    <tr className="bg-info/5">
                       <td
                         colSpan={4}
                         className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide"
@@ -321,7 +321,7 @@ function CashbookSummaryInner() {
                       s.payments.map((entry) => (
                         <tr
                           key={entry.id}
-                          className="cursor-pointer hover:bg-yellow-50 dark:hover:bg-zinc-700/50 no-print-hover"
+                          className="cursor-pointer hover:bg-warning/5 no-print-hover"
                           onClick={() => handleEntryClick(entry, s.account.name)}
                         >
                           <td className="border border-black px-3 py-1">
@@ -346,7 +346,7 @@ function CashbookSummaryInner() {
                     )}
 
                     {/* Account subtotal */}
-                    <tr className="font-semibold bg-gray-50">
+                    <tr className="font-semibold bg-muted/50">
                       <td colSpan={2} className="border border-black px-3 py-1.5 text-right uppercase text-xs">
                         TOTAL {s.account.name.toUpperCase()}:
                       </td>
@@ -359,7 +359,7 @@ function CashbookSummaryInner() {
                 ))}
 
                 {/* Cash Received section */}
-                <tr className="bg-green-50 font-semibold">
+                <tr className="bg-success/5 font-semibold">
                   <td colSpan={4} className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide">
                     CASH RECEIVED
                   </td>
@@ -369,7 +369,7 @@ function CashbookSummaryInner() {
                     s.receipts.map((entry) => (
                       <tr
                         key={entry.id}
-                        className="cursor-pointer hover:bg-yellow-50 dark:hover:bg-zinc-700/50"
+                        className="cursor-pointer hover:bg-warning/5"
                         onClick={() => handleEntryClick(entry, s.account.name)}
                       >
                         <td className="border border-black px-3 py-1">
@@ -379,7 +379,7 @@ function CashbookSummaryInner() {
                         <td className="border border-black px-3 py-1 font-mono text-xs">
                           {chequeOrRef(entry)}
                         </td>
-                        <td className="border border-black px-3 py-1 text-right text-green-700">
+                        <td className="border border-black px-3 py-1 text-right text-success">
                           {fmtAmount(entry.amount)}
                         </td>
                         <td className="border border-black px-3 py-1" />
@@ -395,7 +395,7 @@ function CashbookSummaryInner() {
                 )}
 
                 {/* Totals rows */}
-                <tr className="font-bold bg-gray-100">
+                <tr className="font-bold bg-muted">
                   <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
                     TOTAL PETTY CASH / CASH RECEIVED:
                   </td>
@@ -404,7 +404,7 @@ function CashbookSummaryInner() {
                   </td>
                   <td className="border border-black px-3 py-2" />
                 </tr>
-                <tr className="font-bold bg-gray-100">
+                <tr className="font-bold bg-muted">
                   <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
                     TOTAL EXPENSES:
                   </td>
@@ -413,7 +413,7 @@ function CashbookSummaryInner() {
                     {fmtAmount(grandTotalPayments)}
                   </td>
                 </tr>
-                <tr className="font-bold bg-yellow-50">
+                <tr className="font-bold bg-warning/5">
                   <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
                     GROSS CLOSING BALANCE:
                   </td>
@@ -431,7 +431,7 @@ function CashbookSummaryInner() {
                 <div key={label}>
                   <p className="text-sm font-medium mb-6">{label}:</p>
                   <div
-                    className="border-b border-gray-400 w-full"
+                    className="border-b border-muted-foreground/40 w-full"
                     style={{ borderBottomStyle: "dotted", borderBottomWidth: "2px" }}
                   />
                   <p className="text-xs text-muted-foreground mt-1">Signature &amp; Date</p>

@@ -46,9 +46,9 @@ const FUEL_TYPE_FILTERS = [
 ];
 
 function fillPctColor(pct: number): string {
-  if (pct > 50) return "text-green-600";
-  if (pct > 25) return "text-amber-600";
-  return "text-red-600";
+  if (pct > 50) return "text-success";
+  if (pct > 25) return "text-warning";
+  return "text-destructive";
 }
 
 export default function TanksPage() {
@@ -94,7 +94,7 @@ export default function TanksPage() {
           </Link>
           {isTankBelowMinimum(row) && (
             <span title="Below minimum level">
-              <AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden />
+              <AlertTriangle className="h-4 w-4 text-warning" aria-hidden />
             </span>
           )}
         </div>

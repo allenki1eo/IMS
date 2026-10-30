@@ -104,21 +104,21 @@ function CompanyCard({ summary }: { summary: CompanySummary }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div>
             <p className="text-muted-foreground text-xs">Total Balance</p>
-            <p className={`font-bold text-base ${summary.totalBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
+            <p className={`font-bold text-base ${summary.totalBalance >= 0 ? "text-success" : "text-destructive"}`}>
               {fmtAmount(summary.totalBalance)}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">Period Receipts</p>
-            <p className="font-semibold text-green-600">{fmtAmount(summary.periodReceipts)}</p>
+            <p className="font-semibold text-success">{fmtAmount(summary.periodReceipts)}</p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">Period Payments</p>
-            <p className="font-semibold text-red-600">{fmtAmount(summary.periodPayments)}</p>
+            <p className="font-semibold text-destructive">{fmtAmount(summary.periodPayments)}</p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">Net Movement</p>
-            <p className={`font-semibold ${net >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <p className={`font-semibold ${net >= 0 ? "text-success" : "text-destructive"}`}>
               {fmtAmount(net)}
             </p>
           </div>
@@ -141,7 +141,7 @@ function CompanyCard({ summary }: { summary: CompanySummary }) {
                     <td className="py-1.5 font-medium">{a.name}</td>
                     <td className="py-1.5 text-muted-foreground">{a.bankName ?? "—"}</td>
                     <td className="py-1.5 text-muted-foreground">{a.currency}</td>
-                    <td className={`py-1.5 text-right font-medium ${a.currentBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
+                    <td className={`py-1.5 text-right font-medium ${a.currentBalance >= 0 ? "text-success" : "text-destructive"}`}>
                       {fmtAmount(a.currentBalance)}
                     </td>
                   </tr>
@@ -234,7 +234,7 @@ function DailyView() {
             <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-black text-sm">
               <thead>
-                <tr className="bg-gray-100">
+                <tr className="bg-muted">
                   <th className="border border-black px-3 py-2 text-left font-bold">PARTICULARS</th>
                   <th className="border border-black px-3 py-2 text-left font-bold w-36">CHEQUE NO. / REF</th>
                   <th className="border border-black px-3 py-2 text-right font-bold w-36">PETTY CASH</th>
@@ -243,7 +243,7 @@ function DailyView() {
               </thead>
               <tbody>
                 {/* ── Opening Balance ──────────────────────────────────────────── */}
-                <tr className="font-semibold bg-gray-50">
+                <tr className="font-semibold bg-muted/50">
                   <td className="border border-black px-3 py-1.5" colSpan={2}>OPENING BALANCE</td>
                   <td className="border border-black px-3 py-1.5 text-right">{fmtAmount(data.grandTotal.openingBalance)}</td>
                   <td className="border border-black px-3 py-1.5" />
@@ -253,7 +253,7 @@ function DailyView() {
                 {data.companies.map((cd) => (
                   <Fragment key={cd.company.id}>
                     {/* Company section header with drill-down link */}
-                    <tr className="bg-blue-100">
+                    <tr className="bg-info/10">
                       <td
                         colSpan={3}
                         className="border border-black px-3 py-1.5 font-bold uppercase text-xs tracking-wide"
@@ -263,7 +263,7 @@ function DailyView() {
                       <td className="border border-black px-3 py-1.5 text-right no-print">
                         <Link
                           href={`/finance/cashbook/summary?date=${date}&companyId=${cd.company.id}`}
-                          className="text-blue-600 hover:text-blue-800 flex items-center justify-end gap-1 text-xs"
+                          className="text-info hover:text-info flex items-center justify-end gap-1 text-xs"
                         >
                           View Details
                           <ExternalLink className="h-3 w-3" />
@@ -291,7 +291,7 @@ function DailyView() {
                     ))}
 
                     {/* Company bank-receipt subtotal */}
-                    <tr className="font-semibold bg-gray-50">
+                    <tr className="font-semibold bg-muted/50">
                       <td colSpan={2} className="border border-black px-3 py-1 text-right text-xs uppercase">
                         TOTAL CHEQUE {cd.company.name.toUpperCase()}
                       </td>
@@ -304,7 +304,7 @@ function DailyView() {
                 ))}
 
                 {/* ── Cash Received section ────────────────────────────────────── */}
-                <tr className="bg-green-50 font-bold">
+                <tr className="bg-success/5 font-bold">
                   <td colSpan={4} className="border border-black px-3 py-1.5 uppercase text-xs tracking-wide">
                     CASH RECEIVED
                   </td>
@@ -326,7 +326,7 @@ function DailyView() {
                     </tr>
                   ))
                 )}
-                <tr className="font-semibold bg-gray-50">
+                <tr className="font-semibold bg-muted/50">
                   <td colSpan={2} className="border border-black px-3 py-1 text-right text-xs uppercase">
                     TOTAL CASH RECEIVED
                   </td>
@@ -351,7 +351,7 @@ function DailyView() {
                   ))}
 
                 {/* ── Overall Total ────────────────────────────────────────────── */}
-                <tr className="font-bold bg-gray-100">
+                <tr className="font-bold bg-muted">
                   <td colSpan={2} className="border border-black px-3 py-2 text-right uppercase">
                     OVERALL TOTAL
                   </td>
@@ -388,7 +388,7 @@ function DailyView() {
                 <div key={label}>
                   <p className="text-sm font-medium mb-6">{label}:</p>
                   <div
-                    className="border-b border-gray-400 w-full"
+                    className="border-b border-muted-foreground/40 w-full"
                     style={{ borderBottomStyle: "dotted", borderBottomWidth: "2px" }}
                   />
                   <p className="text-xs text-muted-foreground mt-1">Signature &amp; Date</p>
@@ -470,21 +470,21 @@ function PeriodSummaryView() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs">Combined Balance</p>
-                  <p className={`font-bold text-xl ${grandBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
+                  <p className={`font-bold text-xl ${grandBalance >= 0 ? "text-success" : "text-destructive"}`}>
                     {fmtAmount(grandBalance)}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Period Receipts</p>
-                  <p className="font-bold text-lg text-green-600">{fmtAmount(grandReceipts)}</p>
+                  <p className="font-bold text-lg text-success">{fmtAmount(grandReceipts)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Period Payments</p>
-                  <p className="font-bold text-lg text-red-600">{fmtAmount(grandPayments)}</p>
+                  <p className="font-bold text-lg text-destructive">{fmtAmount(grandPayments)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Net Movement</p>
-                  <p className={`font-bold text-lg ${grandReceipts - grandPayments >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  <p className={`font-bold text-lg ${grandReceipts - grandPayments >= 0 ? "text-success" : "text-destructive"}`}>
                     {fmtAmount(grandReceipts - grandPayments)}
                   </p>
                 </div>
@@ -518,7 +518,7 @@ export default function DirectorCashbookPage() {
             onClick={() => setMode("daily")}
             className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
               mode === "daily"
-                ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400"
+                ? "border-info bg-info/5 text-info"
                 : "border-border bg-background text-muted-foreground hover:border-muted-foreground"
             }`}
           >
@@ -529,7 +529,7 @@ export default function DirectorCashbookPage() {
             onClick={() => setMode("period")}
             className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
               mode === "period"
-                ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400"
+                ? "border-info bg-info/5 text-info"
                 : "border-border bg-background text-muted-foreground hover:border-muted-foreground"
             }`}
           >

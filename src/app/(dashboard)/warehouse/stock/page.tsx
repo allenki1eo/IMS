@@ -106,9 +106,9 @@ export default function StockPage() {
         const status = stockStatus(row);
         const colorClass =
           status === "CRITICAL"
-            ? "text-red-600 font-bold"
+            ? "text-destructive font-bold"
             : status === "LOW"
-            ? "text-amber-600 font-semibold"
+            ? "text-warning font-semibold"
             : "text-foreground";
         return (
           <span className={colorClass}>

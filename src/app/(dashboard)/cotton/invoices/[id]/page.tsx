@@ -194,7 +194,7 @@ export default function InvoiceDetailPage() {
           <div className="mb-6">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="border-b-2 border-gray-200">
+                <tr className="border-b-2 border-border">
                   <th className="text-left py-3 pr-4 font-semibold">Lot Number</th>
                   <th className="text-right py-3 pr-4 font-semibold">Bales</th>
                   <th className="text-right py-3 pr-4 font-semibold">Net Weight (kg)</th>
@@ -204,7 +204,7 @@ export default function InvoiceDetailPage() {
               </thead>
               <tbody>
                 {invoice.contract.lines.map((line) => (
-                  <tr key={line.id} className="border-b border-gray-100">
+                  <tr key={line.id} className="border-b border-border">
                     <td className="py-2.5 pr-4 font-mono text-xs">{line.lot.lotNumber}</td>
                     <td className="py-2.5 pr-4 text-right">{line.lot.baleCount}</td>
                     <td className="py-2.5 pr-4 text-right">{line.weight.toLocaleString(undefined, { maximumFractionDigits: 3 })}</td>
@@ -214,7 +214,7 @@ export default function InvoiceDetailPage() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-gray-300 font-semibold">
+                <tr className="border-t-2 border-border font-semibold">
                   <td className="py-3 pr-4">TOTAL</td>
                   <td className="py-3 pr-4 text-right">
                     {invoice.contract.lines.reduce((s, l) => s + l.lot.baleCount, 0)}

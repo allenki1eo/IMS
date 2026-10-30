@@ -70,9 +70,9 @@ function vehicleLabel(tx: TransactionRow) {
 }
 
 function stockStatusLabel(part: SparePart): { label: string; color: string } {
-  if (part.currentStock === 0) return { label: "Out of Stock", color: "text-red-600" };
-  if (part.currentStock <= part.minStock) return { label: "Low Stock", color: "text-amber-600" };
-  return { label: "In Stock", color: "text-green-600" };
+  if (part.currentStock === 0) return { label: "Out of Stock", color: "text-destructive" };
+  if (part.currentStock <= part.minStock) return { label: "Low Stock", color: "text-warning" };
+  return { label: "In Stock", color: "text-success" };
 }
 
 export default function SparePartDetailPage() {
@@ -357,7 +357,7 @@ export default function SparePartDetailPage() {
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">{part.uom}</p>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="w-full bg-muted rounded-full h-3">
                 <div
                   className="h-3 rounded-full transition-all"
                   style={{ width: `${stockPct}%`, backgroundColor: stockBarColor }}
@@ -549,13 +549,13 @@ export default function SparePartDetailPage() {
                           {format(new Date(tx.createdAt), "dd MMM yyyy")}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tx.transactionType === "ISSUE" ? "text-red-600" : "text-green-600"}`}>
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tx.transactionType === "ISSUE" ? "text-destructive" : "text-success"}`}>
                             {tx.transactionType === "ISSUE" ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
                             {tx.transactionType}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={tx.transactionType === "ISSUE" ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
+                          <span className={tx.transactionType === "ISSUE" ? "text-destructive font-medium" : "text-success font-medium"}>
                             {tx.transactionType === "ISSUE" ? "-" : "+"}{tx.quantity.toLocaleString()}
                           </span>
                         </td>

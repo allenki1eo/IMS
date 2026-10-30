@@ -215,13 +215,13 @@ export default function CoaSetupWizardPage() {
                 active
                   ? "border-primary bg-primary/10 text-primary font-medium"
                   : done
-                    ? "border-green-600/40 text-green-700 dark:text-green-400"
+                    ? "border-success text-success"
                     : "border-muted text-muted-foreground"
               }`}
             >
               <span
                 className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                  done ? "bg-green-600 text-white" : active ? "bg-primary text-primary-foreground" : "bg-muted"
+                  done ? "bg-success text-success-foreground" : active ? "bg-primary text-primary-foreground" : "bg-muted"
                 }`}
               >
                 {done ? <Check className="h-3 w-3" /> : s.n}
@@ -366,7 +366,7 @@ export default function CoaSetupWizardPage() {
                 </div>
               </div>
               {!canCreate && (
-                <p className="text-sm text-amber-700 dark:text-amber-400">
+                <p className="text-sm text-warning">
                   You need finance:account:create permission to run setup.
                 </p>
               )}
@@ -396,10 +396,10 @@ export default function CoaSetupWizardPage() {
 
       {/* Step 4 — Done */}
       {step === 4 && (
-        <Card className="border-green-600/30">
+        <Card className="border-success">
           <CardContent className="pt-6 space-y-4">
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-8 w-8 text-green-600 shrink-0" />
+              <CheckCircle2 className="h-8 w-8 text-success shrink-0" />
               <div>
                 <p className="font-medium text-lg">
                   {alreadySetUpOnCreate ? "Already set up" : "Chart of Accounts ready"}

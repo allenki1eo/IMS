@@ -141,7 +141,7 @@ export default function JournalEntriesPage() {
       header: "",
       cell: (row: any) => {
         const deleteButton = canDelete ? (
-          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)} className="h-7 gap-1 text-xs text-red-700 border-red-300 hover:bg-red-50">
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(row.id)} className="h-7 gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/5">
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         ) : null;
@@ -155,7 +155,7 @@ export default function JournalEntriesPage() {
                 variant="outline"
                 disabled={busy}
                 onClick={() => handlePost(row.id)}
-                className="h-7 gap-1 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                className="h-7 gap-1 text-xs text-success border-success/30 hover:bg-success/5"
               >
                 <CheckCircle className="h-3.5 w-3.5" />
                 {busy ? "Posting…" : "Post"}
@@ -172,7 +172,7 @@ export default function JournalEntriesPage() {
                 variant="outline"
                 disabled={busy}
                 onClick={() => handleReverse(row.id)}
-                className="h-7 gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+                className="h-7 gap-1 text-xs text-warning border-warning/30 hover:bg-warning/5"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 {busy ? "Reversing…" : "Reverse"}

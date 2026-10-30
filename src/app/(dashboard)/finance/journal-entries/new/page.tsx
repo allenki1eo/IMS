@@ -277,7 +277,7 @@ export default function NewJournalEntryPage() {
         {totalDebit > 0 || totalCredit > 0 ? (
           <div
             className={`flex items-center gap-3 rounded-lg border p-4 ${
-              isBalanced ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-red-300 bg-red-50 text-red-800"
+              isBalanced ? "border-success/30 bg-success/5 text-success" : "border-destructive/30 bg-destructive/5 text-destructive"
             }`}
           >
             {isBalanced ? (
@@ -307,7 +307,7 @@ export default function NewJournalEntryPage() {
             variant="default"
             disabled={loading || !isBalanced}
             onClick={(e) => handleSubmit(e as any, true)}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-success text-success-foreground hover:bg-success/90"
           >
             {loading ? "Saving…" : "Save & Post"}
           </Button>

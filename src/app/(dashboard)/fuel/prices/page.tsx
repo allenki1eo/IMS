@@ -105,7 +105,7 @@ export default function FuelPricesPage() {
         const from = new Date(r.effectiveFrom);
         const to = r.effectiveTo ? new Date(r.effectiveTo) : null;
         const isCurrent = from <= now && (!to || to > now);
-        return isCurrent ? <Badge className="bg-green-100 text-green-800 border-green-200">Current</Badge> : <Badge variant="outline" className="text-muted-foreground">Historical</Badge>;
+        return isCurrent ? <Badge className="bg-success/10 text-success border-success/20">Current</Badge> : <Badge variant="outline" className="text-muted-foreground">Historical</Badge>;
       },
     },
   ];

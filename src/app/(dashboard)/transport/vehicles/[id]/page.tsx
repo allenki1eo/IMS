@@ -92,7 +92,7 @@ function ExpiryDate({ date }: { date: string | null }) {
   const formatted = format(new Date(date), "dd MMM yyyy");
   if (days <= 30) {
     return (
-      <span className={`font-medium ${days < 0 ? "text-red-600" : "text-amber-600"}`}>
+      <span className={`font-medium ${days < 0 ? "text-destructive" : "text-warning"}`}>
         {formatted} {days < 0 ? "(Expired)" : `(${days}d left)`}
       </span>
     );

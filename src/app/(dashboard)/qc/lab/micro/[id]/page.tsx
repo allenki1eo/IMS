@@ -48,7 +48,7 @@ export default function MicroReportDetailPage({ params }: { params: Promise<{ id
   }, [id]);
 
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>;
-  if (!report) return <div className="p-8 text-red-500">Report not found</div>;
+  if (!report) return <div className="p-8 text-destructive">Report not found</div>;
 
   const sorted = [...report.samples].sort((a, b) => a.sortOrder - b.sortOrder);
   const oos = sorted.filter((s) => s.isInSpec === false).length;
@@ -75,8 +75,8 @@ export default function MicroReportDetailPage({ params }: { params: Promise<{ id
         <div>
           <span className="text-muted-foreground">Out of Spec:</span>{" "}
           {oos > 0
-            ? <span className="font-semibold text-red-600">{oos}</span>
-            : <span className="font-semibold text-green-600">0 — All Pass</span>
+            ? <span className="font-semibold text-destructive">{oos}</span>
+            : <span className="font-semibold text-success">0 — All Pass</span>
           }
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function MicroReportDetailPage({ params }: { params: Promise<{ id
               </thead>
               <tbody>
                 {sorted.map((s) => (
-                  <tr key={s.id} className={`border-b last:border-0 ${s.isInSpec === false ? "bg-red-50" : ""}`}>
+                  <tr key={s.id} className={`border-b last:border-0 ${s.isInSpec === false ? "bg-destructive/5" : ""}`}>
                     <td className="border px-2 py-1 font-medium">{SAMPLE_TYPE_LABELS[s.sampleType] ?? s.sampleType}</td>
                     <td className="border px-2 py-1">{s.sampleSource ?? "—"}</td>
                     <td className="border px-2 py-1">{s.brand ?? "—"}</td>
@@ -111,8 +111,8 @@ export default function MicroReportDetailPage({ params }: { params: Promise<{ id
                     <td className="border px-2 py-1">{s.media ?? "—"}</td>
                     <td className="border px-2 py-1">{s.result ?? "—"}</td>
                     <td className="border px-2 py-1">
-                      {s.isInSpec === true && <span className="text-green-600 font-semibold">✓ Yes</span>}
-                      {s.isInSpec === false && <span className="text-red-600 font-semibold">✗ No</span>}
+                      {s.isInSpec === true && <span className="text-success font-semibold">✓ Yes</span>}
+                      {s.isInSpec === false && <span className="text-destructive font-semibold">✗ No</span>}
                       {s.isInSpec == null && "—"}
                     </td>
                     <td className="border px-2 py-1">{s.actual ?? "—"}</td>

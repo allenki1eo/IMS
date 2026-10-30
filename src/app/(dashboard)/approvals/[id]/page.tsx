@@ -201,7 +201,7 @@ export default function ApprovalDetailPage() {
                     <div key={step.id} className="flex items-start gap-3">
                       <div className="mt-0.5">
                         {step.status === "APPROVED" ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
+                          <CheckCircle className="h-5 w-5 text-success" />
                         ) : step.status === "REJECTED" ? (
                           <XCircle className="h-5 w-5 text-destructive" />
                         ) : (
@@ -276,7 +276,7 @@ export default function ApprovalDetailPage() {
               <div className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base text-green-600">Approve</CardTitle>
+                  <CardTitle className="text-base text-success">Approve</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-1">
@@ -291,7 +291,7 @@ export default function ApprovalDetailPage() {
                     />
                   </div>
                   <Button
-                    className="w-full bg-green-600 hover:bg-green-700"
+                    className="w-full bg-success text-success-foreground hover:bg-success/90"
                     onClick={handleApprove}
                     disabled={!!actioning}
                   >

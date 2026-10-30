@@ -87,8 +87,8 @@ export default function SalesOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <Users className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center flex-shrink-0">
+              <Users className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-2xl font-bold">{summary?.totalCustomers ?? 0}</p>
@@ -99,11 +99,11 @@ export default function SalesOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-              <ShoppingBag className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+              <ShoppingBag className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-600">{summary?.totalOrders ?? 0}</p>
+              <p className="text-2xl font-bold text-success">{summary?.totalOrders ?? 0}</p>
               <p className="text-sm text-muted-foreground">Total Orders</p>
             </div>
           </CardContent>
@@ -111,11 +111,11 @@ export default function SalesOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-              <Clock className="h-5 w-5 text-orange-600" />
+            <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <Clock className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-orange-600">{summary?.pendingOrders ?? 0}</p>
+              <p className="text-2xl font-bold text-warning">{summary?.pendingOrders ?? 0}</p>
               <p className="text-sm text-muted-foreground">Pending Orders</p>
             </div>
           </CardContent>
@@ -123,17 +123,17 @@ export default function SalesOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="h-5 w-5 text-purple-600" />
+            <div className="h-10 w-10 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="h-5 w-5 text-violet" />
             </div>
             <div>
-              <p className="text-xl font-bold text-purple-600">
+              <p className="text-xl font-bold text-violet">
                 {formatMoney(summary?.thisMonth.revenue ?? 0)}
               </p>
               <div className="flex items-center gap-1">
                 <p className="text-xs text-muted-foreground">This Month Revenue</p>
                 {revenueChange !== null && (
-                  <span className={`flex items-center text-xs font-medium ${revenueChange >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  <span className={`flex items-center text-xs font-medium ${revenueChange >= 0 ? "text-success" : "text-destructive"}`}>
                     {revenueChange >= 0
                       ? <ArrowUpRight className="h-3 w-3" />
                       : <ArrowDownRight className="h-3 w-3" />}
@@ -177,7 +177,7 @@ export default function SalesOverviewPage() {
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${progress >= 100 ? "bg-green-500" : progress >= 70 ? "bg-blue-500" : "bg-orange-400"}`}
+                        className={`h-full rounded-full transition-all ${progress >= 100 ? "bg-success" : progress >= 70 ? "bg-info" : "bg-warning/60"}`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -249,8 +249,8 @@ export default function SalesOverviewPage() {
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardContent className="pt-6">
             <Link href="/sales/orders" className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-md bg-blue-100 flex items-center justify-center">
-                <ShoppingBag className="h-5 w-5 text-blue-600" />
+              <div className="h-9 w-9 rounded-md bg-info/10 flex items-center justify-center">
+                <ShoppingBag className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="font-medium">Sales Orders</p>
@@ -263,8 +263,8 @@ export default function SalesOverviewPage() {
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardContent className="pt-6">
             <Link href="/sales/customers" className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-md bg-green-100 flex items-center justify-center">
-                <Users className="h-5 w-5 text-green-600" />
+              <div className="h-9 w-9 rounded-md bg-success/10 flex items-center justify-center">
+                <Users className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="font-medium">Customers</p>
@@ -277,8 +277,8 @@ export default function SalesOverviewPage() {
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardContent className="pt-6">
             <Link href="/sales/kpis" className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-md bg-purple-100 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
+              <div className="h-9 w-9 rounded-md bg-violet/10 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-violet" />
               </div>
               <div>
                 <p className="font-medium">KPIs & Targets</p>

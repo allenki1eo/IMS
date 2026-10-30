@@ -29,8 +29,8 @@ interface MovementRow {
 const PAGE_SIZE = 20;
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "SUBMITTED") return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Submitted</Badge>;
-  return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">Draft</Badge>;
+  if (status === "SUBMITTED") return <Badge className="bg-success/10 text-success hover:bg-success/10">Submitted</Badge>;
+  return <Badge className="bg-warning/10 text-warning hover:bg-warning/10">Draft</Badge>;
 }
 
 export default function DailyMovementListPage() {
@@ -95,21 +95,21 @@ export default function DailyMovementListPage() {
       key: "onTrip",
       header: "On Trip",
       cell: (row: MovementRow) => (
-        <span className="text-sm font-semibold text-blue-600">{row.onTrip}</span>
+        <span className="text-sm font-semibold text-info">{row.onTrip}</span>
       ),
     },
     {
       key: "present",
       header: "Present",
       cell: (row: MovementRow) => (
-        <span className="text-sm font-semibold text-emerald-600">{row.present}</span>
+        <span className="text-sm font-semibold text-success">{row.present}</span>
       ),
     },
     {
       key: "maintenance",
       header: "Maintenance",
       cell: (row: MovementRow) => (
-        <span className="text-sm font-semibold text-orange-500">{row.maintenance}</span>
+        <span className="text-sm font-semibold text-warning">{row.maintenance}</span>
       ),
     },
     {

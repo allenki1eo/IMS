@@ -266,6 +266,11 @@ const PERMISSIONS = [
   { module: "lab", resource: "micro", action: "write", description: "Create/edit daily micro reports" },
   { module: "lab", resource: "spec", action: "read", description: "View packaged product specs" },
   { module: "lab", resource: "spec", action: "write", description: "Create/edit packaged product specs" },
+  // Data Center (periodic uploads)
+  { module: "data", resource: "upload", action: "read", description: "View and download Data Center files" },
+  { module: "data", resource: "upload", action: "create", description: "Upload files to the Data Center" },
+  { module: "data", resource: "upload", action: "archive", description: "Archive Data Center files" },
+  { module: "data", resource: "requirement", action: "manage", description: "Define required periodic submissions" },
 ];
 
 // ─── Role definitions ─────────────────────────────────────
@@ -285,6 +290,7 @@ const ROLES = [
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   SUPER_ADMIN: ["*"], // all permissions
   COMPANY_ADMIN: [
+    "data:upload:read", "data:upload:create", "data:upload:archive", "data:requirement:manage",
     "auth:session:create",
     "users:user:create", "users:user:read", "users:user:update", "users:user:deactivate",
     "users:user:reset_password", "users:user:assign_role",
@@ -364,6 +370,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "lab:spec:read", "lab:spec:write",
   ],
   BRANCH_MANAGER: [
+    "data:upload:read", "data:upload:create",
     "auth:session:create",
     "users:user:read",
     "roles:role:read",
@@ -436,6 +443,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "lab:spec:read", "lab:spec:write",
   ],
   DEPT_HEAD: [
+    "data:upload:read", "data:upload:create",
     "auth:session:create",
     "users:user:read",
     "company:company:read", "company:branch:read", "company:department:read", "company:department:update",
@@ -490,6 +498,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "lab:spec:read", "lab:spec:write",
   ],
   MANAGEMENT: [
+    "data:upload:read",
     "auth:session:create",
     "users:user:read",
     "company:company:read", "company:branch:read", "company:department:read",
@@ -526,6 +535,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "lab:unitank:read", "lab:bbt:read", "lab:micro:read", "lab:spec:read",
   ],
   DIRECTOR: [
+    "data:upload:read", "data:upload:create", "data:requirement:manage",
     "auth:session:create",
     // Company overview
     "company:company:read", "company:branch:read", "company:department:read",
@@ -557,6 +567,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "reports:report:read",
   ],
   AUDITOR: [
+    "data:upload:read",
     "auth:session:create",
     "users:user:read",
     "roles:role:read",

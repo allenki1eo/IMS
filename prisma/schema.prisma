@@ -2701,3 +2701,78 @@ model FinanceSmsLog {
   @@index([status])
   @@map("finance_sms_logs")
 }
+
+// ─── Data Center: periodic data submissions ──────────────────────────────────
+
+/// Something a company expects to be uploaded on a schedule,
+/// e.g. "Annual budget" (ANNUAL, due 31 Jan) or "Excise return" (MONTHLY, due 7th).
+model DataRequirement {
+  id           String   @id @default(cuid())
+  companyId    String
+  departmentId String?
+  name         String
+  description  String?
+  /// BUDGET | TARGETS | STATUTORY | LICENCE | PRICE_LIST | MASTER_DATA | REPORT | OTHER
+  category     String
+  /// ANNUAL | QUARTERLY | MONTHLY
+  frequency    String
+  /// ANNUAL: month the file is due (1–12). Ignored for other frequencies.
+  dueMonth     Int      @default(1)
+  /// Day of month the file is due (clamped to month length). For QUARTERLY and
+  /// MONTHLY this is in the month after the period ends.
+  dueDay       Int      @default(31)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+
+  uploads DataUpload[]
+
+  @@index([companyId])
+  @@index([companyId, isActive])
+  @@map("data_requirements")
+}
+
+/// An uploaded file. Re-uploading for the same requirement + period creates a
+/// new version and marks the previous one SUPERSEDED.
+model DataUpload {
+  id             String   @id @default(cuid())
+  companyId      String
+  departmentId   String?
+  requirementId  String?
+  title          String
+  description    String?
+  category       String
+  periodYear     Int
+  /// "2026", "2026-Q1", or "2026-03"
+  periodKey      String
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  sha256         String
+  /// DB (bytes in data_upload_blobs) | DISK (UPLOAD_DIR)
+  storage        String
+  version        Int      @default(1)
+  /// CURRENT | SUPERSEDED | ARCHIVED
+  status         String   @default("CURRENT")
+  uploadedById   String
+  uploadedByName String
+  createdAt      DateTime @default(now())
+
+  requirement DataRequirement? @relation(fields: [requirementId], references: [id])
+  blob        DataUploadBlob?
+
+  @@index([companyId, periodYear])
+  @@index([requirementId, periodKey])
+  @@index([status])
+  @@map("data_uploads")
+}
+
+/// File bytes for DB-backed storage (serverless deployments without a disk).
+model DataUploadBlob {
+  uploadId String     @id
+  content  Bytes
+  upload   DataUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@map("data_upload_blobs")
+}

@@ -39,17 +39,17 @@ interface Stats {
 
 function priorityClass(priority: string): string {
   switch (priority) {
-    case "CRITICAL": return "bg-red-100 text-red-700";
-    case "HIGH": return "bg-orange-100 text-orange-700";
-    case "MEDIUM": return "bg-yellow-100 text-yellow-700";
-    default: return "bg-gray-100 text-gray-600";
+    case "CRITICAL": return "bg-destructive/10 text-destructive";
+    case "HIGH": return "bg-warning/10 text-warning";
+    case "MEDIUM": return "bg-warning/10 text-warning";
+    default: return "bg-muted text-muted-foreground";
   }
 }
 
 function stockStatusLabel(part: SparePartRow): { label: string; color: string } {
-  if (part.currentStock === 0) return { label: "Out", color: "text-red-600" };
-  if (part.currentStock <= part.minStock) return { label: "Low", color: "text-amber-600" };
-  return { label: "OK", color: "text-green-600" };
+  if (part.currentStock === 0) return { label: "Out", color: "text-destructive" };
+  if (part.currentStock <= part.minStock) return { label: "Low", color: "text-warning" };
+  return { label: "OK", color: "text-success" };
 }
 
 export default function MaintenanceOverviewPage() {
@@ -98,8 +98,8 @@ export default function MaintenanceOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <ClipboardList className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center flex-shrink-0">
+              <ClipboardList className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.totalWorkOrders ?? 0}</p>
@@ -110,11 +110,11 @@ export default function MaintenanceOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-              <Wrench className="h-5 w-5 text-orange-600" />
+            <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <Wrench className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-orange-600">{stats?.openWorkOrders ?? 0}</p>
+              <p className="text-2xl font-bold text-warning">{stats?.openWorkOrders ?? 0}</p>
               <p className="text-sm text-muted-foreground">Open Work Orders</p>
             </div>
           </CardContent>
@@ -122,11 +122,11 @@ export default function MaintenanceOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-600">{stats?.completedThisMonth ?? 0}</p>
+              <p className="text-2xl font-bold text-success">{stats?.completedThisMonth ?? 0}</p>
               <p className="text-sm text-muted-foreground">Completed This Month</p>
             </div>
           </CardContent>
@@ -134,11 +134,11 @@ export default function MaintenanceOverviewPage() {
 
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-              <Package className="h-5 w-5 text-red-600" />
+            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
+              <Package className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-red-600">{stats?.lowStockParts ?? 0}</p>
+              <p className="text-2xl font-bold text-destructive">{stats?.lowStockParts ?? 0}</p>
               <p className="text-sm text-muted-foreground">Low Stock Parts</p>
             </div>
           </CardContent>

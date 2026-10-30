@@ -228,7 +228,7 @@ export default function ReceiptDetailPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Quantity to Add</span>
-              <span className="font-medium text-green-600">+{receipt.quantityLiters.toLocaleString()} L</span>
+              <span className="font-medium text-success">+{receipt.quantityLiters.toLocaleString()} L</span>
             </div>
             {receipt.tank && (
               <>
@@ -238,7 +238,7 @@ export default function ReceiptDetailPage() {
                 </div>
                 <div className="flex justify-between border-t pt-3 font-semibold">
                   <span>New Level</span>
-                  <span className="text-green-600">{newLevel?.toLocaleString()} L</span>
+                  <span className="text-success">{newLevel?.toLocaleString()} L</span>
                 </div>
               </>
             )}

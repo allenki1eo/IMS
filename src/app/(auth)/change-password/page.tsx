@@ -45,8 +45,8 @@ export default function ChangePasswordPage() {
   return (
     <Card className="w-full max-w-sm shadow-2xl">
       <CardHeader className="space-y-1 text-center">
-        <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
-          <Lock className="h-6 w-6 text-amber-600" />
+        <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
+          <Lock className="h-6 w-6 text-warning" />
         </div>
         <CardTitle className="text-xl font-bold">Set New Password</CardTitle>
         <CardDescription>

@@ -298,7 +298,7 @@ export default function NewReceiptPage() {
                 {qty > 0 && (
                   <div className="flex justify-between font-medium border-t pt-2">
                     <span className="text-muted-foreground">Level After Receipt</span>
-                    <span className="text-green-600">
+                    <span className="text-success">
                       {Math.min(selectedTank.currentLevel + qty, selectedTank.capacity).toLocaleString()} L
                     </span>
                   </div>

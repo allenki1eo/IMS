@@ -187,7 +187,7 @@ export default function NewGRNPage() {
                 {!suppliersLoaded ? (
                   <p className="text-sm text-muted-foreground">Loading suppliers…</p>
                 ) : suppliersError ? (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  <div className="rounded-md border border-warning/20 bg-warning/5 px-3 py-2 text-sm text-warning">
                     Could not load suppliers. Ensure you have procurement supplier access.
                   </div>
                 ) : suppliers.length === 0 ? (
@@ -268,7 +268,7 @@ export default function NewGRNPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {warehouseId && locations.length === 0 && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <div className="rounded-md border border-warning/20 bg-warning/5 px-3 py-2 text-sm text-warning">
                 This warehouse has no storage locations.{" "}
                 <Link href={`/warehouse/warehouses/${warehouseId}`} className="underline underline-offset-2">
                   Add a location

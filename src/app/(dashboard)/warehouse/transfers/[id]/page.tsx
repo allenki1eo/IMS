@@ -201,10 +201,10 @@ export default function TransferDetailPage() {
         <>
           <Separator className="my-6" />
           <PermissionGuard require="warehouse:transfer:dispatch">
-            <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-4 p-4 bg-info/5 border border-info/20 rounded-lg">
               <div className="flex-1">
-                <p className="text-sm font-medium text-blue-800">Ready to dispatch?</p>
-                <p className="text-xs text-blue-700">
+                <p className="text-sm font-medium text-info">Ready to dispatch?</p>
+                <p className="text-xs text-info">
                   Dispatching marks the transfer as in-transit. Stock will deduct from the source warehouse.
                 </p>
               </div>
@@ -221,10 +221,10 @@ export default function TransferDetailPage() {
         <>
           <Separator className="my-6" />
           <PermissionGuard require="warehouse:transfer:receive">
-            <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-4 p-4 bg-success/5 border border-success/20 rounded-lg">
               <div className="flex-1">
-                <p className="text-sm font-medium text-green-800">Confirm receipt?</p>
-                <p className="text-xs text-green-700">
+                <p className="text-sm font-medium text-success">Confirm receipt?</p>
+                <p className="text-xs text-success">
                   Marking as received will add the stock to the destination warehouse.
                 </p>
               </div>

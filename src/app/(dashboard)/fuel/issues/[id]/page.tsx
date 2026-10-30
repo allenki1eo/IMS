@@ -125,7 +125,7 @@ export default function FuelIssueDetailPage() {
             {issue.vehicle.usageType === "PRIVATE" && issue.vehicle.nextRefuelAt && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Next Refuel</span>
-                <span className="text-amber-600 font-medium">{format(new Date(issue.vehicle.nextRefuelAt), "dd MMM yyyy")}</span>
+                <span className="text-warning font-medium">{format(new Date(issue.vehicle.nextRefuelAt), "dd MMM yyyy")}</span>
               </div>
             )}
             <div className="flex justify-between">
