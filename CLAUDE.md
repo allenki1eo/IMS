@@ -168,6 +168,8 @@ Status: Complete
 - Settings, audit log viewer, dashboard stats
 - Approval workflows and approval request lifecycle
 - Shared layout, sidebar, navbar, status badges, tables, search, permission guards, loading/empty states
+- Navigation: pinned pages (sidebar ★), recent pages and quick-create actions in the ⌘K palette, linked breadcrumbs
+- Semantic status colours: `success` / `warning` / `info` tokens (plus `destructive`) in `globals.css`; prefer `bg-success/10 text-success` over hard-coded `green-100`
 
 ### Phase 2 - Warehouse Management
 
@@ -375,7 +377,7 @@ Status: Complete
 2. Add API routes under `src/app/api/{module}/`.
 3. Add UI pages under `src/app/(dashboard)/{module}/`.
 4. Add permissions to `prisma/seed.ts` and run seed.
-5. Add sidebar nav items in `src/components/layout/Sidebar.tsx`.
+5. Add nav items in `src/components/layout/nav-config.ts` — the single source for the sidebar, ⌘K palette, breadcrumbs, and pinned/recent pages.
 6. Connect to approval workflows when business rules require review/authorization.
 7. All writes must call `createAuditLog()`.
 

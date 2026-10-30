@@ -332,9 +332,9 @@ function KpiCard({ metric, value, trends, loading }: { metric: MetricConfig; val
   }, [metric.key, trends]);
 
   return (
-    <Link href={metric.href} className="group block">
-      <Card className="h-full hover:shadow-md transition-all hover:-translate-y-0.5">
-        <CardContent className="p-5">
+    <Link href={metric.href} className="group block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+      <Card className="h-full transition-all group-hover:-translate-y-0.5 group-hover:border-foreground/20 group-hover:shadow-md">
+        <CardContent className="p-4 sm:p-5">
           {loading ? (
             <div className="space-y-3">
               <Skeleton className="h-3 w-24" />
@@ -343,16 +343,16 @@ function KpiCard({ metric, value, trends, loading }: { metric: MetricConfig; val
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   {metric.title}
                 </p>
-                <Icon className="h-4 w-4 text-muted-foreground/60" />
+                <Icon className="h-4 w-4 shrink-0 text-muted-foreground/60" />
               </div>
 
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-3xl font-bold tracking-tight tabular-nums">
+                  <div className="text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
                     {formatNumber(value)}
                   </div>
                   <p className="mt-1.5 text-xs text-muted-foreground truncate">{metric.description}</p>
@@ -360,13 +360,13 @@ function KpiCard({ metric, value, trends, loading }: { metric: MetricConfig; val
 
                 {/* Sparkline — real monthly series only */}
                 {sparkData && (
-                  <div className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <div className="hidden shrink-0 opacity-60 transition-opacity group-hover:opacity-100 sm:block">
                     <DashboardSparkBar data={sparkData} />
                   </div>
                 )}
               </div>
 
-              <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="mt-3 hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
                 <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity">View details</span>
               </div>
@@ -425,19 +425,19 @@ function ActionLink({ action }: { action: ActionConfig }) {
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  CREATE: "bg-emerald-100 text-emerald-700",
-  UPDATE: "bg-blue-100 text-blue-700",
-  DELETE: "bg-red-100 text-red-700",
-  LOGIN: "bg-gray-100 text-gray-700",
-  LOGOUT: "bg-gray-100 text-gray-700",
-  APPROVE: "bg-violet-100 text-violet-700",
-  REJECT: "bg-red-100 text-red-700",
-  SUBMIT: "bg-amber-100 text-amber-700",
+  CREATE: "bg-success/10 text-success",
+  UPDATE: "bg-info/10 text-info",
+  DELETE: "bg-destructive/10 text-destructive",
+  LOGIN: "bg-muted text-muted-foreground",
+  LOGOUT: "bg-muted text-muted-foreground",
+  APPROVE: "bg-success/10 text-success",
+  REJECT: "bg-destructive/10 text-destructive",
+  SUBMIT: "bg-warning/10 text-warning",
 };
 
 function actionColor(action: string) {
   const key = Object.keys(ACTION_COLORS).find((k) => action.startsWith(k));
-  return key ? ACTION_COLORS[key] : "bg-gray-100 text-gray-600";
+  return key ? ACTION_COLORS[key] : "bg-muted text-muted-foreground";
 }
 
 const TREND_SERIES = [
@@ -546,27 +546,27 @@ export default function DashboardPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground max-w-xl">{profile.summary}</p>
         </div>
-        <div className="shrink-0 rounded-lg border bg-muted/40 px-5 py-4 sm:min-w-52">
+        <div className="hidden shrink-0 rounded-lg border bg-muted/40 px-5 py-4 sm:block sm:min-w-52">
           <div className="flex items-center gap-2 text-sm font-medium mb-1">
             <CalendarCheck className="h-4 w-4" />
             Today
           </div>
           <div className="text-sm text-muted-foreground mb-2">{formatDateTime(new Date())}</div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Activity className="h-3.5 w-3.5 text-emerald-600" />
+            <Activity className="h-3.5 w-3.5 text-success" />
             {profile.title}
           </div>
         </div>
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {visibleMetrics.map((metric) => (
           <KpiCard key={metric.key} metric={metric} value={stats[metric.key]} trends={trends} loading={loading} />
         ))}
         {loading && visibleMetrics.length === 0 &&
           Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}><CardContent className="p-5 space-y-3"><Skeleton className="h-3 w-24" /><Skeleton className="h-8 w-16" /><Skeleton className="h-3 w-32" /></CardContent></Card>
+            <Card key={i}><CardContent className="p-4 sm:p-5 space-y-3"><Skeleton className="h-3 w-24" /><Skeleton className="h-8 w-16" /><Skeleton className="h-3 w-32" /></CardContent></Card>
           ))
         }
       </div>

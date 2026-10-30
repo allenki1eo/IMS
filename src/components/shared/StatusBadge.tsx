@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 type StatusConfig = {
   label: string;
@@ -98,7 +97,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   const key = String(status);
   const config = STATUS_MAP[key] ?? { label: key, variant: "outline" as const };
   return (
-    <Badge variant={config.variant} className={cn("font-medium", className)}>
+    <Badge variant={config.variant} dot={config.variant !== "outline"} className={className}>
       {config.label}
     </Badge>
   );
